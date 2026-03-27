@@ -18,6 +18,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 @specs/
 
+## セットアップ
+
+パッケージマネージャーは **bun** を使用します。
+
+```bash
+bun install
+```
+
 ## 開発プロセス
 
 本リポジトリは **spec-to-dev-workflow エージェント** が全体を統括し、各ディレクトリのサブエージェントに実装を委譲する構成です。詳細は `README.md` の「開発プロセス」を参照してください。

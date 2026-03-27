@@ -11,13 +11,13 @@ help:
 	@echo "  help     このヘルプを表示"
 
 install:
-	npm install
+	bun install
 
 clean:
 	rm -rf node_modules
 
 check:
-	npm run lint:md
+	bun run lint:md
 
 fix:
-	npm run lint:md:fix
+	bun run lint:md:fix
