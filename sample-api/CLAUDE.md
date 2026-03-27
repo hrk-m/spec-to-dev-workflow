@@ -23,8 +23,29 @@ go build ./...
 # テスト
 go test ./...
 
+# テスト（詳細出力）
+go test -v ./...
+
+# lint
+golangci-lint run ./...
+
+# lint（自動修正）
+golangci-lint run --fix ./...
+
+
 # ローカル起動
 go run main.go
+```
+
+### Makefile ショートカット
+
+```bash
+make test         # テスト
+make test-verbose # テスト（詳細）
+make lint         # lint
+make fix          # lint + 自動修正
+make build        # ビルド
+make run          # ローカル起動
 ```
 
 ## 実装ガイドライン
