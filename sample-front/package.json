@@ -14,7 +14,8 @@
     "lint:fix": "oxlint src --fix",
     "format": "prettier --check \"**/*.{ts,tsx,js,jsx,mjs,md,json}\"",
     "format:fix": "prettier --write \"**/*.{ts,tsx,js,jsx,mjs,md,json}\"",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "screenshot": "bun run scripts/screenshot.ts"
   },
   "dependencies": {
     "react": "^19",
@@ -32,6 +33,7 @@
     "@vitest/coverage-v8": "^4.1.2",
     "jsdom": "^29.0.1",
     "oxlint": "^1.57.0",
+    "playwright": "^1.58.2",
     "prettier": "^3.8.1",
     "vite": "^8.0.3",
     "vitest": "^4.1.2"
