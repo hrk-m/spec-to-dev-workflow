@@ -23,7 +23,7 @@ ln -s ../sample-front ./sample-front
 
 ## 構成
 
-```
+```text
 spec-to-dev-workflow/
 ├── specs/                    # 要件定義・テストコード
 │   └── {機能名}/             # 大きな機能単位でディレクトリを分割
@@ -41,7 +41,7 @@ spec-to-dev-workflow/
 
 本リポジトリは **spec-to-dev-workflow エージェント** が全体を統括し、各ディレクトリの **サブエージェント** に実装を委譲する構成です。
 
-```
+```text
 spec-to-dev-workflow エージェント
 ├── 1. 要件定義
 │   ├── 機能単位で specs/{機能名}/ ディレクトリを作成
@@ -57,7 +57,7 @@ spec-to-dev-workflow エージェント
 ### 各フェーズの責務
 
 | フェーズ | 担当 | 場所 |
-|---|---|---|
+| --- | --- | --- |
 | 要件定義・テストコード作成 | spec-to-dev-workflow エージェント | `specs/` |
 | API 実装 | sample-api エージェント | `sample-api/` |
 | フロントエンド実装 | sample-front エージェント | `sample-front/` |
