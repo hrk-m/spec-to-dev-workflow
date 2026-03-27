@@ -26,7 +26,7 @@ start:
 	NODE_ENV=production bun src/index.ts
 
 test:
-	bun test
+	bun run test
 
 clean:
 	rm -rf dist/
