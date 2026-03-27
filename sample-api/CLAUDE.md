@@ -2,40 +2,11 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Overview
+## プロジェクトコンテキスト
 
-`sample-api` はバックエンド API のサンプル実装ディレクトリです。
-
-実装が追加されたら、以下の項目をこのファイルに追記してください：
-
-- ビルドコマンド
-- テスト実行コマンド（単体・統合）
-- lint / フォーマットコマンド
-- ローカル起動コマンド
-- アーキテクチャの概要
-
-## コマンド
-
-```bash
-# ビルド
-go build ./...
-
-# テスト
-go test ./...
-
-# テスト（詳細出力）
-go test -v ./...
-
-# lint
-golangci-lint run ./...
-
-# lint（自動修正）
-golangci-lint run --fix ./...
-
-
-# ローカル起動
-go run main.go
-```
+### パス
+- Steering: `docs/steering/`
+- Specs: `docs/specs/`
 
 ### Makefile ショートカット
 
@@ -58,14 +29,14 @@ make run          # ローカル起動
 
 スキルは `.claude/skills/go-clean-arch/` に定義されており、Clean Architecture パターンに従ったコード生成・修正を行います。
 
-## アーキテクチャ概要
+## Steering ワークフロー
+- `/steering` - steering ドキュメントを更新・レビューする
 
-- フレームワーク: [labstack/echo](https://github.com/labstack/echo)
-- エントリーポイント: `main.go`
-- ポート: `8080`
+## 開発ルール
+- steering を常に最新の状態に保つ
+- ユーザーの指示に忠実に従い、その範囲内で自律的に行動すること。必要なコンテキストを収集し、今回の実行でエンドツーエンドの作業を完了する。質問するのは、必須情報が不足している場合や指示が致命的に曖昧な場合に限る。
 
-## エンドポイント
-
-| Method | Path     | 説明               |
-|--------|----------|--------------------|
-| GET    | /hello   | `{"message":"hello"}` を返す |
+## Steering 設定
+- `docs/steering/` 全体をプロジェクトメモリとして読み込む
+- デフォルトファイル: `product.md`, `tech.md`, `structure.md`
+- カスタムファイルをサポート
