@@ -13,3 +13,28 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - lint / フォーマットコマンド
 - ローカル起動コマンド
 - アーキテクチャの概要
+
+## コマンド
+
+```bash
+# ビルド
+go build ./...
+
+# テスト
+go test ./...
+
+# ローカル起動
+go run main.go
+```
+
+## アーキテクチャ概要
+
+- フレームワーク: [labstack/echo](https://github.com/labstack/echo)
+- エントリーポイント: `main.go`
+- ポート: `8080`
+
+## エンドポイント
+
+| Method | Path     | 説明               |
+|--------|----------|--------------------|
+| GET    | /hello   | `{"message":"hello"}` を返す |
