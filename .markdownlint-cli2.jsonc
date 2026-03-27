@@ -10,5 +10,5 @@
     "MD047": true
   },
   "globs": ["**/*.md"],
-  "ignores": ["node_modules/**", ".claude/**"]
+  "ignores": ["node_modules/**", ".claude/**", "sample-api/**", "sample-front/**"]
 }
