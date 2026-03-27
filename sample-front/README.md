@@ -1,12 +1,21 @@
-# sample-front
+# bun-react-template
 
-フロントエンドのサンプル実装です。
+To install dependencies:
 
-## 開発
+```bash
+bun install
+```
 
-実装が追加され次第、以下を更新してください。
+To start a development server:
 
-- セットアップ手順
-- ビルド・起動コマンド
-- テスト実行コマンド
-- 画面構成・コンポーネント概要
+```bash
+bun dev
+```
+
+To run for production:
+
+```bash
+bun start
+```
+
+This project was created using `bun init` in bun v1.3.9. [Bun](https://bun.com) is a fast all-in-one JavaScript runtime.
