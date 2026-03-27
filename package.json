@@ -6,7 +6,8 @@
   "scripts": {
     "lint:md": "markdownlint-cli2 \"**/*.md\"",
     "lint:md:fix": "markdownlint-cli2 --fix \"**/*.md\"",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepare": "husky"
   },
   "repository": {
     "type": "git",
@@ -20,6 +21,7 @@
   },
   "homepage": "https://github.com/hrk-m/spec-to-dev-workflow#readme",
   "devDependencies": {
+    "husky": "^9.1.7",
     "markdownlint-cli2": "^0.22.0"
   }
 }
