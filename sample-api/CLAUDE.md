@@ -27,6 +27,16 @@ go test ./...
 go run main.go
 ```
 
+## 実装ガイドライン
+
+新しいドメイン（Entity / Repository / Service / Handler）を追加する際は、必ず `/go-clean-arch` スキルを使用してください。
+
+```text
+/go-clean-arch
+```
+
+スキルは `.claude/skills/go-clean-arch/` に定義されており、Clean Architecture パターンに従ったコード生成・修正を行います。
+
 ## アーキテクチャ概要
 
 - フレームワーク: [labstack/echo](https://github.com/labstack/echo)

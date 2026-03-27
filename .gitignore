@@ -1,19 +1,1 @@
 node_modules/
-
-# Go binaries
-*.exe
-*.exe~
-*.dll
-*.so
-*.dylib
-
-# api
-sample-api/sample-api
-sample-api/bin/
-
-# Go test artifacts
-*.test
-*.out
-
-# Go vendor directory (if not using vendor mode)
-# vendor/
