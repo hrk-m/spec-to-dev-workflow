@@ -9,13 +9,19 @@
     "start": "NODE_ENV=production bun src/index.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "lint": "oxlint src",
+    "lint:fix": "oxlint src --fix",
+    "format": "prettier --check \"**/*.{ts,tsx,js,jsx,mjs,md,json}\"",
+    "format:fix": "prettier --write \"**/*.{ts,tsx,js,jsx,mjs,md,json}\"",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "react": "^19",
     "react-dom": "^19"
   },
   "devDependencies": {
+    "@ianvs/prettier-plugin-sort-imports": "^4.7.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
@@ -25,6 +31,8 @@
     "@vitejs/plugin-react": "^6.0.1",
     "@vitest/coverage-v8": "^4.1.2",
     "jsdom": "^29.0.1",
+    "oxlint": "^1.57.0",
+    "prettier": "^3.8.1",
     "vite": "^8.0.3",
     "vitest": "^4.1.2"
   }

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+
 import { apiFetch } from "@/shared/api/client";
 
 export function HomePage() {

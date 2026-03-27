@@ -1,4 +1,5 @@
 import { serve } from "bun";
+
 import index from "./index.html";
 
 const server = serve({
@@ -12,4 +13,4 @@ const server = serve({
   },
 });
 
-console.log(`🚀 Server running at ${server.url}`);
+process.stdout.write(`🚀 Server running at ${server.url}\n`);
