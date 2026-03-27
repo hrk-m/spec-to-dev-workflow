@@ -1,0 +1,14 @@
+{
+  "config": {
+    // デフォルトルールを有効化
+    "default": true,
+    // 行の最大文字数（日本語ドキュメントは長くなりやすいため無効化）
+    "MD013": false,
+    // インラインHTMLを許可
+    "MD033": false,
+    // ファイル末尾の改行を必須化
+    "MD047": true
+  },
+  "globs": ["**/*.md"],
+  "ignores": ["node_modules/**", ".claude/**"]
+}
