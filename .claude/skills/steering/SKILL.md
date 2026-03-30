@@ -1,3 +1,8 @@
+---
+name: steering
+description: specs/ を永続的なプロジェクト知識として管理する
+---
+
 # /steering — specs/ を永続的なプロジェクト知識として管理する
 
 **役割**: `specs/` をプロジェクトの永続メモリとして維持する。
@@ -12,7 +17,7 @@
 
 - **言語**: 日本語（技術用語は英語）
 - **一次情報**: `specs/{機能名}/README.md` を最優先で参照する
-- specs/{機能名}/*.mdは`.claude/commands/template/spec-feature.md`のテンプレートを必ず参照すること
+- specs/{機能名}/*.mdは`.claude/skills/steering/templates/spec-feature.md`のテンプレートを必ず参照すること
 - **技術詳細の折りたたみ**: エンジニア向けの実装詳細（実装ポイント・技術フロー・エラー時の動作）は必ず `<details><summary>技術詳細（エンジニア向け）</summary>` で折りたたむ
 
 ---

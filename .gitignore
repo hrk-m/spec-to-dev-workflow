@@ -1,1 +1,4 @@
 node_modules/
+
+# plansディレクトリ配下のファイルを無視
+# plans/*

@@ -1,3 +1,8 @@
+---
+name: add-screenshot
+description: /add-screenshot — spec ファイルの `## 画面` セクションにスクリーンショットを埋め込む。ユーザーが `/add-screenshot` を実行したとき、spec ファイルに画面イメージを追加・更新したいとき、実装変更後に画面仕様を最新化したいときに必ず使用すること。
+---
+
 # /add-screenshot — spec ファイルの `## 画面` セクションにスクリーンショットを埋め込む
 
 ## 役割
