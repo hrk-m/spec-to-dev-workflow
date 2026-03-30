@@ -2,9 +2,9 @@
  * sample-front のスクリーンショットを撮るスクリプト
  *
  * 使い方:
- *   bun run screenshot  （= bun run scripts/screenshot.ts）
+ *   bun run screenshot  （リポジトリルートから実行）
  *
- * 出力先: docs/img/*.png  （リポジトリルート基準）
+ * 出力先: specs/img/*.png  （リポジトリルート基準）
  *
  * シナリオ定義: specs/{機能名}/*.md の `## スクリーンショット設定` JSON ブロックを自動解析する。
  *
@@ -27,7 +27,7 @@ import type { ChildProcess } from "child_process";
 import { spawn } from "child_process";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const projectRoot = path.resolve(__dirname, "../..");
+const projectRoot = path.resolve(__dirname, "../../../..");
 const specDir = path.resolve(projectRoot, "specs");
 const outputDir = path.resolve(projectRoot, "specs/img");
 

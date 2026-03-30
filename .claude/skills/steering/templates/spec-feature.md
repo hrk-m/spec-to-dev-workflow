@@ -10,9 +10,9 @@
 
 ## 画面
 
-{`docs/img/` に PNG が存在する場合は img タグで埋め込む。存在しない場合は ASCII アートで代替する。
- `bun run screenshot` を実行すると sidepanel.png / popup.png が生成される。
- 特定画面を撮る場合は scripts/screenshot.ts を編集する（詳細: .agents/skills/wxt-screenshot/SKILL.md）}
+{`specs/img/` に PNG が存在する場合は img タグで埋め込む。存在しない場合は ASCII アートで代替する。
+ リポジトリルートで `bun run screenshot` を実行すると PNG が生成される。
+ シナリオは spec ファイルの `## スクリーンショット設定` セクションで定義する。}
 
 <!-- PNG が存在する場合 -->
 <img src="../img/{screen-name}.png" width="400" alt="{画面名}" />

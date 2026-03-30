@@ -7,7 +7,8 @@
     "lint:md": "markdownlint-cli2 \"**/*.md\"",
     "lint:md:fix": "markdownlint-cli2 --fix \"**/*.md\"",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "prepare": "husky"
+    "prepare": "husky",
+    "screenshot": "bun run .claude/skills/add-screenshot/scripts/screenshot.ts"
   },
   "repository": {
     "type": "git",
@@ -21,7 +22,9 @@
   },
   "homepage": "https://github.com/hrk-m/spec-to-dev-workflow#readme",
   "devDependencies": {
+    "@types/bun": "latest",
     "husky": "^9.1.7",
-    "markdownlint-cli2": "^0.22.0"
+    "markdownlint-cli2": "^0.22.0",
+    "playwright": "^1.58.2"
   }
 }
