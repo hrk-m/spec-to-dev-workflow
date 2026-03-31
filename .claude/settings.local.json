@@ -5,7 +5,9 @@
       "Bash(git rm:*)",
       "Bash(git commit:*)",
       "Bash(git:*)",
-      "Bash(bun install:*)"
+      "Bash(bun install:*)",
+      "mcp__claude_ai__fetch",
+      "mcp__claude_ai__search"
     ]
   }
 }
