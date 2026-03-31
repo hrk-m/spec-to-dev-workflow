@@ -14,11 +14,16 @@ domain/               ← エンティティ + センチネルエラー（外部
   service.go
   service_test.go
 internal/
-  repository/mysql/   ← DB 実装（隠蔽）
+  repository/mysql/   ← DB 実装（隠蔽）★ {domain}/repository/ ではない
+    {domain}.go       ← 例: todo → internal/repository/mysql/todo.go
+    {domain}_test.go
   rest/               ← Echo HTTP ハンドラ + Service Interface（消費側宣言）（隠蔽）
   rest/mocks/         ← mockery 自動生成（編集禁止）
 app/main.go           ← DI 配線・サーバー起動のみ（薄く保つ）
 ```
+
+> ⚠️ **よくある間違い**: Repository 実装を `{domain}/repository/mysql.go` に置かない。
+> MySQL 実装は必ず `internal/repository/mysql/{domain}.go` に配置する。
 
 ---
 
@@ -62,10 +67,10 @@ rest → {domain}(Service IF) → domain ← repository
 
 実装コードテンプレートは **[references/implementation.md](references/implementation.md)** を参照。
 
-1. `domain/foo.go` — エンティティ定義
-2. `foo/service.go` — Repository IF + Service 実装
-3. `internal/repository/mysql/foo.go` — MySQL Repository 実装
-4. `internal/rest/foo.go` — Handler + Service IF 宣言
+1. `domain/{domain}.go` — エンティティ定義
+2. `{domain}/service.go` — Repository IF + Service 実装
+3. `internal/repository/mysql/{domain}.go` — MySQL Repository 実装（`{domain}/repository/` ではない）
+4. `internal/rest/{domain}.go` — Handler + Service IF 宣言
 5. `app/main.go` — DI 配線追記
 
 関連エンティティの並列フェッチ（`errgroup` + goroutine + channel）も implementation.md に記載。
@@ -79,8 +84,8 @@ rest → {domain}(Service IF) → domain ← repository
 | レイヤー | ファイル | パッケージ | 使用ライブラリ |
 |----------|----------|------------|----------------|
 | Service | `{domain}/service_test.go` | `package {domain}_test` | mockery mock |
-| Repository | `internal/repository/mysql/foo_test.go` | `package mysql_test` | sqlmock |
-| Handler | `internal/rest/foo_test.go` | `package rest_test` | httptest + mockery mock |
+| Repository | `internal/repository/mysql/{domain}_test.go` | `package mysql_test` | sqlmock |
+| Handler | `internal/rest/{domain}_test.go` | `package rest_test` | httptest + mockery mock |
 
 ---
 

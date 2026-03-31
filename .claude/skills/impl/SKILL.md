@@ -4,7 +4,7 @@ description: >
   `plans/tasks/{タスク名}/prd.md` を参照して TDD で実装する。
   `/impl` または「実装して」「実装を開始」などのトリガーで起動。
   バックエンドは `sample-api-agent`、フロントエンドは `sample-front-agent` に委譲する。
-  `/plan` や `/prd-writer` で要件が確定した後に使用する。
+  `/plan` や `/plan-writer` で要件が確定した後に使用する。
 ---
 
 # /impl — タスク実装コマンド
@@ -13,7 +13,7 @@ description: >
 
 ## いつ使うか
 
-- `/plan` と `/prd-writer` で要件が確定し、`plans/tasks/{タスク名}/prd.md` が存在する場合
+- `/plan` と `/plan-writer` で要件が確定し、`plans/tasks/{タスク名}/prd.md` が存在する場合
 - 「実装して」「コードを書いて」「impl を実行して」などの指示があった場合
 
 ---
@@ -31,7 +31,7 @@ description: >
 
 ```
 plans/tasks/{タスク名}/prd.md が見つかりません。
-先に /plan → /prd-writer を実行して要件を確定してください。
+先に /plan → /plan-writer を実行して要件を確定してください。
 ```
 
 ---

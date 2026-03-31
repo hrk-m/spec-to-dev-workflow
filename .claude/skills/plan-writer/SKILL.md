@@ -1,9 +1,9 @@
 ---
-name: prd-writer
+name: plan-writer
 description: 合意済みの要件を `plans/tasks/{タスク名}/prd.md` に書き出す。/plan コマンドで目的・ゴール・フローの合意が取れた後に使用する。
 ---
 
-# prd-writer
+# plan-writer
 
 合意済みの内容を `plans/tasks/{タスク名}/prd.md` に書き出す。
 
@@ -19,7 +19,7 @@ description: 合意済みの要件を `plans/tasks/{タスク名}/prd.md` に書
    - **`/plan` 未実行** → 以下のメッセージを表示してスキルを終了する。解決したい課題は何ですかとユーザーへ確認を取る
      ```
      /plan を先に実行してください。
-     目的・ゴール・処理フローが確定してから prd-writer を使用してください。
+     目的・ゴール・処理フローが確定してから plan-writer を使用してください。
      ```
 
 3. **実装可能性チェック**（prd.md 書き出し前に必ず実施する）
@@ -74,3 +74,17 @@ description: 合意済みの要件を `plans/tasks/{タスク名}/prd.md` に書
      → そのままステップ 5 へ進む
 
 5. 確定した要件を `plans/tasks/{タスク名}/prd.md` に書き出す
+<!-- 
+6. **`plan-checker` を必ず実行する**（書き出し後の詳細整合性チェック）
+
+   書き出した `plans/tasks/{タスク名}/prd.md` を対象に `plan-checker` を実行し、
+   `api-context` / `front-context` とその参照先スキルに対して詳細照合を行う。
+
+   - **`plan-checker` で不一致が出た場合**
+     → `AskUserQuestion` で差異と修正案をユーザーに確認する
+     → 回答に応じて `prd.md` を修正する
+     → `plan-checker` を再実行する
+     → `fail` が 0 になるまで完了扱いにしない
+
+   - **`plan-checker` が通過した場合**
+     → その `prd.md` を最終版とする -->

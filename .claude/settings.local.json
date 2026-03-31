@@ -7,7 +7,9 @@
       "Bash(git:*)",
       "Bash(bun install:*)",
       "mcp__claude_ai__fetch",
-      "mcp__claude_ai__search"
+      "mcp__claude_ai__search",
+      "Bash(find /Users/s13993/src/github.com/hrk-m/spec-to-dev-workflow/sample-front -path */.claude/* -name *.md)",
+      "WebFetch(domain:docs.anthropic.com)"
     ]
   }
 }
