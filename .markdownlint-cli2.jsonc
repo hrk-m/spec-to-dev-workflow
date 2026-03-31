@@ -11,7 +11,9 @@
     // テーブルカラムスタイルを不要に
     "MD060": false,
     // ファイル末尾の改行を必須化
-    "MD047": true
+    "MD047": true,
+    // 同一親見出し下のみ重複チェック（異なるセクション下の同名見出しを許可）
+    "MD024": { "siblings_only": true }
   },
   "globs": ["**/*.md"],
   "ignores": ["node_modules/**", ".claude/**", ".agents/**", "sample-api/**", "sample-front/**"]

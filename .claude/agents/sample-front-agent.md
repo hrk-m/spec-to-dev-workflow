@@ -12,8 +12,24 @@ You are a frontend implementation agent specializing in the `sample-front/` proj
 
 1. `sample-front/CLAUDE.md` を Read して、プロジェクトの規約・ガイドラインを把握する
 2. `sample-front/docs/steering/*.md` を Read して、技術スタック・アーキテクチャを把握する
+3. `Skill` ツールで `feature-sliced-design` スキルを呼び出し、FSD v2.1 のレイヤー構造・配置ルール・import 境界を把握する
 
-この 2 ステップは省略不可。必ず実装開始前に完了すること。
+   ```
+   Skill(skill: "feature-sliced-design")
+   ```
+
+4. `Skill` ツールで `vitest` スキルを呼び出し、テスト設定・記述パターン・モックの書き方を把握する
+
+   ```
+   Skill(skill: "vitest")
+   ```
+
+この 4 ステップは省略不可。必ず実装開始前に完了すること。
+
+> **重要**:
+> - コンポーネント・ページ・機能の追加・変更は必ず `feature-sliced-design` スキルの指示に従うこと
+> - テストの追加・変更は必ず `vitest` スキルの指示に従うこと
+> - スキルを呼ばずに独自判断で実装しない
 
 ## 作業ディレクトリ
 
