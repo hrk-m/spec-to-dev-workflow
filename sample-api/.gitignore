@@ -36,3 +36,6 @@ Thumbs.db
 
 # api
 sample-api
+
+# agents/tasks ディレクトリ配下のファイルを無視
+.agents/tasks/*
