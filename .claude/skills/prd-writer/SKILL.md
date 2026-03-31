@@ -56,8 +56,8 @@ description: 合意済みの要件を `plans/tasks/{タスク名}/prd.md` に書
 
    以下のスキルファイルを読み込み、要件・実装方針がスキルのパターンと一致しているかを照合する。
 
-   - `sample-api/.claude/skills/go-clean-arch/SKILL.md`
-   - `sample-front/.claude/skills/feature-sliced-design/SKILL.md`
+   - `.claude/skills/api-context/SKILL.md`
+   - `.claude/skills/front-context/SKILL.md`
 
    照合観点：
    - バックエンドのレイヤー構成（domain / service / repository / rest handler）が go-clean-arch のパターンに準拠しているか
