@@ -8,3 +8,14 @@ plans/*
 
 # 個人環境依存の Claude Code 設定
 .claude/settings.local.json
+.claude/*.local.md
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
