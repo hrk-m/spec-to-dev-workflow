@@ -77,10 +77,33 @@ Step 2: Validation gate.
 If any test/lint/build fails -> ask the agent to fix it.
 If all pass -> proceed to Step 2.5.
 
-Step 2.5: Skill compliance check.
-Read .claude/skills/api-context/SKILL.md and verify backend implementation.
-Read .claude/skills/front-context/SKILL.md and verify frontend implementation.
-If violations found -> ask the relevant agent to fix, end this iteration.
+Step 2.5: Skill compliance check against architecture patterns.
+
+Backend compliance (run this sequence):
+1. Read .claude/skills/api-context/SKILL.md
+2. Read sample-api/.claude/skills/go-clean-arch/SKILL.md
+3. Verify actual code against Section 9 checklist of go-clean-arch/SKILL.md:
+   - Interface declared in consumer layer (service.go declares Repository IF; rest handler declares Service IF)
+   - domain/ has zero external package imports
+   - service does not import internal/repository/mysql or internal/rest
+   - error response uses getStatusCode + ResponseError (no ad-hoc formatting)
+   - app/main.go contains ONLY: config load, connection init, DI wiring, server start
+   - {domain}/mocks/ exists with mock for Repository IF
+   - internal/rest/mocks/ exists with mock for Service IF
+   - mocks match their interfaces (all methods present, correct signatures)
+If any violation -> ask sample-api-agent to fix all violations, end this iteration.
+If all pass -> proceed to frontend check.
+
+Frontend compliance (run this sequence):
+1. Read .claude/skills/front-context/SKILL.md
+2. Read sample-front/.claude/skills/feature-sliced-design/SKILL.md
+3. Verify actual code against Section 4 "Architectural Rules (MUST)":
+   - Import direction strict: app→pages→widgets→features→entities→shared (no upward imports)
+   - Every slice that has external consumers exports only through index.ts
+   - No cross-imports between slices on the same layer
+   - No business logic in shared/ (only infra: UI kit, utils, API client)
+   - Single-use code stays in pages/ (no premature entity/feature extraction)
+If any violation -> ask sample-front-agent to fix all violations, end this iteration.
 If all pass -> proceed to Step 3.
 
 Step 3: Requirements check.
