@@ -32,6 +32,9 @@ sample-api/
 ## DI パターン（main.go）
 
 ```go
+e := echo.New()
+e.Use(middleware.CORS())           // ミドルウェア登録
+
 svc := hello.NewService()         // use case をインスタンス化
 rest.NewHelloHandler(e, svc)      // delivery 層に注入してルート登録
 ```

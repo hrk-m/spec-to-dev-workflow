@@ -4,6 +4,7 @@
 
 - **言語**: Go 1.25
 - **HTTP フレームワーク**: Echo v4 (`labstack/echo`)
+- **ミドルウェア**: CORS（`echo/v4/middleware`）
 - **テスト**: testify (`assert` + `mock`)
 - **Lint**: golangci-lint v2
 
@@ -43,4 +44,5 @@ internal/rest/  →  hello/  →  domain/
 
 - **use case 層**: 実体を直接インスタンス化してテスト（モック不要）
 - **delivery 層**: `testify/mock` で use case をモック化し、httptest でエンドポイントを検証
+  - mock はテストファイル内にインライン定義する（`mocks/` ディレクトリは使用しない）
 - エラー系（センチネルエラー、予期しないエラー）のケースを必ず網羅する
