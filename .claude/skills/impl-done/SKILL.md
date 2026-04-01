@@ -3,7 +3,8 @@ name: impl-done
 description: >
   `/impl` による実装・修正が全て完了した後に実行するポスト実装スキル。
   `sample-api-agent` と `sample-front-agent` を使って各サービスの steering ドキュメント
-  (`docs/steering/`) を最新の実装に同期し、完了後に `spec-update` で `specs/` も同期する。
+  (`docs/steering/`) を最新の実装に同期し、完了後に `spec-knowledge` と `spec-screenshot` の
+  両方を自動実行して `specs/` も同期する。
   「実装が終わった」「impl-done を実行して」「steering を更新して」「ドキュメントを同期して」
   などのトリガーで起動する。`/impl` の完了後に必ず使用すること。
 ---
@@ -30,11 +31,12 @@ description: >
 /steering を実行して docs/steering/ を現在の実装に同期してください。
 ```
 
-### Step 2: spec 同期
+### Step 2: spec 同期（両方自動実行）
 
-両 agent の steering 更新が完了したら、Read ツールで `.claude/skills/spec-update/SKILL.md` を読み込み、**同期モード**として手順に従って `specs/` を更新する。
+`sample-api-agent` と `sample-front-agent` を **同時に** 起動し、以下の 2 つを **順番に** 実行する（AskUserQuestion は出さない）。
 
-> spec-update の AskUserQuestion が表示された場合は `spec-update`（specs/ の生成・同期）を選択して進める。
+1. Read ツールで `.claude/skills/spec-update/references/spec-knowledge/SKILL.md` を読み込み、手順に従って `specs/` を生成・同期する。
+2. Read ツールで `.claude/skills/spec-update/references/spec-screenshot/SKILL.md` を読み込み、手順に従って画面セクションにスクリーンショットを埋め込む。
 
 ## 完了報告フォーマット
 
@@ -45,6 +47,9 @@ description: >
 - sample-api/docs/steering/: [変更したファイルと内容]
 - sample-front/docs/steering/: [変更したファイルと内容]
 
-### spec 同期
+### spec 同期（spec-knowledge）
 - [更新した specs/ のファイルと内容]
+
+### spec 同期（spec-screenshot）
+- [埋め込んだスクリーンショットと対象セクション]
 ```

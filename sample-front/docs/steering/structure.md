@@ -10,17 +10,19 @@ inclusion: always
 
 ```
 src/
-  app/        ← アプリ初期化・グローバルスタイル・エントリーポイント
-  pages/      ← ルート単位のページコンポーネント
-  shared/     ← インフラ（API クライアント・設定・UI キット）
-  test/       ← テストセットアップ
+  index.ts      ← Bun エントリーポイント（サーバー起動）
+  index.html    ← HTML テンプレート
+  app/          ← アプリ初期化・グローバルスタイル・React マウント
+  pages/        ← ルート単位のページコンポーネント
+  shared/       ← インフラ（API クライアント・設定・UI キット）
+  test/         ← テストセットアップ
 ```
 
 ## 各レイヤーのパターン
 
 ### `app/`
-- `index.tsx` — React DOM のマウント
-- `App.tsx` — ルートコンポーネント（ページのルーティングを担う）
+- `index.tsx` — React DOM のマウント（`StrictMode` + `createRoot` + `render`）。HMR 対応（`import.meta.hot` による root の再利用）
+- `App.tsx` — ルートコンポーネント。現在は `HomePage` を直接表示（ルーティング未導入）
 - `styles/index.css` — グローバルスタイル
 
 ### `pages/<page-name>/`
@@ -32,9 +34,9 @@ src/
 | スライス | 状態 |
 |---|---|
 | `home` | 実装済み（`HomePage` コンポーネント + テスト） |
-| `todo` | スケルトンのみ（ディレクトリ構造のみ、ファイルなし） |
-| `todo-create` | スケルトンのみ（ディレクトリ構造のみ、ファイルなし） |
-| `todo-list` | スケルトンのみ（ディレクトリ構造のみ、ファイルなし） |
+| `todo` | スケルトンのみ（`ui/__tests__/` ディレクトリ構造のみ、ファイルなし） |
+| `todo-create` | スケルトンのみ（`ui/__tests__/` ディレクトリ構造のみ、ファイルなし） |
+| `todo-list` | スケルトンのみ（`ui/__tests__/` ディレクトリ構造のみ、ファイルなし） |
 
 ### `shared/`
 - `api/client.ts` — 汎用 fetch ラッパー（`apiFetch<T>`）。レスポンスエラー検知・JSON 変換を担う
