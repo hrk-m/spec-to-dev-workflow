@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add:*)",
+      "Bash(git rm:*)",
+      "Bash(git commit:*)",
+      "Bash(git:*)",
+      "Bash(bun install:*)",
+      "mcp__claude_ai__fetch",
+      "mcp__claude_ai__search",
+      "Bash(find /path/to/spec-to-dev-workflow/sample-front -path */.claude/* -name *.md)",
+      "Bash(find /path/to/spec-to-dev-workflow/sample-api -path */.claude/* -name *.md)",
+      "WebFetch(domain:docs.anthropic.com)",
+      "Skill(ralph-loop:ralph-loop)",
+      "Skill(update-config)",
+      "Bash(bash:*)",
+      "Bash(go get:*)",
+      "Bash(bun add:*)",
+      "Bash(bun run:*)",
+      "Bash(make test:*)",
+      "Bash(make lint:*)",
+      "Bash(go mod:*)",
+      "Bash(go test:*)",
+      "Bash(go build:*)",
+      "Bash(make build:*)",
+      "Bash(npx vitest:*)"
+    ]
+  }
+}
