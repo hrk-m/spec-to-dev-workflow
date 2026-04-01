@@ -68,4 +68,21 @@ spec-to-dev-workflow エージェント
 - [sample-api](./sample-api/README.md)
 - [sample-front](./sample-front/README.md)
 
-### メモ
+## セットアップ
+
+### ralph-loop プラグインの追加
+
+Claude Code の Plugin スキルから `ralph-loop@claude-plugins-official` をインストールする。
+`/plan-writer` や `/impl` が使用する `ralph-loop` プラグインを使用。
+
+---
+
+## スキルの使い方
+
+### /skill-link
+
+`sample-api` / `sample-front` のスキルを `api-context` / `front-context` にシンボリックリンクで登録する。新しいスキルをエージェントに認識させたいときに実行する。
+
+### /guide
+
+使うスキルに迷ったときに起動する。対話形式でスキルを選ぶと手順をそのまま実行する。ワークフロー全体の入口。
