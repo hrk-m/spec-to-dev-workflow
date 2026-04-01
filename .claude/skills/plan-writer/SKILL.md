@@ -52,39 +52,35 @@ description: 合意済みの要件を `plans/tasks/{タスク名}/prd.md` に書
    - **一致している場合**（エージェントの報告がスキル内容と整合しており懸念点もない場合）
      → そのままステップ 4 へ進む
 
-4. **各スキルとの照合チェック**（prd.md 書き出し前に必ず実施する）
+4. 確定した要件を `plans/tasks/{タスク名}/prd.md` に書き出す
 
-   以下のスキルファイルを読み込み、要件・実装方針がスキルのパターンと一致しているかを照合する。
+5. **各スキルとの照合チェック**（prd.md 書き出し後に必ず実施する）
 
-   - `.claude/skills/api-context/SKILL.md`
-   - `.claude/skills/front-context/SKILL.md`
+   **ステップ 5-1**: Write ツールで `plans/tasks/{タスク名}/.ralph-alignment.md` に以下の内容を書き出す（{タスク名} は実際の名前に置換）：
 
-   照合観点：
-   - バックエンドのレイヤー構成（domain / service / repository / rest handler）が go-clean-arch のパターンに準拠しているか
-   - Repository Interface が消費側（service 層）で宣言されているか
-   - エラーハンドリングのマッピングがスキルの定義と整合しているか
-   - フロントエンドのファイル配置・import 方向・Public API 定義が FSD v2.1 に準拠しているか
-   - entities / features の不要な抽出が発生していないか
+   ```
+   Check plans/tasks/{タスク名}/prd.md alignment with skills. Skip already-fixed issues from prior iterations.
 
-   - **不一致がある場合**
-     → 差異を特定し、prd.md の実装方針を修正する
-     → **ステップ 4 を再実施する**
+   Steps:
+   1. Read .claude/skills/api-context/SKILL.md
+   2. Read .claude/skills/front-context/SKILL.md
+   3. Read plans/tasks/{タスク名}/prd.md
+   4. Check these points:
+      - Backend layer structure (domain/service/repository/rest handler) matches go-clean-arch pattern
+      - Repository Interface is declared in the consumer layer (service layer)
+      - Error handling mapping matches skill definitions
+      - Frontend file placement and import direction follows FSD v2.1
+      - No premature entities/features extraction
+   5. Fix any mismatches directly with Edit tool on prd.md
+   6. When all checks pass with zero mismatches, output: <promise>ALIGNED</promise>
+   ```
 
-   - **一致している場合**
-     → そのままステップ 5 へ進む
+   **ステップ 5-2**: `Skill` ツールで `ralph-loop:ralph-loop` を以下の引数で起動する：
 
-5. 確定した要件を `plans/tasks/{タスク名}/prd.md` に書き出す
-<!-- 
-6. **`plan-checker` を必ず実行する**（書き出し後の詳細整合性チェック）
+   ```
+   Read and follow plans/tasks/{タスク名}/.ralph-alignment.md --completion-promise ALIGNED --max-iterations 5
+   ```
 
-   書き出した `plans/tasks/{タスク名}/prd.md` を対象に `plan-checker` を実行し、
-   `api-context` / `front-context` とその参照先スキルに対して詳細照合を行う。
+   > **重要**: args には上記の1行の英語プロンプトのみを渡す。多行・日本語プロンプトを直接渡すとシェルパースエラーになる。
 
-   - **`plan-checker` で不一致が出た場合**
-     → `AskUserQuestion` で差異と修正案をユーザーに確認する
-     → 回答に応じて `prd.md` を修正する
-     → `plan-checker` を再実行する
-     → `fail` が 0 になるまで完了扱いにしない
-
-   - **`plan-checker` が通過した場合**
-     → その `prd.md` を最終版とする -->
+   ループが `ALIGNED` で完了したらスキルを終了する。

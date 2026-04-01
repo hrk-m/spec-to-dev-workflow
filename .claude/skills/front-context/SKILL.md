@@ -27,12 +27,10 @@ description: sample-front サービスのコンテキスト定義。フロント
 
 ## Feature Sliced Design スキル
 
-@sample-front/.claude/skills/feature-sliced-design/SKILL.md
+Read ツールで `.claude/skills/front-context/references/feature-sliced-design/SKILL.md` を読み込むこと。
 
 ---
 
 ## Vitest スキル
 
-@sample-front/.claude/skills/vitest/SKILL.md
-
-> **注意**: 本ファイル内のスキル参照（`@` で始まるパス）が展開されず内容が空の場合、該当パスのファイルが存在するか Read ツールで確認すること。ファイルが存在しない場合は、ユーザーにスキルファイルの作成が必要である旨を報告し、作業を中断する。
+Read ツールで `.claude/skills/front-context/references/vitest/SKILL.md` を読み込むこと。

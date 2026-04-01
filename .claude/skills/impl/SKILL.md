@@ -49,78 +49,72 @@ plans/tasks/{タスク名}/prd.md が見つかりません。
 
 ---
 
-## 4. 実装の委譲
+## 4. ralph-loop の起動
 
-PRD の「対象システム」に応じて、以下のエージェントに **並列で** 委譲する。
+`/ralph-loop:ralph-loop` を使い、**現在のセッション（オーケストレーター自身）** をループさせる。
+ループの各イテレーションで、サブエージェントへの委譲・検証・修正依頼・要件充足チェックをすべて行う。
 
-### バックエンド → `sample-api-agent`
+### ステップ 4-1: ループプロンプトファイルの書き出し
 
-PRD の以下セクションを渡して実装を依頼する:
-- API 仕様（エンドポイント・バリデーション・レスポンス・エラーケース）
-- バックエンド処理フロー
-- バックエンド実装方針（追加ファイル・アーキテクチャ）
-- データ仕様
+Write ツールで `plans/tasks/{タスク名}/.ralph-impl.md` に以下の内容を書き出す（{タスク名} と {prd セクション} は実際の内容に置換）：
 
-依頼文のテンプレート:
 ```
-以下の PRD に従って `sample-api/` に実装してください。TDD（RED→GREEN→REFACTOR）で進め、
-実装後に `bun run test && bun run lint && bun run build` を実行して結果を報告してください。
+Implement task {タスク名} following plans/tasks/{タスク名}/prd.md. Skip completed steps, resume from failed ones.
 
-{prd のバックエンド関連セクションをそのまま貼り付ける}
+Step 1: Delegate implementation in parallel.
+Run sample-api-agent for backend and sample-front-agent for frontend simultaneously.
+Each agent must run tests, lint, and build after implementation and report results.
+
+Backend agent instructions (sample-api-agent):
+Implement in sample-api/ using TDD (RED->GREEN->REFACTOR).
+{prd のバックエンド関連セクション（英語または日本語）}
+
+Frontend agent instructions (sample-front-agent):
+Implement in sample-front/ using TDD (RED->GREEN->REFACTOR).
+{prd のフロントエンド関連セクション（英語または日本語）}
+
+Step 2: Validation gate.
+If any test/lint/build fails -> ask the agent to fix it.
+If all pass -> proceed to Step 2.5.
+
+Step 2.5: Skill compliance check.
+Read .claude/skills/api-context/SKILL.md and verify backend implementation.
+Read .claude/skills/front-context/SKILL.md and verify frontend implementation.
+If violations found -> ask the relevant agent to fix, end this iteration.
+If all pass -> proceed to Step 3.
+
+Step 3: Requirements check.
+Launch prd-checker agent with TASK_NAME={タスク名} and REQUIREMENTS from plans/tasks/{タスク名}/prd.md.
+If all requirements met -> proceed to Step 4.
+If any fail/partial -> ask the relevant agent to fix, end this iteration.
+
+Step 4: Completion.
+Only when Step 2 and Step 3 both fully pass, output: <promise>IMPL COMPLETE</promise>
 ```
 
-### フロントエンド → `sample-front-agent`
+### ステップ 4-2: ralph-loop 起動
 
-PRD の以下セクションを渡して実装を依頼する:
-- API 仕様（フロントエンドが呼び出すエンドポイントとレスポンス形式）
-- フロントエンド処理フロー
-- フロントエンド実装方針（追加ファイル・ライブラリ）
-- データ仕様
+`Skill` ツールで `ralph-loop:ralph-loop` を以下の**1行の短いプロンプト**で起動する：
 
-依頼文のテンプレート:
 ```
-以下の PRD に従って `sample-front/` に実装してください。TDD（RED→GREEN→REFACTOR）で進め、
-実装後に `bun run test && bun run lint && bun run build` を実行して結果を報告してください。
-
-{prd のフロントエンド関連セクションをそのまま貼り付ける}
+Read and follow plans/tasks/{タスク名}/.ralph-impl.md --completion-promise IMPL COMPLETE --max-iterations 5
 ```
+
+> **重要**: args には上記の1行の英語プロンプトのみを渡す。多行・日本語プロンプトを直接渡すとシェルパースエラーになる。
 
 ---
 
-## 5. 検証ゲート
+## 5. ループの終了条件
 
-両エージェントの完了後、メインコンテキストで以下を確認する:
-
-- 各エージェントが `test/lint/build` の結果を報告しているか
-- エラーが残っている場合は原因と修正方針を示し、該当エージェントに再依頼する
-- 1 つでも失敗が残っている場合は完了扱いにしない
-
----
-
-## 6. 要件充足チェック
-
-検証ゲートを通過したら、`Agent` ツールで `prd-checker` エージェントを起動する。
-
-エージェントへの指示テンプレート:
-
-```
-以下の要件に基づいて、タスク名 "{タスク名}" の要件充足チェックを実施してください。
-
-## TASK_NAME
-{タスク名}
-
-## REQUIREMENTS
-{plans/tasks/{タスク名}/prd.md の内容をそのまま展開}
-```
-
-### チェック結果への対応
-
-- **全要件充足** の場合 → Step 7（出力フォーマット）へ進む
-- **fail / partial あり** の場合 → 該当エージェント（`sample-api-agent` / `sample-front-agent`）に修正を依頼し、修正完了後に Step 6 を再実行する
+| 状態 | 動作 |
+|---|---|
+| ステップ 2・3 が全て pass | `<promise>IMPL COMPLETE</promise>` を出力 → ループ終了 |
+| いずれかが fail | 修正依頼を出してイテレーション終了 → 次のイテレーションで再実行 |
+| max-iterations（5回）到達 | ループ強制終了 → 残課題を Step 7 に記載して報告 |
 
 ---
 
-## 7. 出力フォーマット
+## 6. 出力フォーマット
 
 実装完了後に以下を報告する:
 
