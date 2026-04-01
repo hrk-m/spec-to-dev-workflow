@@ -34,12 +34,25 @@ import { apiFetch } from "../../shared/api/client";
 ### 環境変数
 `BUN_PUBLIC_*` プレフィックスを使用。`.env` に `BUN_PUBLIC_API_URL` を設定することで API ベース URL を上書き可能。デフォルトは `http://localhost:8080`。
 
+### リント構成
+oxlint を使用。プラグイン: `import`, `typescript`, `unicorn`。主な有効ルール:
+- `import/no-cycle`: 循環インポート禁止
+- `import/no-relative-parent-imports`: 親ディレクトリへの相対インポート禁止（`@/` エイリアスを使う）
+- `typescript/no-unused-vars`: 未使用変数はエラー
+- `typescript/consistent-type-imports`: 型インポートは `type` キーワードを推奨
+
+### フォーマット構成
+Prettier + `@ianvs/prettier-plugin-sort-imports` でインポート順を FSD レイヤー順に自動整列。
+- `printWidth: 100`, `singleQuote: false`, `semi: true`, `trailingComma: "all"`
+
 ### テスト構成
 - `vitest.config.ts` で React plugin と jsdom を設定済み
 - セットアップファイル: `src/test/setup.ts`（`@testing-library/jest-dom` のインポート）
 - カバレッジ: `vitest run --coverage`（v8 プロバイダー）
 
 ## コマンド
+
+### bun scripts
 
 ```bash
 bun dev             # 開発サーバー起動 (HMR)
@@ -52,4 +65,15 @@ bun run lint:fix    # oxlint 自動修正
 bun run format      # Prettier チェック
 bun run format:fix  # Prettier 自動整形
 bun run typecheck   # 型チェック (tsc --noEmit)
+```
+
+### Makefile ショートカット
+
+```bash
+make test           # テスト実行
+make lint           # oxlint でリント
+make fix            # oxlint 自動修正
+make build          # 本番ビルド
+make run            # 開発サーバー起動
+make check          # typecheck + lint + format + test をまとめて実行
 ```

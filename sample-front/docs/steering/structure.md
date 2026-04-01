@@ -13,6 +13,7 @@ src/
   app/        ← アプリ初期化・グローバルスタイル・エントリーポイント
   pages/      ← ルート単位のページコンポーネント
   shared/     ← インフラ（API クライアント・設定・UI キット）
+  test/       ← テストセットアップ
 ```
 
 ## 各レイヤーのパターン
@@ -27,10 +28,21 @@ src/
 - `ui/<Component>.tsx` — ページコンポーネント本体
 - `ui/__tests__/` — ページのテスト
 
+**現在のページスライス:**
+| スライス | 状態 |
+|---|---|
+| `home` | 実装済み（`HomePage` コンポーネント + テスト） |
+| `todo` | スケルトンのみ（ディレクトリ構造のみ、ファイルなし） |
+| `todo-create` | スケルトンのみ（ディレクトリ構造のみ、ファイルなし） |
+| `todo-list` | スケルトンのみ（ディレクトリ構造のみ、ファイルなし） |
+
 ### `shared/`
-- `api/client.ts` — 汎用 fetch ラッパー（レスポンスエラー検知・JSON 変換）
-- `config/env.ts` — 環境変数の集約・エクスポート
+- `api/client.ts` — 汎用 fetch ラッパー（`apiFetch<T>`）。レスポンスエラー検知・JSON 変換を担う
+- `config/env.ts` — 環境変数の集約・エクスポート（`API_BASE_URL`）
 - `api/__tests__/` / `config/__tests__/` — shared のテスト
+
+### `test/`
+- `setup.ts` — Vitest のグローバルセットアップ（`@testing-library/jest-dom` のインポート）
 
 ## インポート規則
 
