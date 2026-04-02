@@ -18,6 +18,8 @@ func getStatusCode(err error) int {
 		return http.StatusOK
 	}
 	switch err {
+	case domain.ErrBadParamInput:
+		return http.StatusBadRequest
 	case domain.ErrInternalServerError:
 		return http.StatusInternalServerError
 	case domain.ErrNotFound:

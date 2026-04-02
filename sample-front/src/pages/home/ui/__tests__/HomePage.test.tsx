@@ -1,11 +1,15 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { HomePage } from "@/pages/home/ui/HomePage";
 import { apiFetch } from "@/shared/api/client";
+import { HomePage } from "../HomePage";
 
 vi.mock("@/shared/api/client", () => ({
   apiFetch: vi.fn(),
+}));
+
+vi.mock("../GroupList", () => ({
+  GroupList: () => <div>mock group list</div>,
 }));
 
 describe("HomePage", () => {

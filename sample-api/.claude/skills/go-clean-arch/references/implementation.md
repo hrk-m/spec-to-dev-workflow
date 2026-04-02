@@ -1,10 +1,74 @@
 # 実装パターン
 
-> このファイルはテンプレート。最終的には対象パッケージの既存コードを正とする。
+> このファイルはテンプレート。最終的には `SKILL.md` の MUST ルールと repo-wide invariants を正とし、既存コードは観察元として使う。
+
+## DB Migration の置き場
+
+この skill では、DB migration file は repo ルートの `db/migrations/` を標準とする。
+
+- schema 変更 SQL: `db/migrations/`
+- 実行コードや runner: `cmd/...`, `app/...`, `Makefile`, CI, Docker entrypoint`
+- 置かない場所: `domain/`, `{domain}/service.go`, `internal/rest/`, `internal/repository/mysql/`
+
+既存 repo に単発の `schema.sql` や `article.sql` があっても、新規 migration は `db/migrations/` に寄せる。
+
+## 実装前チェック
+
+新機能を追加する前に、まず次を行う。
+
+1. 同じドメインの service / rest / repository / test を読む
+2. 最も近い既存機能を 1 つ決める
+3. その既存機能の naming、引数順、error 処理、テスト構成を真似る
+4. 新しい抽象化を足す前に、既存ファイルへ素直に追加できないか確認する
+
+このファイルのサンプルは出発点であって、実際の追加先では近傍コードが優先。
+
+## 既存コード整列前チェック
+
+既存コードをスキル準拠に寄せるときは、まず次を行う。
+
+1. どの MUST ルールや invariant から外れているかを特定する
+2. 変更単位を 1 file / 1 package / 1 usecase に閉じられるか確認する
+3. 近傍コードの naming と責務分割は維持できるか確認する
+4. mock と test を同じ変更で追随できるか確認する
+
+整列の目的は「全置換」ではなく、「repo-wide ルールへ安全に寄せること」。
+
+## 写経元の決め方
+
+追加実装では、毎回「最も近い既存機能」を 1 つ決める。
+
+優先順位:
+
+1. 同じファイル内の近い責務
+2. 同じ package 内の近い責務
+3. 同じ層の別ドメイン実装
+4. この reference のサンプル
+
+合わせる対象:
+
+- file 配置
+- type 名、method 名
+- 引数順
+- error の返し方
+- HTTP response 形式
+- SQL の列順、改行、引数順
+- test の粒度
+
+合わせない対象:
+
+- error 握り潰し
+- close 漏れ、`rows.Err()` 未確認
+- status map 漏れ
+- テスト不足
+
+写経元が `SKILL.md` の MUST ルールと矛盾する場合は、写経元ではなく整列対象として扱う。
 
 ## ディレクトリ構造
 
 ```text
+db/
+├── migrations/
 {domain}/
 ├── mocks/
 │   └── FooRepository.go   ← 手動作成・手動保守
@@ -108,6 +172,7 @@ func (s *Service) Delete(ctx context.Context, id int64) error {
 - service 層は adapter 実装を import しない
 - `time.Now()` 更新のような薄いユースケースロジックは service に置く
 - repository mock は `mocks/` 配下に手動作成する
+- 既存ドメインの機能追加なら、新しい service file を増やす前に既存 `service.go` への追加を優先する
 
 ---
 
@@ -158,6 +223,11 @@ func (m *FooRepository) fetch(ctx context.Context, query string, args ...interfa
 		result = append(result, item)
 	}
 
+	if err = rows.Err(); err != nil {
+		logrus.Error(err)
+		return nil, err
+	}
+
 	return result, nil
 }
 
@@ -187,8 +257,8 @@ func (m *FooRepository) Store(ctx context.Context, f *domain.Foo) error {
 	if err != nil {
 		return err
 	}
+	defer stmt.Close()
 
-	// stmt.Close() の扱いは対象ファイルの既存パターンに合わせる。
 	res, err := stmt.ExecContext(ctx, f.Name, f.UpdatedAt, f.CreatedAt)
 	if err != nil {
 		return err
@@ -208,6 +278,7 @@ func (m *FooRepository) Update(ctx context.Context, f *domain.Foo) error {
 	if err != nil {
 		return err
 	}
+	defer stmt.Close()
 
 	res, err := stmt.ExecContext(ctx, f.Name, f.UpdatedAt, f.ID)
 	if err != nil {
@@ -229,8 +300,10 @@ func (m *FooRepository) Update(ctx context.Context, f *domain.Foo) error {
 
 - mysql adapter は service / handler パッケージに依存しない
 - cursor は helper に寄せる
-- `PrepareContext` の後処理や `rows.Err()` の扱いは、対象ファイルの既存スタイルに揃える
+- 近傍コードの query style は真似てよいが、resource の close や `rows.Err()` 確認のような安全性は落とさない
+- 既存 repository 実装がこの safety line を満たしていなければ、legacy drift として整列対象にする
 - レビュー時は「近傍コードとの一貫性」を先に確認する
+- SQL の改行、列順、引数順も近傍クエリに合わせる
 
 ---
 
@@ -299,6 +372,7 @@ func (h *FooHandler) GetByID(c echo.Context) error {
 - service 起点のエラーは `ResponseError` で返す
 - 新しい domain エラーを client-visible にするなら `getStatusCode` も更新する
 - service mock は `internal/rest/mocks/` 配下に手動作成する
+- 既存 endpoint を増やすときは、route 登録順や handler メソッド名も近傍コードに揃える
 
 ---
 
@@ -311,3 +385,5 @@ rest.NewFooHandler(e, svc)
 ```
 
 `app/main.go` では配線だけを行い、ユースケース判断は service に残す。
+
+既存ドメインの機能追加で新しい依存が不要なら、`app/main.go` は触らない。

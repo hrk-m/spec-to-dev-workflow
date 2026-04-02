@@ -15,17 +15,21 @@
 3 層に明確に分離し、依存方向を内側（domain）に向ける。
 
 ```
-internal/rest/  →  hello/  →  domain/
-  (delivery)     (use case)   (entity)
+internal/rest/              →  {feature}/           →  domain/
+  (delivery)                   (use case)              (entity)
+internal/repository/mysql/  →  {feature} repository IF
+  (repository adapter)
+db/migrations/              →  DB 初期化 SQL
 ```
 
 - `domain/`: フレームワーク依存ゼロ。純粋な struct とセンチネルエラーのみ
-- `hello/` など機能別パッケージ: ビジネスロジックを実装、`domain` に依存
+- `hello/`, `group/` など機能別パッケージ: ビジネスロジックを実装し、repository interface を宣言する
+- `internal/repository/mysql/`: MySQL ベースの repository adapter を実装する
 - `internal/rest/`: Echo ハンドラ。上位層のインターフェースを定義し、DI で受け取る
 
 ### インターフェース定義の配置
 
-インターフェースは**呼び出し元（delivery 層）**で定義する。たとえば `HelloService` は `internal/rest/` パッケージが定義し、`hello/` パッケージが実装する。これにより delivery 層が use case 層に依存しない。
+インターフェースは**消費側**で定義する。たとえば `HelloService` と `GroupService` は `internal/rest/` が定義し、`GroupRepository` は `group/` が定義する。これにより delivery 層と use case 層が実装詳細に依存しない。
 
 ### エラーハンドリング
 
@@ -42,7 +46,8 @@ internal/rest/  →  hello/  →  domain/
 
 ## テスト方針
 
-- **use case 層**: 実体を直接インスタンス化してテスト（モック不要）
-- **delivery 層**: `testify/mock` で use case をモック化し、httptest でエンドポイントを検証
-  - mock はテストファイル内にインライン定義する（`mocks/` ディレクトリは使用しない）
+- **use case 層**: repository interface を小さな mock で差し替えてテストする
+- **delivery 層**: `testify/mock` で use case をモック化し、httptest でエンドポイントを検証する
+- **repository 層**: in-memory 実装または MySQL integration test で振る舞いを検証する
+- mock は実装変更と同じ変更セットで追随させる
 - エラー系（センチネルエラー、予期しないエラー）のケースを必ず網羅する

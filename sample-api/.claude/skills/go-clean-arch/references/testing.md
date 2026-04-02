@@ -2,11 +2,26 @@
 
 > このファイルもテンプレート。期待値の置き方は対象パッケージの既存テストを優先する。
 
+## テスト追加前チェック
+
+新機能のテストを書く前に、同じドメインの既存テストを読む。
+
+- service の追加なら同じ package の service_test
+- handler の追加なら同じ package の rest_test
+- repository の追加なら同じ package の mysql_test
+
+新しいテストスタイルを持ち込まず、最も近い既存ケースの構造を真似る。
+実装を追加したら、同じ変更セットで影響層のテストも更新する。
+既存コード整列でも、修正した drift を捕まえる regression test を同じ変更で足す。
+
 ## 基本方針
 
 - テストパッケージは外部パッケージ (`package foo_test`, `package rest_test`, `package mysql_test`)
 - mock は手動作成し、通常のソースとして保守する
 - 成功系だけでなく、エラー系と境界条件も見る
+- interface を変えたら mock とテストを同時に直す
+- handler の status や response 形式を変えたら handler test で明示的に確認する
+- 既存コード整列なら「何が直ったか」を落とし込むテストを最低 1 本は追加検討する
 
 ---
 
@@ -16,6 +31,7 @@
 - service mock は `internal/rest/mocks/` に置く
 - interface 全体を機械的に複製するより、実際のテストで使うメソッドを明示した小さな mock を優先する
 - テストケースが少ない場合は、テストファイル内のローカル stub でもよい
+- interface を変更したら、その変更セットで mock も直す
 
 例:
 
@@ -97,6 +113,7 @@ func TestFooGetByID(t *testing.T) {
 - service が repository エラーをどう伝搬するか
 - `Update` の時刻更新など、service 固有ロジックがあるか
 - `Store` / `Delete` の事前存在確認や conflict 判定があるか
+- 既存 service test の `t.Run` 粒度や assertion の置き方に揃っているか
 
 ---
 
@@ -151,6 +168,7 @@ func TestStoreFoo(t *testing.T) {
 - production code が `PrepareContext` を使うなら `ExpectPrepare` を使う
 - `QueryContext` / `QueryRowContext` 直呼びなら `ExpectQuery` を使う
 - cursor decode 失敗、not found、affected rows mismatch などの分岐も必要に応じて追加する
+- SQL 文字列の比較方法も既存テストの粒度に揃える
 
 ---
 
@@ -209,6 +227,7 @@ func TestFooGetByID(t *testing.T) {
 - `Bind` / validation error のレスポンス形式
 - `domain.ErrNotFound` / `domain.ErrConflict` / internal error のマッピング
 - `Fetch` 系なら `X-Cursor` ヘッダ
+- 既存 handler test と同じ request 組み立て方、path 設定、assertion 順を使う
 
 ---
 
@@ -223,3 +242,6 @@ func TestFooGetByID(t *testing.T) {
 - repository / service から予期しない error が返る path
 
 既存コードが軽めのテストでも、追加分では分岐の意味がある箇所を優先して押さえる。
+
+機能追加では「実装だけ先に入れてテストは後回し」にしない。少なくとも影響した層の主要分岐は同じ変更で更新する。
+既存コード整列でも同様で、status map 修正、error 伝搬修正、validation 修正のような挙動差分は test で固定する。

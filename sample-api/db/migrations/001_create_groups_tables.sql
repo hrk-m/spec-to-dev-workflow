@@ -1,0 +1,16 @@
+CREATE DATABASE IF NOT EXISTS sample;
+USE sample;
+
+CREATE TABLE IF NOT EXISTS `groups` (
+  id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  name        VARCHAR(255) NOT NULL,
+  description TEXT         NOT NULL,
+  deleted_at  DATETIME     NULL
+);
+
+CREATE TABLE IF NOT EXISTS group_members (
+  id       BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  group_id BIGINT UNSIGNED NOT NULL,
+  name     VARCHAR(255) NOT NULL,
+  FOREIGN KEY (group_id) REFERENCES `groups`(id)
+);

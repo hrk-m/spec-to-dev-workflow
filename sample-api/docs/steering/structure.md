@@ -4,7 +4,10 @@
 
 ```
 sample-api/
-├── main.go              # DI 配線とサーバー起動
+├── app/
+│   └── main.go          # DI 配線とサーバー起動
+├── db/
+│   └── migrations/      # DB schema migration
 ├── domain/              # コアドメイン層（フレームワーク依存ゼロ）
 │   ├── *.go             # ドメインモデル（struct + json タグ）
 │   └── errors.go        # センチネルエラーの一元管理
@@ -12,6 +15,9 @@ sample-api/
 │   ├── service.go       # Service struct + コンストラクタ + メソッド
 │   └── service_test.go  # 外部テストパッケージ (package {feature}_test)
 └── internal/
+    ├── repository/
+    │   └── mysql/       # Repository adapter（MySQL 実装）
+    │       └── {feature}.go
     └── rest/            # Delivery 層（Echo ハンドラ）
         ├── {feature}.go       # ハンドラ + インターフェース定義 + ルート登録
         ├── {feature}_test.go  # モックを使ったハンドラテスト
@@ -29,7 +35,7 @@ sample-api/
 | ハンドラ登録関数 | `New{Feature}Handler` | `rest.NewHelloHandler(e, svc)` |
 | インターフェース | `{Feature}Service` | `rest.HelloService` |
 
-## DI パターン（main.go）
+## DI パターン（app/main.go）
 
 ```go
 e := echo.New()
@@ -45,7 +51,8 @@ rest.NewHelloHandler(e, svc)      // delivery 層に注入してルート登録
 
 1. `domain/{model}.go` にドメインモデルを定義
 2. `{feature}/service.go` にユースケースを実装
-3. `internal/rest/{feature}.go` にハンドラとインターフェースを定義
-4. `main.go` で DI 配線とルート登録を追加
+3. `internal/repository/mysql/{feature}.go` に Repository adapter を実装
+4. `internal/rest/{feature}.go` にハンドラとインターフェースを定義
+5. `app/main.go` で DI 配線とルート登録を追加
 
 詳細は `CLAUDE.md` の `/go-clean-arch` スキルを参照。

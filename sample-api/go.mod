@@ -3,11 +3,13 @@ module github.com/hrk-m/spec-to-dev-workflow/sample-api
 go 1.25.0
 
 require (
+	github.com/go-sql-driver/mysql v1.9.3
 	github.com/labstack/echo/v4 v4.15.1
 	github.com/stretchr/testify v1.11.1
 )
 
 require (
+	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/labstack/gommon v0.4.2 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
