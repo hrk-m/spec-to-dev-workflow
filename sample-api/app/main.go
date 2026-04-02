@@ -13,7 +13,6 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 
 	groupSvc "github.com/hrk-m/spec-to-dev-workflow/sample-api/group"
-	helloSvc "github.com/hrk-m/spec-to-dev-workflow/sample-api/hello"
 	mysqlRepo "github.com/hrk-m/spec-to-dev-workflow/sample-api/internal/repository/mysql"
 	"github.com/hrk-m/spec-to-dev-workflow/sample-api/internal/rest"
 )
@@ -47,9 +46,6 @@ func main() {
 
 	e := echo.New()
 	e.Use(middleware.CORS())
-
-	svc := helloSvc.NewService()
-	rest.NewHelloHandler(e, svc)
 
 	groupRepo := mysqlRepo.NewGroupRepository(db)
 	gSvc := groupSvc.NewService(groupRepo)

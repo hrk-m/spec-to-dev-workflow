@@ -6,38 +6,45 @@ inclusion: always
 
 ## スタック
 
-| カテゴリ | 技術 |
-|---|---|
-| ランタイム / バンドラー | Bun |
-| UI ライブラリ | React 19 |
-| 言語 | TypeScript (strict) |
-| テスト | Vitest + Testing Library (jsdom) |
-| リント | oxlint |
-| フォーマット | Prettier + `@ianvs/prettier-plugin-sort-imports` |
+| カテゴリ                | 技術                                             |
+| ----------------------- | ------------------------------------------------ |
+| ランタイム / バンドラー | Bun                                              |
+| UI ライブラリ           | React 19                                         |
+| 言語                    | TypeScript (strict)                              |
+| テスト                  | Vitest + Testing Library (jsdom)                 |
+| リント                  | oxlint                                           |
+| フォーマット            | Prettier + `@ianvs/prettier-plugin-sort-imports` |
 
 ## 主要な決定事項
 
 ### Bun ファースト
-開発サーバー・ビルド・テスト実行をすべて Bun で統一。`bun --hot` による HMR、`bun build` による本番バンドルを利用。
+
+開発サーバー・ビルド・テスト実行をすべて Bun で統一。`bun --hot` による HMR、`bun build`
+による本番バンドルを利用。
 
 ### パスエイリアス
+
 `@/` は `src/` を指す。すべての内部インポートは相対パスではなく `@/` を使う。
 
 ```ts
 // Good
 import { apiFetch } from "@/shared/api/client";
-
 // Bad
 import { apiFetch } from "../../shared/api/client";
 ```
 
 ### 環境変数
-`BUN_PUBLIC_*` プレフィックスを使用。`.env` に `BUN_PUBLIC_API_URL` を設定することで API ベース URL を上書き可能。デフォルトは `http://localhost:8080`。
+
+`BUN_PUBLIC_*` プレフィックスを使用。`.env` に `BUN_PUBLIC_API_URL`
+を設定することで API ベース URL を上書き可能。デフォルトは `http://localhost:8080`。
 
 ### リント構成
-oxlint を使用（`.oxlintrc.json`）。プラグイン: `import`, `typescript`, `unicorn`。カテゴリレベル: `correctness: error`, `suspicious: warn`, `perf: warn`。
+
+oxlint を使用（`.oxlintrc.json`）。プラグイン: `import`, `typescript`, `unicorn`。カテゴリレベル:
+`correctness: error`, `suspicious: warn`, `perf: warn`。
 
 **エラーレベルのルール:**
+
 - `import/no-cycle`: 循環インポート禁止
 - `import/no-relative-parent-imports`: 親ディレクトリへの相対インポート禁止（`@/` エイリアスを使う）
 - `typescript/no-unused-vars`: 未使用変数はエラー
@@ -50,24 +57,30 @@ oxlint を使用（`.oxlintrc.json`）。プラグイン: `import`, `typescript`
 - `unicorn/prefer-number-properties`: `Number.isNaN` 等のプロパティ使用を推奨
 
 **警告レベルのルール:**
+
 - `no-console`: コンソール出力は警告
 - `typescript/no-explicit-any`: `any` 型の使用は警告
 - `typescript/no-non-null-assertion`: 非 null アサーション（`!`）は警告
 - `typescript/consistent-type-imports`: 型インポートは `type` キーワードを推奨
 
 **明示的に無効化しているルール:**
+
 - `no-unused-vars`: off（`typescript/no-unused-vars` で代替）
 - `import/no-named-as-default`: off
 - `import/no-named-as-default-member`: off
 - `import/no-unassigned-import`: off
 
 ### フォーマット構成
-Prettier + `@ianvs/prettier-plugin-sort-imports`（`.prettierrc.mjs`）でインポート順を FSD レイヤー順に自動整列。
+
+Prettier +
+`@ianvs/prettier-plugin-sort-imports`（`.prettierrc.mjs`）でインポート順を FSD レイヤー順に自動整列。
+
 - `printWidth: 100`, `singleQuote: false`, `semi: true`, `trailingComma: "all"`
 - `tabWidth: 2`, `arrowParens: "always"`, `proseWrap: "always"`, `endOfLine: "lf"`
 - インポート順: React → サードパーティ → `@/app` → `@/pages` → `@/shared` → 相対パス
 
 ### テスト構成
+
 - `vitest.config.ts` で React plugin と jsdom を設定済み
 - セットアップファイル: `src/test/setup.ts`（`@testing-library/jest-dom` のインポート）
 - カバレッジ: `vitest run --coverage`（v8 プロバイダー）

@@ -36,12 +36,12 @@ sample-api/
 
 | 要素 | パターン | 例 |
 |------|---------|-----|
-| ユースケースパッケージ | 機能名（小文字） | `hello`, `group` |
-| Service 型 | `Service` | `hello.Service`, `group.Service` |
-| コンストラクタ | `New{Type}` | `hello.NewService()`, `group.NewService(repo)` |
-| ハンドラ型 | `{Feature}Handler` | `rest.HelloHandler`, `rest.GroupHandler` |
-| ハンドラ登録関数 | `New{Feature}Handler` | `rest.NewHelloHandler(e, svc)`, `rest.NewGroupHandler(e, svc)` |
-| Service IF（rest 側） | `{Feature}Service` | `rest.HelloService`, `rest.GroupService` |
+| ユースケースパッケージ | 機能名（小文字） | `group` |
+| Service 型 | `Service` | `group.Service` |
+| コンストラクタ | `New{Type}` | `group.NewService(repo)` |
+| ハンドラ型 | `{Feature}Handler` | `rest.GroupHandler` |
+| ハンドラ登録関数 | `New{Feature}Handler` | `rest.NewGroupHandler(e, svc)` |
+| Service IF（rest 側） | `{Feature}Service` | `rest.GroupService` |
 | Repository IF（feature 側） | `{Feature}Repository` | `group.GroupRepository` |
 | Repository 実装 | `{Feature}Repository` | `mysql.GroupRepository`, `inmem.GroupRepository` |
 | テスト内 mock 型 | `mock{Feature}{IF}` | `mockGroupRepository`, `mockGroupService` |
@@ -52,17 +52,13 @@ sample-api/
 e := echo.New()
 e.Use(middleware.CORS())           // ミドルウェア登録
 
-// hello: repository 不要のシンプルなパターン
-svc := hello.NewService()
-rest.NewHelloHandler(e, svc)
-
 // group: repository → service → handler の標準パターン
 groupRepo := mysql.NewGroupRepository(db)
 gSvc := group.NewService(groupRepo)
 rest.NewGroupHandler(e, gSvc)
 ```
 
-新しいドメインを追加する場合は group パターン（Repository → Service → Handler）を踏襲する。hello は repository 不要の特殊ケース。
+新しいドメインを追加する場合は group パターン（Repository → Service → Handler）を踏襲する。
 
 ## 新規ドメイン追加時の手順
 

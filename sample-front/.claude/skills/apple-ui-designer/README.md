@@ -1,10 +1,10 @@
 # Apple UI Designer
 
-A design skill that applies iOS Human Interface Guidelines and modern Apple design language. Interfaces feel native, calm, and inevitable — like first-party Apple apps.
+A design skill that applies Apple design language to web interfaces. Interfaces feel calm, refined, and inevitable — like first-party Apple web experiences.
 
 ## Design Philosophy
 
-- **Native over custom** — System components feel right
+- **Apple-style over custom** — Apple design patterns feel right
 - **Subtle over expressive** — Confidence without noise
 - **Calm and human** — Respectful of user attention
 - **"Feels obvious"** — Not "looks fancy"
@@ -13,7 +13,7 @@ A design skill that applies iOS Human Interface Guidelines and modern Apple desi
 
 ![Apple Music UX Case Study - Dock](../../images/apple.png)
 
-This Apple Music "Now Playing" UX case study by Jaymie Gill demonstrates key principles of Apple-native design:
+This Apple Music "Now Playing" UX case study by Jaymie Gill demonstrates key principles of Apple-style design:
 
 ### Dock Pattern Analysis
 
@@ -25,7 +25,7 @@ The four screens showcase progressive disclosure and contextual UI expansion:
 
 3. **Audio Routing** — AirPods status and device indicators appear in a compact dock without disrupting the main interface.
 
-4. **Expanded Sheet** — AirPlay device selection uses a native bottom sheet with clear hierarchy. Background content blurs to maintain focus.
+4. **Expanded Panel** — AirPlay device selection uses an Apple-style overlay panel with clear hierarchy. Background content blurs to maintain focus.
 
 ### Key Design Principles Demonstrated
 
@@ -33,10 +33,10 @@ The four screens showcase progressive disclosure and contextual UI expansion:
 |-----------|----------------|
 | **Translucency & Depth** | Frosted glass effect on dock and sheets creates layered hierarchy |
 | **Progressive Disclosure** | Information reveals contextually, not all at once |
-| **System-like Components** | Native bottom sheets, standard control layouts |
-| **Touch Target Clarity** | Large, comfortable hit areas for playback controls |
+| **Apple-style Components** | Apple-inspired sheets, standard control layouts |
+| **Click Target Clarity** | Large, comfortable hit areas for controls |
 | **Color Restraint** | Accent color (pink) used sparingly for brand identity |
-| **Gesture-first** | Swipe-up dock, drag-to-dismiss sheets |
+| **Interaction-first** | Hover states, smooth panel transitions, drag-to-dismiss |
 
 ### Typography Usage
 
@@ -46,17 +46,17 @@ The four screens showcase progressive disclosure and contextual UI expansion:
 
 ### Motion & Interaction
 
-- Dock slides with natural spring physics
-- Background blur animates smoothly with sheet presentation
+- Panels slide and expand with natural spring physics
+- Background blur animates smoothly with overlay presentation
 - All transitions feel calm and intentional
 
 ## When to Use This Skill
 
-- iOS-native mobile apps
-- Apps requiring Human Interface Guidelines compliance
-- Native-feeling system UI components
+- Web UI applying Apple design language
+- Apps requiring clean, refined Apple-style aesthetics
+- Apple-style UI components for web applications
 - Music, media, or content playback interfaces
-- Any interface that should feel "Apple-like"
+- Any web interface that should feel "Apple-like"
 
 ## Usage
 

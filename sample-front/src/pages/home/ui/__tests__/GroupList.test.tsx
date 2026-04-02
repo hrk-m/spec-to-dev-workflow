@@ -73,9 +73,9 @@ describe("GroupList", () => {
     render(<GroupList />);
 
     await waitFor(() => {
-      expect(screen.getByText("Page 1")).toBeInTheDocument();
+      expect(screen.getByText("Page 1 of 1")).toBeInTheDocument();
     });
-    expect(screen.getByText("Total: 2")).toBeInTheDocument();
+    expect(screen.getByText("Showing 2 of 2 groups")).toBeInTheDocument();
   });
 
   it("API がエラーの場合はエラーメッセージを表示する", async () => {
@@ -104,7 +104,7 @@ describe("GroupList", () => {
       expect(screen.getByText("Engineering")).toBeInTheDocument();
     });
 
-    const searchInput = screen.getByPlaceholderText("Search groups...");
+    const searchInput = screen.getByPlaceholderText("Search by name or description");
     await user.clear(searchInput);
     await user.type(searchInput, "Eng");
 
@@ -115,7 +115,7 @@ describe("GroupList", () => {
     });
   });
 
-  it("次ページボタンで次のページに遷移できる", async () => {
+  it("Load More ボタンで次のページに遷移できる", async () => {
     const user = userEvent.setup();
     const multiPageResponse: GroupsResponse = {
       ...mockGroupsResponse,
@@ -134,42 +134,15 @@ describe("GroupList", () => {
       expect(screen.getByText("Engineering")).toBeInTheDocument();
     });
 
-    const nextButton = screen.getByRole("button", { name: "Next" });
-    await user.click(nextButton);
+    const loadMoreButton = screen.getByRole("button", { name: "Load More" });
+    await user.click(loadMoreButton);
 
     await waitFor(() => {
       expect(vi.mocked(fetchGroups)).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2 }));
     });
   });
 
-  it("前ページボタンで前のページに遷移できる", async () => {
-    const user = userEvent.setup();
-    const page2Response: GroupsResponse = {
-      ...mockGroupsResponse,
-      pagination: { total: 20, page: 2, limit: 10 },
-    };
-    vi.mocked(fetchGroups).mockResolvedValueOnce(page2Response);
-
-    render(<GroupList />);
-
-    await waitFor(() => {
-      expect(screen.getByText("Page 2")).toBeInTheDocument();
-    });
-
-    vi.mocked(fetchGroups).mockResolvedValueOnce({
-      ...mockGroupsResponse,
-      pagination: { total: 20, page: 1, limit: 10 },
-    });
-
-    const prevButton = screen.getByRole("button", { name: "Previous" });
-    await user.click(prevButton);
-
-    await waitFor(() => {
-      expect(vi.mocked(fetchGroups)).toHaveBeenLastCalledWith(expect.objectContaining({ page: 1 }));
-    });
-  });
-
-  it("1ページ目では Previous ボタンが無効になる", async () => {
+  it("最終ページでは Load More ボタンを表示しない", async () => {
     vi.mocked(fetchGroups).mockResolvedValueOnce(mockGroupsResponse);
 
     render(<GroupList />);
@@ -178,21 +151,7 @@ describe("GroupList", () => {
       expect(screen.getByText("Engineering")).toBeInTheDocument();
     });
 
-    const prevButton = screen.getByRole("button", { name: "Previous" });
-    expect(prevButton).toBeDisabled();
-  });
-
-  it("最終ページでは Next ボタンが無効になる", async () => {
-    vi.mocked(fetchGroups).mockResolvedValueOnce(mockGroupsResponse);
-
-    render(<GroupList />);
-
-    await waitFor(() => {
-      expect(screen.getByText("Engineering")).toBeInTheDocument();
-    });
-
-    const nextButton = screen.getByRole("button", { name: "Next" });
-    expect(nextButton).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Load More" })).not.toBeInTheDocument();
   });
 
   it("タイトルを表示する", () => {
@@ -201,5 +160,17 @@ describe("GroupList", () => {
     render(<GroupList />);
 
     expect(screen.getByRole("heading", { name: "Groups" })).toBeInTheDocument();
+  });
+
+  it("セクションヘッダーを表示する", async () => {
+    vi.mocked(fetchGroups).mockResolvedValueOnce(mockGroupsResponse);
+
+    render(<GroupList />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Engineering")).toBeInTheDocument();
+    });
+
+    expect(screen.getByText("All Groups")).toBeInTheDocument();
   });
 });

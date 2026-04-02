@@ -1,0 +1,217 @@
+import { appColors } from "@/shared/ui/theme";
+
+const colors = {
+  separator: appColors.separator,
+  accent: appColors.accent,
+  background: appColors.background,
+  surfaceRaised: appColors.surfaceRaised,
+  errorBackground: appColors.errorBackground,
+  errorBorder: appColors.errorBorder,
+  error: appColors.error,
+  textPrimary: appColors.textPrimary,
+  textSecondary: appColors.textSecondary,
+  textSubtle: appColors.textSubtle,
+  textTertiary: appColors.textTertiary,
+  searchBackground: appColors.searchBackground,
+} as const;
+
+export const styles = {
+  container: {
+    width: "100%",
+    padding: "22px 16px 36px",
+  },
+  content: {
+    maxWidth: 720,
+    margin: "0 auto",
+  },
+  heroSection: {
+    paddingBottom: 6,
+  },
+  pageTitle: {
+    fontSize: 40,
+    fontWeight: 700,
+    letterSpacing: -0.7,
+    color: colors.textPrimary,
+    margin: "6px 0 0 0",
+    lineHeight: 1.02,
+  },
+  pageSubtitle: {
+    fontSize: 15,
+    color: colors.textSecondary,
+    margin: "8px 0 0 0",
+  },
+  searchSection: {
+    marginTop: 18,
+  },
+  searchField: {
+    width: "100%",
+    boxSizing: "border-box" as const,
+    background: colors.searchBackground,
+    borderRadius: 16,
+    boxShadow: `inset 0 0 0 1px ${colors.separator}`,
+  },
+  searchFieldIcon: {
+    width: 18,
+    height: 18,
+    display: "block",
+    color: colors.textSecondary,
+  },
+  listSection: {
+    marginTop: 26,
+  },
+  sectionHeader: {
+    display: "flex",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    gap: 12,
+    marginBottom: 12,
+    flexWrap: "wrap" as const,
+  },
+  sectionTitle: {
+    margin: 0,
+    fontSize: 15,
+    fontWeight: 600,
+    color: colors.textPrimary,
+    letterSpacing: -0.2,
+  },
+  sectionMeta: {
+    margin: 0,
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+  listCard: {
+    background: colors.surfaceRaised,
+    border: `1px solid ${colors.separator}`,
+    borderRadius: 22,
+    overflow: "hidden",
+    boxShadow: "0 18px 42px rgba(15, 23, 42, 0.06)",
+  },
+  rowBlock: {
+    padding: "18px 20px",
+    background: colors.surfaceRaised,
+  },
+  rowShell: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: 16,
+  },
+  rowContent: {
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: 6,
+    minWidth: 0,
+    flex: 1,
+  },
+  rowTitle: {
+    fontSize: 17,
+    fontWeight: 600,
+    color: colors.textPrimary,
+    margin: 0,
+    letterSpacing: -0.2,
+  },
+  rowDescription: {
+    fontSize: 14,
+    lineHeight: 1.45,
+    color: colors.textSubtle,
+    margin: 0,
+  },
+  rowMeta: {
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: 2,
+    flexShrink: 0,
+    minWidth: 92,
+  },
+  rowMetaLabel: {
+    fontSize: 12,
+    color: colors.textTertiary,
+    margin: 0,
+  },
+  rowMetaValue: {
+    fontSize: 14,
+    fontWeight: 600,
+    color: colors.textPrimary,
+    margin: 0,
+  },
+  rowBorder: {
+    borderBottom: `1px solid ${colors.separator}`,
+  },
+  footerSection: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 16,
+    flexWrap: "wrap" as const,
+    marginTop: 18,
+  },
+  footerMeta: {
+    margin: 0,
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+  loadMoreButton: {
+    minWidth: 132,
+  },
+  emptyState: {
+    marginTop: 26,
+    padding: "28px 24px",
+    textAlign: "center" as const,
+    background: colors.surfaceRaised,
+    border: `1px solid ${colors.separator}`,
+    borderRadius: 22,
+    boxShadow: "0 18px 42px rgba(15, 23, 42, 0.06)",
+  },
+  emptyStateTitle: {
+    margin: 0,
+    fontSize: 16,
+    fontWeight: 600,
+    color: colors.textPrimary,
+  },
+  emptyStateText: {
+    margin: "6px 0 0 0",
+    fontSize: 14,
+    lineHeight: 1.5,
+    color: colors.textSecondary,
+  },
+  errorCard: {
+    marginTop: 24,
+    padding: "18px 20px",
+    borderRadius: 18,
+    background: colors.errorBackground,
+    border: `1px solid ${colors.errorBorder}`,
+    color: colors.error,
+  },
+  inlineErrorCard: {
+    marginTop: 16,
+    borderRadius: 18,
+    background: colors.errorBackground,
+    border: `1px solid ${colors.errorBorder}`,
+  },
+  errorTitle: {
+    fontSize: 15,
+    fontWeight: 700,
+    margin: 0,
+  },
+  errorText: {
+    fontSize: 14,
+    lineHeight: 1.45,
+    margin: "6px 0 0 0",
+  },
+  skeletonStack: {
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: 10,
+    flex: 1,
+  },
+  skeletonMeta: {
+    display: "flex",
+    flexDirection: "column" as const,
+    gap: 8,
+    alignItems: "flex-start" as const,
+  },
+  skeletonLine: {
+    background: "rgba(118, 118, 128, 0.16)",
+    borderRadius: 999,
+    height: 12,
+  },
+} as const;

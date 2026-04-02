@@ -27,14 +27,14 @@ db/migrations/              →  DB schema migration
 ```
 
 - `domain/`: フレームワーク依存ゼロ。純粋な struct とセンチネルエラーのみ
-- `hello/`, `group/` など機能別パッケージ: ビジネスロジックを実装し、repository interface を宣言する
+- `group/` など機能別パッケージ: ビジネスロジックを実装し、repository interface を宣言する
 - `internal/repository/mysql/`: MySQL ベースの repository adapter を実装する
 - `internal/repository/inmem/`: in-memory の repository adapter を実装する（テスト・ローカル開発用）
 - `internal/rest/`: Echo ハンドラ。上位層のインターフェースを定義し、DI で受け取る
 
 ### インターフェース定義の配置
 
-インターフェースは**消費側**で定義する。たとえば `HelloService` と `GroupService` は `internal/rest/` が定義し、`GroupRepository` は `group/` が定義する。これにより delivery 層と use case 層が実装詳細に依存しない。
+インターフェースは**消費側**で定義する。たとえば `GroupService` は `internal/rest/` が定義し、`GroupRepository` は `group/` が定義する。これにより delivery 層と use case 層が実装詳細に依存しない。
 
 ### エラーハンドリング
 
