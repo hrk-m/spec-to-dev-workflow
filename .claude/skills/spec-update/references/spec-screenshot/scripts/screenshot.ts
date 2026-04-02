@@ -27,7 +27,7 @@ import type { ChildProcess } from "child_process";
 import { spawn } from "child_process";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const projectRoot = path.resolve(__dirname, "../../../..");
+const projectRoot = path.resolve(__dirname, "../../../../../..");
 const specDir = path.resolve(projectRoot, "specs");
 const outputDir = path.resolve(projectRoot, "specs/img");
 

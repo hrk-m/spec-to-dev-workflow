@@ -2,11 +2,11 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { fetchGroups } from "../../api/fetch-groups";
-import type { Group, GroupsResponse } from "../../model/group";
-import { GroupList } from "../GroupList";
+import { fetchGroups } from "@/pages/home/api/fetch-groups";
+import type { Group, GroupsResponse } from "@/pages/home/model/group";
+import { GroupList } from "@/pages/home/ui/GroupList";
 
-vi.mock("../../api/fetch-groups", () => ({
+vi.mock("@/pages/home/api/fetch-groups", () => ({
   fetchGroups: vi.fn(),
 }));
 

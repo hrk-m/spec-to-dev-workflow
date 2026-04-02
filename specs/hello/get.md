@@ -10,8 +10,7 @@
 
 <img src="../img/hello.png" width="400" alt="Hello 画面" />
 
-<details>
-<summary>スクリーンショット設定</summary>
+## スクリーンショット設定
 
 ```json
 {
@@ -22,8 +21,6 @@
   ]
 }
 ```
-
-</details>
 
 ---
 

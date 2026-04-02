@@ -29,11 +29,14 @@ src/
 - `index.ts` — Public API（barrel export）。**外部からは必ずここを経由してインポートする**
 - `ui/<Component>.tsx` — ページコンポーネント本体
 - `ui/__tests__/` — ページのテスト
+- `api/` — ページ固有の API 通信ロジック（必要に応じて配置）
+- `model/` — ページ固有の型定義・ドメインモデル（必要に応じて配置）
 
 **現在のページスライス:**
 | スライス | 状態 |
 |---|---|
-| `home` | 実装済み（`HomePage` コンポーネント + テスト） |
+| `home` | 実装済み（`HomePage` + `GroupList` コンポーネント、`api/fetch-groups.ts`、`model/group.ts`、テスト） |
+| `group-list` | スケルトンのみ（`api/`, `model/`, `ui/__tests__/` ディレクトリ構造のみ、ファイルなし） |
 | `todo` | スケルトンのみ（`ui/__tests__/` ディレクトリ構造のみ、ファイルなし） |
 | `todo-create` | スケルトンのみ（`ui/__tests__/` ディレクトリ構造のみ、ファイルなし） |
 | `todo-list` | スケルトンのみ（`ui/__tests__/` ディレクトリ構造のみ、ファイルなし） |

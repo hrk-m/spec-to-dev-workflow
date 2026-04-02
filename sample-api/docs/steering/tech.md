@@ -5,8 +5,10 @@
 - **言語**: Go 1.25
 - **HTTP フレームワーク**: Echo v4 (`labstack/echo`)
 - **ミドルウェア**: CORS（`echo/v4/middleware`）
+- **DB ドライバ**: `go-sql-driver/mysql`
 - **テスト**: testify (`assert` + `mock`)
 - **Lint**: golangci-lint v2
+- **インフラ**: Docker Compose（MySQL）
 
 ## アーキテクチャ決定
 
@@ -19,12 +21,15 @@ internal/rest/              →  {feature}/           →  domain/
   (delivery)                   (use case)              (entity)
 internal/repository/mysql/  →  {feature} repository IF
   (repository adapter)
-db/migrations/              →  DB 初期化 SQL
+internal/repository/inmem/  →  {feature} repository IF
+  (in-memory adapter, テスト用)
+db/migrations/              →  DB schema migration
 ```
 
 - `domain/`: フレームワーク依存ゼロ。純粋な struct とセンチネルエラーのみ
 - `hello/`, `group/` など機能別パッケージ: ビジネスロジックを実装し、repository interface を宣言する
 - `internal/repository/mysql/`: MySQL ベースの repository adapter を実装する
+- `internal/repository/inmem/`: in-memory の repository adapter を実装する（テスト・ローカル開発用）
 - `internal/rest/`: Echo ハンドラ。上位層のインターフェースを定義し、DI で受け取る
 
 ### インターフェース定義の配置
@@ -48,6 +53,7 @@ db/migrations/              →  DB 初期化 SQL
 
 - **use case 層**: repository interface を小さな mock で差し替えてテストする
 - **delivery 層**: `testify/mock` で use case をモック化し、httptest でエンドポイントを検証する
-- **repository 層**: in-memory 実装または MySQL integration test で振る舞いを検証する
+- **repository 層**: `internal/repository/inmem/` の in-memory 実装でユニットテスト、または MySQL integration test で振る舞いを検証する
+- mock は `mocks/` ディレクトリではなく、テストファイル内にインラインで定義する（`mockXxxRepository`, `mockXxxService` 型をテストファイルの先頭に配置）
 - mock は実装変更と同じ変更セットで追随させる
 - エラー系（センチネルエラー、予期しないエラー）のケースを必ず網羅する

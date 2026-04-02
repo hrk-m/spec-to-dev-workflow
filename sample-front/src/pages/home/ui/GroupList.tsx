@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
-import { fetchGroups } from "../api/fetch-groups";
-import type { Group, Pagination } from "../model/group";
+import { fetchGroups } from "@/pages/home/api/fetch-groups";
+import type { Group, Pagination } from "@/pages/home/model/group";
 
 const DEFAULT_LIMIT = 10;
 const SKELETON_ROWS = 3;
