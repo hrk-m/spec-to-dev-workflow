@@ -2,15 +2,30 @@
 
 > このファイルはテンプレート。最終的には `SKILL.md` の MUST ルールと repo-wide invariants を正とし、既存コードは観察元として使う。
 
-## DB Migration の置き場
+## DB Migration / Seed の置き場
 
-この skill では、DB migration file は repo ルートの `db/migrations/` を標準とする。
+この skill では、schema 変更と seed データを分離して管理する。
 
-- schema 変更 SQL: `db/migrations/`
-- 実行コードや runner: `cmd/...`, `app/...`, `Makefile`, CI, Docker entrypoint`
+### Migration（`db/migrate/`）
+
+- ツール: `golang-migrate`
+- ファイル命名: `YYYYMMDDHHMMSS_{table_name}.up.sql` / `YYYYMMDDHHMMSS_{table_name}.down.sql`
+  - 例: `20260403120000_create_groups.up.sql` / `20260403120000_create_groups.down.sql`
+- 内容: DDL のみ（CREATE TABLE, ALTER TABLE, DROP TABLE など）
+- Makefile: `make db-migrate` / `make db-rollback`
+
+### Seed（`db/seed/`）
+
+- ファイル命名: `001_groups.sql`（連番管理）
+- 内容: DML のみ（INSERT など）、冪等に設計する
+- Makefile: `make db-seed`
+
+### 実行コードや runner の置き場
+
+- `Makefile`, CI, Docker entrypoint
 - 置かない場所: `domain/`, `{domain}/service.go`, `internal/rest/`, `internal/repository/mysql/`
 
-既存 repo に単発の `schema.sql` や `article.sql` があっても、新規 migration は `db/migrations/` に寄せる。
+既存 repo に `db/migrations/` の単発 SQL があっても、新規 schema 変更は `db/migrate/` へ、seed は `db/seed/` へ寄せる。
 
 ## 実装前チェック
 
@@ -68,7 +83,13 @@
 
 ```text
 db/
-├── migrations/
+├── migrate/          ← schema 変更（DDL）, golang-migrate 形式
+│   ├── 20260403120000_create_groups.up.sql
+│   ├── 20260403120000_create_groups.down.sql
+│   └── ...
+└── seed/             ← 初期データ（DML のみ）
+    ├── 001_groups.sql
+    └── ...
 {domain}/
 ├── mocks/
 │   └── FooRepository.go   ← 手動作成・手動保守

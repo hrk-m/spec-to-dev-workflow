@@ -21,7 +21,8 @@ internal/rest/              →  {feature}/           →  domain/
   (delivery)                   (use case)              (entity)
 internal/repository/mysql/  →  {feature} repository IF
   (repository adapter)
-db/migrations/              →  DB schema migration
+db/migrate/                 →  DB schema migration (golang-migrate)
+db/seed/                    →  Seed data (DML only)
 ```
 
 - `domain/`: フレームワーク依存ゼロ。純粋な struct とセンチネルエラーのみ

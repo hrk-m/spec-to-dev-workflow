@@ -6,7 +6,7 @@ description: >
   の追加、既存ドメインへの機能追加、既存レイヤーの修正、DI 配線、テスト追加、エラーフロー確認、
   mock の作成・更新方針の確認で使う。新機能追加時は必ず対象ドメインの既存実装とテストを先に読み、
   最も近い既存機能を写経元にして最小差分で実装する。既存コードの整列・legacy drift の是正でも使う。
-  DB schema 変更は repo ルートの `db/migrations/` に置き、business layer には置かない。
+  DB schema 変更は repo ルートの `db/migrate/` に置き、seed データは `db/seed/` に置く。business layer には置かない。
 ---
 
 # go-clean-arch ガイド
@@ -39,7 +39,7 @@ repo-wide invariants と矛盾するなら、その既存コードは **legacy d
 - handler まで返す domain error は status map と test を追随させる
 - error 握り潰し、resource close 漏れ、`rows.Err()` 未確認を放置しない
 - 実装変更に対して mock と test を同じ変更セットで追随させる
-- DB migration は repo ルートの `db/migrations/` に置く
+- DB migration は repo ルートの `db/migrate/` に置く（seed は `db/seed/` に分離する）
 
 ### 1-2. 新機能追加時の基本姿勢
 
@@ -86,7 +86,8 @@ internal/
   rest/                    ← HTTP ハンドラ + Service Interface
   rest/mocks/              ← handler/service テスト用 mock（手動保守）
 db/
-  migrations/             ← DB schema migration（repo ルート）
+  migrate/               ← DB schema migration（golang-migrate, .up.sql / .down.sql）
+  seed/                  ← 初期データ（DML のみ、スキーマ変更は含めない）
 app/main.go                ← DI 配線・サーバー起動
 ```
 
@@ -130,7 +131,7 @@ README や references より、近傍コードの一貫性を優先する。
 - **既存ドメインの機能追加**なら、まず同じドメインの既存ファイルを拡張する
 - **新しいドメイン追加**が必要なときだけ、新しい `{domain}/` と対応する `internal/` 配下を作る
 - **既存コード整列**なら、まず同じ責務の既存ファイルを修正し、新しい package や abstraction は増やさない
-- **DB schema 変更**なら、migration file は repo ルートの `db/migrations/` に置く
+- **DB schema 変更**なら、migration file は repo ルートの `db/migrate/` に置く（seed データは `db/seed/` に分離する）
 - 迷ったら「新しい package を増やさず、既存 package の既存ファイルに足せるか」を先に検討する
 - 共通化のためだけの helper / util / 抽象 interface は追加しない
 
@@ -276,15 +277,35 @@ interface 変更時は mock も同じ変更セットで更新する。
 
 設定読み込み、接続初期化、DI、サーバ起動に限定する。
 
-### 7-7a. migration は `db/migrations/` に置く
+### 7-7a. migration は `db/migrate/` に置き、seed は `db/seed/` に置く
 
-DB schema 変更を入れるときは、migration file は repo ルートの `db/migrations/` に置く。
+DB schema 変更を入れるときは、migration file は repo ルートの `db/migrate/` に置く。
+初期データや開発用データは `db/seed/` に置き、schema 変更（DDL）とデータ投入（DML）を混在させない。
 
-- 置いてよい場所: `db/migrations/`
-- 実行責務を持たせてよい場所: `cmd/...`, `app/...`, `Makefile`, CI, Docker entrypoint
-- 置かない場所: `domain/`, `{domain}/service.go`, `internal/rest/`, `internal/repository/mysql/`
+**Migration（`db/migrate/`）**
+- ツール: `golang-migrate`
+- ファイル命名: `YYYYMMDDHHMMSS_{table_name}.up.sql` / `YYYYMMDDHHMMSS_{table_name}.down.sql`
+  - 例: `20260403120000_create_groups.up.sql` / `20260403120000_create_groups.down.sql`
+- 内容: DDL のみ（CREATE TABLE, ALTER TABLE, DROP TABLE など）
+- 適用履歴は `schema_migrations` テーブルで自動管理
+- Makefile: `make db-migrate`（未適用を順番に実行）/ `make db-rollback`（1 つ戻す）
 
-既存の単発 SQL が repo ルートにあっても、新規の schema 変更は `db/migrations/` へ寄せる。
+**Seed（`db/seed/`）**
+- ファイル命名: `001_groups.sql`, `002_users.sql`（連番で管理）
+- 内容: DML のみ（INSERT, TRUNCATE など）
+- Makefile: `make db-seed`（冪等に設計すること）
+
+**置いてよい場所**
+
+| 種別 | 場所 |
+|---|---|
+| Schema 変更 SQL | `db/migrate/` |
+| Seed データ SQL | `db/seed/` |
+| 実行コード・runner | `Makefile`, CI, Docker entrypoint |
+
+**置かない場所**: `domain/`, `{domain}/service.go`, `internal/rest/`, `internal/repository/mysql/`
+
+既存の `db/migrations/` の単発 SQL があっても、新規の schema 変更は `db/migrate/` へ、seed は `db/seed/` へ寄せる。
 
 ### 7-8. 新しい domain エラーを handler まで流すなら、ステータスマッピングも確認する
 
@@ -403,7 +424,8 @@ domain.ErrInternalServerError → 500
 - 追加前に対象ドメインの service / handler / repository / test / mock を読んだか
 - 写経元にする既存実装を 1 つ決めたか
 - 追加先は既存ドメインか新規ドメインか、または既存コード整列か
-- DB schema 変更なら `db/migrations/` に置いているか
+- DB schema 変更（DDL）なら `db/migrate/` に `.up.sql` / `.down.sql` ペアで置いているか
+- Seed データ（DML）なら `db/seed/` に置き、`db/migrate/` と混在していないか
 - service / handler / repository / test のどこまで触る必要があるか整理したか
 - interface を変えたなら実装・mock・テストを同時に更新したか
 - 既存の error / response / SQL / naming の形に揃っているか
