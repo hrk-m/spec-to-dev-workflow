@@ -40,8 +40,9 @@ allowed-tools: Read, AskUserQuestion
 | 5 | `impl-done` | **`/impl` が完了した後**。steering と specs/ をコードに同期する |
 | 6 | `api-context` | **バックエンドの実装前**（主にエージェントが自動ロード）。Go Clean Architecture の規約を確認する |
 | 7 | `front-context` | **フロントエンドの実装前**（主にエージェントが自動ロード）。FSD v2.1 の規約を確認する |
-| 8 | `skill-link` | **新しいスキルを api-context / front-context に登録したいとき** |
-| 9 | `spec-update` | **実装後に仕様書を最新化したいとき** |
+| 8 | `arch-review` | **実装後にアーキテクチャ規約への適合を確認・自動修正したいとき**。スキルを絶対的な正として違反を ralph-loop で修正する |
+| 9 | `skill-link` | **新しいスキルを api-context / front-context に登録したいとき** |
+| 10 | `spec-update` | **実装後に仕様書を最新化したいとき** |
 
 ---
 
@@ -58,8 +59,9 @@ allowed-tools: Read, AskUserQuestion
      5. `impl-done` — 実装完了後に steering と specs を同期する
      6. `api-context` — バックエンドの実装規約を確認する
      7. `front-context` — フロントエンドの実装規約を確認する
-     8. `skill-link` — スキルを api-context / front-context にリンクする
-     9. `spec-update` — specs/ を最新の実装に同期する
+     8. `arch-review` — アーキテクチャ規約への適合をチェック・自動修正する
+     9. `skill-link` — スキルを api-context / front-context にリンクする
+     10. `spec-update` — specs/ を最新の実装に同期する
 
 2. 選択に応じて返信候補をチャットに提示する。
 

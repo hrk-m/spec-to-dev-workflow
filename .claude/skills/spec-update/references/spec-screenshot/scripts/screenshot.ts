@@ -29,7 +29,6 @@ import { spawn } from "child_process";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, "../../../../../..");
 const specDir = path.resolve(projectRoot, "specs");
-const outputDir = path.resolve(projectRoot, "specs/img");
 
 const FRONT_PORT = Number(process.env.FRONT_PORT ?? 3000);
 const API_PORT = Number(process.env.API_PORT ?? 8080);
@@ -63,9 +62,9 @@ function extractConfig(markdown: string): ScenarioConfig | null {
   }
 }
 
-function loadScenarios(): Array<{ specName: string; config: ScenarioConfig }> {
+function loadScenarios(): Array<{ specName: string; specSubDir: string; config: ScenarioConfig }> {
   if (!fs.existsSync(specDir)) return [];
-  const results: Array<{ specName: string; config: ScenarioConfig }> = [];
+  const results: Array<{ specName: string; specSubDir: string; config: ScenarioConfig }> = [];
   const walk = (dir: string) => {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
       const fullPath = path.join(dir, entry.name);
@@ -75,7 +74,8 @@ function loadScenarios(): Array<{ specName: string; config: ScenarioConfig }> {
         const content = fs.readFileSync(fullPath, "utf-8");
         const config = extractConfig(content);
         if (config) {
-          results.push({ specName: path.basename(entry.name, ".md"), config });
+          const specSubDir = path.relative(specDir, path.dirname(fullPath));
+          results.push({ specName: path.basename(entry.name, ".md"), specSubDir, config });
         }
       }
     }
@@ -110,7 +110,7 @@ function startProcess(cmd: string, args: string[], cwd: string): ChildProcess {
 
 // ── シナリオ実行 ──────────────────────────────────────────────
 
-async function runScenario(config: ScenarioConfig, page: Page): Promise<void> {
+async function runScenario(config: ScenarioConfig, page: Page, specSubDir: string): Promise<void> {
   for (const step of config.steps) {
     if ("goto" in step) {
       await page.goto(step.goto, { waitUntil: "networkidle", timeout: 15000 });
@@ -122,19 +122,21 @@ async function runScenario(config: ScenarioConfig, page: Page): Promise<void> {
         .getByRole(step.click.role as Parameters<Page["getByRole"]>[0], { name: step.click.name })
         .click();
       await page.waitForTimeout(300);
-      if (step.screenshot) await capture(page, step.screenshot);
+      if (step.screenshot) await capture(page, step.screenshot, specSubDir);
     } else if ("fill" in step) {
       await page.getByRole("textbox", { name: step.fill.name }).fill(step.fill.value);
       await page.waitForTimeout(300);
-      if (step.screenshot) await capture(page, step.screenshot);
+      if (step.screenshot) await capture(page, step.screenshot, specSubDir);
     } else if ("screenshot" in step) {
-      await capture(page, step.screenshot);
+      await capture(page, step.screenshot, specSubDir);
     }
   }
 }
 
-async function capture(page: Page, name: string): Promise<void> {
-  const filePath = path.join(outputDir, `${name}.png`);
+async function capture(page: Page, name: string, specSubDir: string): Promise<void> {
+  const dir = path.join(specDir, specSubDir, "img");
+  fs.mkdirSync(dir, { recursive: true });
+  const filePath = path.join(dir, `${name}.png`);
   await page.screenshot({ path: filePath, fullPage: true });
   console.log(`  → ${filePath}`);
 }
@@ -152,8 +154,6 @@ if (scenarios.length === 0) {
 }
 
 console.log(`${scenarios.length} シナリオを検出:`, scenarios.map((s) => s.specName).join(", "));
-
-fs.mkdirSync(outputDir, { recursive: true });
 
 // サーバー起動（未起動の場合のみ）
 const apiRunning = await isReachable(`http://localhost:${API_PORT}/hello`);
@@ -180,11 +180,11 @@ if (!frontRunning) {
 const browser = await chromium.launch({ headless: true });
 
 try {
-  for (const { specName, config } of scenarios) {
-    console.log(`\n[${specName}]`);
+  for (const { specName, specSubDir, config } of scenarios) {
+    console.log(`\n[${specName}] (${specSubDir})`);
     const page = await browser.newPage();
     await page.setViewportSize({ width: 1280, height: 800 });
-    await runScenario(config, page);
+    await runScenario(config, page, specSubDir);
     await page.close();
   }
 } finally {

@@ -9,15 +9,9 @@ type Group struct {
 	MemberCount int    `json:"member_count"`
 }
 
-// Pagination represents pagination metadata for list responses.
-type Pagination struct {
-	Total int `json:"total"`
-	Page  int `json:"page"`
-	Limit int `json:"limit"`
-}
-
-// GroupListResponse represents the response payload for listing groups.
-type GroupListResponse struct {
-	Groups     []Group    `json:"groups"`
-	Pagination Pagination `json:"pagination"`
+// GroupMember represents a member of a group.
+type GroupMember struct {
+	ID        uint64 `json:"id"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
 }

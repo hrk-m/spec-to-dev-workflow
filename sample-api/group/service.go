@@ -11,11 +11,19 @@ const (
 	minPage  = 1
 	minLimit = 1
 	maxLimit = 100
+
+	minID              = 1
+	minMemberLimit     = 1
+	maxMemberLimit     = 500
+	defaultMemberLimit = 500
+	minMemberOffset    = 0
 )
 
 // GroupRepository defines the interface for group data access.
 type GroupRepository interface {
 	ListGroups(ctx context.Context, search string, page, limit int) ([]domain.Group, int, error)
+	GetByID(ctx context.Context, id uint64) (domain.Group, error)
+	ListGroupMembers(ctx context.Context, id, limit, offset uint64, q string) ([]domain.GroupMember, int, error)
 }
 
 // Service handles group business logic.
@@ -28,26 +36,49 @@ func NewService(repo GroupRepository) *Service {
 	return &Service{repo: repo}
 }
 
+// GetByID returns a group by its ID.
+func (s *Service) GetByID(ctx context.Context, id uint64) (domain.Group, error) {
+	if id < minID {
+		return domain.Group{}, domain.ErrBadParamInput
+	}
+
+	return s.repo.GetByID(ctx, id)
+}
+
+// ListGroupMembers returns a paginated list of members for a group.
+func (s *Service) ListGroupMembers(ctx context.Context, id, limit, offset uint64, q string) ([]domain.GroupMember, int, error) {
+	if id < minID {
+		return nil, 0, domain.ErrBadParamInput
+	}
+	if limit < minMemberLimit || limit > maxMemberLimit {
+		return nil, 0, domain.ErrBadParamInput
+	}
+
+	// Check group existence first.
+	if _, err := s.repo.GetByID(ctx, id); err != nil {
+		return nil, 0, err
+	}
+
+	members, total, err := s.repo.ListGroupMembers(ctx, id, limit, offset, q)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	if members == nil {
+		members = []domain.GroupMember{}
+	}
+
+	return members, total, nil
+}
+
 // ListGroups returns a paginated list of groups filtered by search.
-func (s *Service) ListGroups(ctx context.Context, search string, page, limit int) (domain.GroupListResponse, error) {
+func (s *Service) ListGroups(ctx context.Context, search string, page, limit int) ([]domain.Group, int, error) {
 	if page < minPage {
-		return domain.GroupListResponse{}, domain.ErrBadParamInput
+		return nil, 0, domain.ErrBadParamInput
 	}
 	if limit < minLimit || limit > maxLimit {
-		return domain.GroupListResponse{}, domain.ErrBadParamInput
+		return nil, 0, domain.ErrBadParamInput
 	}
 
-	groups, total, err := s.repo.ListGroups(ctx, search, page, limit)
-	if err != nil {
-		return domain.GroupListResponse{}, err
-	}
-
-	return domain.GroupListResponse{
-		Groups: groups,
-		Pagination: domain.Pagination{
-			Total: total,
-			Page:  page,
-			Limit: limit,
-		},
-	}, nil
+	return s.repo.ListGroups(ctx, search, page, limit)
 }

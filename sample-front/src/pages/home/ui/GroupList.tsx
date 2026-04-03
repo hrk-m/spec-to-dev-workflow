@@ -1,9 +1,10 @@
 import { Box, Button, Callout, Flex, Heading, Skeleton, Text, TextField } from "@radix-ui/themes";
 import { FaArrowDown, FaMagnifyingGlass } from "react-icons/fa6";
+import { useNavigate } from "react-router";
 
 import type { Group } from "@/pages/home/model/group";
 import { useGroupList } from "@/pages/home/model/useGroupList";
-
+import { PageContainer } from "@/shared/ui";
 import { styles } from "./GroupList.styles";
 
 const SKELETON_ROWS = 5;
@@ -35,10 +36,12 @@ function GroupRow({
   group,
   isLast,
   isWideLayout,
+  onClick,
 }: {
   group: Group;
   isLast: boolean;
   isWideLayout: boolean;
+  onClick: () => void;
 }) {
   const memberCount = group.member_count;
   const rowShellStyle = {
@@ -52,7 +55,18 @@ function GroupRow({
   };
 
   return (
-    <Box style={{ ...styles.rowBlock, ...(isLast ? {} : styles.rowBorder) }}>
+    <Box
+      style={{ ...styles.rowBlock, ...(isLast ? {} : styles.rowBorder), cursor: "pointer" }}
+      onClick={onClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+    >
       <Flex style={rowShellStyle}>
         <Flex style={styles.rowContent}>
           <Heading as="h2" style={styles.rowTitle}>
@@ -76,6 +90,7 @@ function GroupRow({
 }
 
 export function GroupList() {
+  const navigate = useNavigate();
   const {
     groups,
     pagination,
@@ -92,139 +107,125 @@ export function GroupList() {
     visibleGroupCountLabel,
   } = useGroupList();
 
-  const contentStyle = {
-    ...styles.content,
-    maxWidth: isWideLayout ? 980 : styles.content.maxWidth,
-  };
-  const containerStyle = {
-    ...styles.container,
-    padding: isWideLayout ? "32px 28px 44px" : styles.container.padding,
-  };
-
   return (
-    <Box style={containerStyle}>
-      <Box style={contentStyle}>
-        <Box style={styles.heroSection}>
-          <Heading as="h1" style={styles.pageTitle}>
-            Groups
-          </Heading>
-          <Text as="p" style={styles.pageSubtitle}>
-            {groupCountLabel}
-          </Text>
-        </Box>
+    <PageContainer>
+      <Box style={styles.heroSection}>
+        <Heading as="h1" style={styles.pageTitle}>
+          Groups
+        </Heading>
+        <Text as="p" style={styles.pageSubtitle}>
+          {groupCountLabel}
+        </Text>
+      </Box>
 
-        <Box style={styles.searchSection}>
-          <TextField.Root
-            size="3"
-            radius="large"
-            variant="surface"
-            style={styles.searchField}
-            placeholder="Search by name or description"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-          >
-            <TextField.Slot>
-              <FaMagnifyingGlass aria-hidden="true" style={styles.searchFieldIcon} />
-            </TextField.Slot>
-          </TextField.Root>
-        </Box>
+      <Box style={styles.searchSection}>
+        <TextField.Root
+          size="3"
+          radius="large"
+          variant="surface"
+          style={styles.searchField}
+          placeholder="Search by name or description"
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(1);
+          }}
+        >
+          <TextField.Slot>
+            <FaMagnifyingGlass aria-hidden="true" style={styles.searchFieldIcon} />
+          </TextField.Slot>
+        </TextField.Root>
+      </Box>
 
-        {error && groups.length === 0 && (
-          <Callout.Root color="red" style={styles.errorCard}>
-            <Flex direction="column" gap="1">
-              <Text as="p" style={styles.errorTitle}>
-                Couldn&apos;t load groups
-              </Text>
-              <Callout.Text style={styles.errorText}>{error}</Callout.Text>
-            </Flex>
-          </Callout.Root>
-        )}
-
-        {isInitialLoading && (
-          <Box style={styles.listSection}>
-            <Text as="p" className="visually-hidden">
-              loading...
+      {error && groups.length === 0 && (
+        <Callout.Root color="red" style={styles.errorCard}>
+          <Flex direction="column" gap="1">
+            <Text as="p" style={styles.errorTitle}>
+              Couldn&apos;t load groups
             </Text>
+            <Callout.Text style={styles.errorText}>{error}</Callout.Text>
+          </Flex>
+        </Callout.Root>
+      )}
+
+      {isInitialLoading && (
+        <Box style={styles.listSection}>
+          <Text as="p" className="visually-hidden">
+            loading...
+          </Text>
+          <Box style={styles.listCard}>
+            {Array.from({ length: SKELETON_ROWS }, (_, i) => (
+              <SkeletonRow key={i} isWideLayout={isWideLayout} isLast={i === SKELETON_ROWS - 1} />
+            ))}
+          </Box>
+        </Box>
+      )}
+
+      {!isInitialLoading && groups.length > 0 && (
+        <Box asChild>
+          <section style={styles.listSection}>
+            <Box style={styles.sectionHeader}>
+              <Text as="p" style={styles.sectionTitle}>
+                All Groups
+              </Text>
+              <Text as="p" style={styles.sectionMeta}>
+                {visibleGroupCountLabel}
+              </Text>
+            </Box>
             <Box style={styles.listCard}>
-              {Array.from({ length: SKELETON_ROWS }, (_, i) => (
-                <SkeletonRow
-                  key={i}
+              {groups.map((group, index) => (
+                <GroupRow
+                  key={group.id}
+                  group={group}
+                  isLast={index === groups.length - 1}
                   isWideLayout={isWideLayout}
-                  isLast={i === SKELETON_ROWS - 1}
+                  onClick={() => navigate(`/groups/${String(group.id)}`)}
                 />
               ))}
             </Box>
-          </Box>
-        )}
+          </section>
+        </Box>
+      )}
 
-        {!isInitialLoading && groups.length > 0 && (
-          <Box asChild>
-            <section style={styles.listSection}>
-              <Box style={styles.sectionHeader}>
-                <Text as="p" style={styles.sectionTitle}>
-                  All Groups
-                </Text>
-                <Text as="p" style={styles.sectionMeta}>
-                  {visibleGroupCountLabel}
-                </Text>
-              </Box>
-              <Box style={styles.listCard}>
-                {groups.map((group, index) => (
-                  <GroupRow
-                    key={group.id}
-                    group={group}
-                    isLast={index === groups.length - 1}
-                    isWideLayout={isWideLayout}
-                  />
-                ))}
-              </Box>
-            </section>
-          </Box>
-        )}
+      {!isInitialLoading && !error && groups.length === 0 && (
+        <Box style={styles.emptyState}>
+          <Text as="p" style={styles.emptyStateTitle}>
+            No groups matched that search.
+          </Text>
+          <Text as="p" style={styles.emptyStateText}>
+            Try a shorter phrase or search by part of a group name.
+          </Text>
+        </Box>
+      )}
 
-        {!isInitialLoading && !error && groups.length === 0 && (
-          <Box style={styles.emptyState}>
-            <Text as="p" style={styles.emptyStateTitle}>
-              No groups matched that search.
-            </Text>
-            <Text as="p" style={styles.emptyStateText}>
-              Try a shorter phrase or search by part of a group name.
-            </Text>
-          </Box>
-        )}
+      {error && groups.length > 0 && (
+        <Callout.Root color="red" style={styles.inlineErrorCard}>
+          <Callout.Text style={styles.errorText}>{error}</Callout.Text>
+        </Callout.Root>
+      )}
 
-        {error && groups.length > 0 && (
-          <Callout.Root color="red" style={styles.inlineErrorCard}>
-            <Callout.Text style={styles.errorText}>{error}</Callout.Text>
-          </Callout.Root>
-        )}
-
-        {pagination && !isInitialLoading && (
-          <Flex style={styles.footerSection}>
-            <Text as="p" style={styles.footerMeta}>
-              Page {pagination.page} of {Math.max(1, Math.ceil(pagination.total / pagination.limit))}
-            </Text>
-            {hasNextPage && (
-              <Button
-                type="button"
-                size="3"
-                radius="full"
-                color="blue"
-                variant="soft"
-                style={styles.loadMoreButton}
-                disabled={isLoadingMore}
-                onClick={loadNextPage}
-              >
-                <FaArrowDown aria-hidden="true" />
-                {isLoadingMore ? "Loading more..." : "Load More"}
-              </Button>
-            )}
-          </Flex>
-        )}
-      </Box>
-    </Box>
+      {pagination && !isInitialLoading && (
+        <Flex style={styles.footerSection}>
+          <Text as="p" style={styles.footerMeta}>
+            Page {pagination.page} of {Math.max(1, Math.ceil(pagination.total / pagination.limit))}
+          </Text>
+          {hasNextPage && (
+            <Button
+              type="button"
+              size="3"
+              radius="full"
+              color="blue"
+              variant="soft"
+              style={styles.loadMoreButton}
+              disabled={isLoadingMore}
+              onClick={loadNextPage}
+            >
+              <FaArrowDown aria-hidden="true" />
+              {isLoadingMore ? "Loading more..." : "Load More"}
+            </Button>
+          )}
+        </Flex>
+      )}
+    </PageContainer>
   );
 }

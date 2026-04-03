@@ -10,6 +10,9 @@ inclusion: always
 | ----------------------- | ------------------------------------------------ |
 | ランタイム / バンドラー | Bun                                              |
 | UI ライブラリ           | React 19                                         |
+| ルーティング            | react-router v7                                  |
+| UI コンポーネント       | Radix UI Themes                                  |
+| アイコン                | react-icons                                      |
 | 言語                    | TypeScript (strict)                              |
 | テスト                  | Vitest + Testing Library (jsdom)                 |
 | リント                  | oxlint                                           |
@@ -21,6 +24,10 @@ inclusion: always
 
 開発サーバー・ビルド・テスト実行をすべて Bun で統一。`bun --hot` による HMR、`bun build`
 による本番バンドルを利用。
+
+### ルーティング
+
+react-router v7 を使用。`src/app/router.tsx` で `createBrowserRouter` によりルート定義を一元管理し、`App.tsx` で `RouterProvider` を通じてマウントする。
 
 ### パスエイリアス
 

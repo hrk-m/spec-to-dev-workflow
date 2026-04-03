@@ -2,7 +2,7 @@ import { useEffect, useState, type CSSProperties } from "react";
 import { Box, Button, Flex, Text } from "@radix-ui/themes";
 import { FaChevronRight, FaHouse } from "react-icons/fa6";
 
-import { TRANSITION_DURATION_MS, styles } from "./Sidebar.styles";
+import { styles, TRANSITION_DURATION_MS } from "./Sidebar.styles";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -61,9 +61,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     ...styles.nav,
     transform: isVisible ? "translateX(0)" : "translateX(calc(-100% - 18px))",
     opacity: isVisible ? 1 : 0,
-    boxShadow: isVisible
-      ? "0 22px 48px rgba(15, 23, 42, 0.14)"
-      : styles.nav.boxShadow,
+    boxShadow: isVisible ? "0 22px 48px rgba(15, 23, 42, 0.14)" : styles.nav.boxShadow,
   };
 
   const overlayStyle: CSSProperties = {

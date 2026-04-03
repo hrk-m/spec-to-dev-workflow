@@ -12,12 +12,35 @@
 
 ## 主要機能
 
-現時点の機能は最小限であり、パターンの実証が目的です。
+グループ管理機能を中心に、Clean Architecture パターンの実証を行います。
+
+### グループ一覧取得
 
 - `GET /api/v1/groups` — グループ一覧を返すエンドポイント
   - 必須パラメータ: `page`（ページ番号、1 以上）、`limit`（取得件数、1-100）
   - 任意パラメータ: `search`（名前・説明の AND 検索、スペース区切り）
   - レスポンス: グループ一覧 + ページネーションメタデータ（total, page, limit）
+
+### グループ詳細取得
+
+- `GET /api/v1/groups/:id` — 指定 ID のグループ詳細を返すエンドポイント
+  - パスパラメータ: `id`（グループ ID、1 以上の整数）
+  - レスポンス: グループ情報（id, name, description, member_count）
+  - エラー: 不正な ID → 400、存在しない ID → 404
+
+### グループメンバー一覧取得
+
+- `GET /api/v1/groups/:id/members` — 指定グループのメンバー一覧を返すエンドポイント
+  - パスパラメータ: `id`（グループ ID、1 以上の整数）
+  - 任意パラメータ: `limit`（取得件数、1-500、デフォルト 500）、`offset`（オフセット、0 以上、デフォルト 0）、`q`（名前検索）
+  - レスポンス: メンバー一覧（members）+ 総件数（total）
+  - エラー: 不正な ID/パラメータ → 400、グループ未存在 → 404
+
+## ドメインモデル
+
+- **Group**: id, name, description, member_count
+- **GroupMember**: id, first_name, last_name
+- **User**: id, first_name, last_name
 
 ## ユーザーとユースケース
 

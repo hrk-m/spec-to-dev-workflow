@@ -12,13 +12,11 @@ inclusion: always
 ## コア機能
 
 - グループ一覧表示（検索・ページネーション付き、`/api/v1/groups` エンドポイント）
+- グループ詳細表示（グループ情報 + メンバー一覧、`/api/v1/groups/:id` + `/api/v1/groups/:id/members` エンドポイント）
+- App Shell パターン（Header + Sidebar によるナビゲーション）
+- react-router によるクライアントサイドルーティング（`/`, `/groups`, `/groups/:id`）
 - 環境変数による API エンドポイントの切り替え
 - Feature-Sliced Design に沿ったスケーラブルなフロントエンド構造のデモ
-
-## 計画中の機能
-
-- グループ一覧の独立ページ化（`group-list` スライス — ディレクトリ構造のみ作成済み）
-- Todo 管理機能（一覧表示・新規作成）— ページスケルトンのみ作成済み
 
 ## 価値
 

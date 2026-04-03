@@ -149,8 +149,10 @@
 | `sample-api/domain/group.go` | Group Entity・Pagination・GroupListResponse・エラー定義 |
 | `sample-api/group/service.go` | GroupRepository interface・ListGroups ビジネスロジック |
 | `sample-api/group/service_test.go` | Service ユニットテスト |
+| `sample-api/group/mocks/group_repository_mock.go` | GroupRepository の手動 mock |
 | `sample-api/internal/rest/group.go` | HTTP Handler（ListGroups） |
 | `sample-api/internal/rest/group_test.go` | Handler ユニットテスト |
+| `sample-api/internal/rest/mocks/group_service_mock.go` | GroupService の手動 mock |
 | `sample-api/internal/rest/errors.go` | ResponseError・getStatusCode |
 | `sample-api/internal/repository/mysql/group.go` | MySQL 実装（countGroups / selectGroups） |
 | `sample-api/db/migrations/001_create_groups_tables.sql` | `groups` / `group_members` テーブル定義 |

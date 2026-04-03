@@ -50,6 +50,12 @@ Everything should feel inevitable and familiar to iOS users.
 - Cards may be used, but should feel light and system-like
 - Avoid dense information; clarity first
 
+### Page Width
+
+- 全ページは `shared/ui/PageContainer` を使って共通幅にすること
+- `PageContainer` は `width: 100%`、左右 `padding: 24px`、`maxWidth` なし（全幅表示）
+- 個別ページで `maxWidth` や `margin: 0 auto` によるセンタリングを追加しない
+
 ---
 
 ## Component Principles

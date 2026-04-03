@@ -1,10 +1,19 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fetchGroups } from "@/pages/home/api/fetch-groups";
 import type { Group, GroupsResponse } from "@/pages/home/model/group";
 import { GroupList } from "@/pages/home/ui/GroupList";
+
+function renderWithRouter() {
+  return render(
+    <MemoryRouter>
+      <GroupList />
+    </MemoryRouter>,
+  );
+}
 
 vi.mock("@/pages/home/api/fetch-groups", () => ({
   fetchGroups: vi.fn(),
@@ -37,7 +46,7 @@ describe("GroupList", () => {
   it("初期表示で loading を表示する", () => {
     vi.mocked(fetchGroups).mockReturnValue(new Promise(() => {}));
 
-    render(<GroupList />);
+    renderWithRouter();
 
     expect(screen.getByText("loading...")).toBeInTheDocument();
   });
@@ -45,7 +54,7 @@ describe("GroupList", () => {
   it("API が成功した場合はグループ一覧を表示する", async () => {
     vi.mocked(fetchGroups).mockResolvedValueOnce(mockGroupsResponse);
 
-    render(<GroupList />);
+    renderWithRouter();
 
     await waitFor(() => {
       expect(screen.getByText("Engineering")).toBeInTheDocument();
@@ -59,7 +68,7 @@ describe("GroupList", () => {
   it("メンバー数を表示する", async () => {
     vi.mocked(fetchGroups).mockResolvedValueOnce(mockGroupsResponse);
 
-    render(<GroupList />);
+    renderWithRouter();
 
     await waitFor(() => {
       expect(screen.getByText("2 members")).toBeInTheDocument();
@@ -70,7 +79,7 @@ describe("GroupList", () => {
   it("ページネーション情報を表示する", async () => {
     vi.mocked(fetchGroups).mockResolvedValueOnce(mockGroupsResponse);
 
-    render(<GroupList />);
+    renderWithRouter();
 
     await waitFor(() => {
       expect(screen.getByText("Page 1 of 1")).toBeInTheDocument();
@@ -81,7 +90,7 @@ describe("GroupList", () => {
   it("API がエラーの場合はエラーメッセージを表示する", async () => {
     vi.mocked(fetchGroups).mockRejectedValueOnce(new Error("500 Internal Server Error"));
 
-    render(<GroupList />);
+    renderWithRouter();
 
     await waitFor(() => {
       expect(screen.getByText("Error: 500 Internal Server Error")).toBeInTheDocument();
@@ -98,7 +107,7 @@ describe("GroupList", () => {
         pagination: { total: 1, page: 1, limit: 10 },
       });
 
-    render(<GroupList />);
+    renderWithRouter();
 
     await waitFor(() => {
       expect(screen.getByText("Engineering")).toBeInTheDocument();
@@ -128,7 +137,7 @@ describe("GroupList", () => {
         pagination: { total: 20, page: 2, limit: 10 },
       });
 
-    render(<GroupList />);
+    renderWithRouter();
 
     await waitFor(() => {
       expect(screen.getByText("Engineering")).toBeInTheDocument();
@@ -145,7 +154,7 @@ describe("GroupList", () => {
   it("最終ページでは Load More ボタンを表示しない", async () => {
     vi.mocked(fetchGroups).mockResolvedValueOnce(mockGroupsResponse);
 
-    render(<GroupList />);
+    renderWithRouter();
 
     await waitFor(() => {
       expect(screen.getByText("Engineering")).toBeInTheDocument();
@@ -157,7 +166,7 @@ describe("GroupList", () => {
   it("タイトルを表示する", () => {
     vi.mocked(fetchGroups).mockReturnValue(new Promise(() => {}));
 
-    render(<GroupList />);
+    renderWithRouter();
 
     expect(screen.getByRole("heading", { name: "Groups" })).toBeInTheDocument();
   });
@@ -165,7 +174,7 @@ describe("GroupList", () => {
   it("セクションヘッダーを表示する", async () => {
     vi.mocked(fetchGroups).mockResolvedValueOnce(mockGroupsResponse);
 
-    render(<GroupList />);
+    renderWithRouter();
 
     await waitFor(() => {
       expect(screen.getByText("Engineering")).toBeInTheDocument();

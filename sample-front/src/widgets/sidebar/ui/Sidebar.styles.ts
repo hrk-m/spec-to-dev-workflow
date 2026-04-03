@@ -1,4 +1,4 @@
-import { appColors } from "@/shared/ui/theme";
+import { appColors } from "@/shared/ui";
 
 const SIDEBAR_WIDTH = 260;
 export const TRANSITION_DURATION_MS = 420;
@@ -49,8 +49,7 @@ export const styles = {
     backdropFilter: "blur(32px) saturate(180%)",
     WebkitBackdropFilter: "blur(32px) saturate(180%)",
     boxShadow: "0 8px 20px rgba(15, 23, 42, 0.08)",
-    padding:
-      "calc(18px + env(safe-area-inset-top)) 14px calc(24px + env(safe-area-inset-bottom))",
+    padding: "calc(18px + env(safe-area-inset-top)) 14px calc(24px + env(safe-area-inset-bottom))",
     willChange: "transform, opacity",
   },
   panel: {

@@ -13,19 +13,20 @@ sample-api/
 │   └── errors.go            # センチネルエラーの一元管理
 ├── {feature}/               # ユースケース層（機能ごとにパッケージを作成）
 │   ├── service.go           # Service struct + コンストラクタ + メソッド
-│   └── service_test.go      # 外部テストパッケージ (package {feature}_test)
+│   ├── service_test.go      # 外部テストパッケージ (package {feature}_test)
+│   └── mocks/               # テスト用 mock（手動保守）
+│       └── {feature}_repository_mock.go
 ├── internal/
 │   ├── repository/
-│   │   ├── inmem/           # Repository adapter（in-memory、テスト・ローカル開発用）
-│   │   │   ├── {feature}.go
-│   │   │   └── {feature}_test.go
 │   │   └── mysql/           # Repository adapter（MySQL 実装）
 │   │       ├── {feature}.go
 │   │       └── {feature}_test.go
 │   └── rest/                # Delivery 層（Echo ハンドラ）
 │       ├── {feature}.go       # ハンドラ + インターフェース定義 + ルート登録
 │       ├── {feature}_test.go  # モックを使ったハンドラテスト
-│       └── errors.go          # エラー → HTTP ステータスコードのマッピング
+│       ├── errors.go          # エラー → HTTP ステータスコードのマッピング
+│       └── mocks/             # テスト用 mock（手動保守）
+│           └── {feature}_service_mock.go
 ├── .env.example             # 環境変数のサンプル
 ├── .golangci.yml            # golangci-lint 設定
 ├── docker-compose.yml       # MySQL コンテナ定義
@@ -43,8 +44,8 @@ sample-api/
 | ハンドラ登録関数 | `New{Feature}Handler` | `rest.NewGroupHandler(e, svc)` |
 | Service IF（rest 側） | `{Feature}Service` | `rest.GroupService` |
 | Repository IF（feature 側） | `{Feature}Repository` | `group.GroupRepository` |
-| Repository 実装 | `{Feature}Repository` | `mysql.GroupRepository`, `inmem.GroupRepository` |
-| テスト内 mock 型 | `mock{Feature}{IF}` | `mockGroupRepository`, `mockGroupService` |
+| Repository 実装 | `{Feature}Repository` | `mysql.GroupRepository` |
+| テスト用 mock 型 | `Mock{Feature}{IF}` | `mocks.MockGroupRepository`, `mocks.MockGroupService` |
 
 ## DI パターン（app/main.go）
 

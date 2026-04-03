@@ -1,0 +1,17 @@
+export type GroupDetail = {
+  id: number;
+  name: string;
+  description: string;
+  member_count: number;
+};
+
+export type Member = {
+  id: number;
+  first_name: string;
+  last_name: string;
+};
+
+export type MembersResponse = {
+  members: Member[];
+  total: number;
+};

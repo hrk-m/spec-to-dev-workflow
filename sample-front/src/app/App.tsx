@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Header } from "@/widgets/header";
 import { Sidebar } from "@/widgets/sidebar";
+import { RouterProvider } from "react-router";
 
-import { HomePage } from "@/pages/home";
+import { router } from "./router";
 
 import "./styles/index.css";
 
@@ -23,7 +24,7 @@ export function App() {
       <Header onMenuClick={() => setIsSidebarOpen(true)} />
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       <main className="app-shell__content">
-        <HomePage />
+        <RouterProvider router={router} />
       </main>
     </div>
   );

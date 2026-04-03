@@ -1,4 +1,4 @@
-import { appColors } from "@/shared/ui/theme";
+import { appColors } from "@/shared/ui";
 
 const colors = {
   background: appColors.headerBackground,
