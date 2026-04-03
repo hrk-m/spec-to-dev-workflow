@@ -3,7 +3,7 @@
 ## スキルフロー
 
 ```
-/plan → /plan-writer → /plan-checker（任意）→ /impl → /impl-done
+/plan → /plan-writer → /plan-checker（任意）→ /impl → /arch-refactor → /impl-done
 ```
 
 | スキル          | 役割                                                              |
@@ -12,9 +12,10 @@
 | `/plan-writer`  | `plans/{機能名}/{verb-noun}/prd.md` に PRD を書き出す             |
 | `/plan-checker` | アーキテクチャ適合チェック（任意・`/impl` 前に使う）             |
 | `/impl`         | TDD でサブエージェントに実装を委譲する                            |
+| `/arch-refactor`  | **`/impl` 完了後・`/impl-done` 前に実行**。スキルを絶対的な正としてアーキテクチャ違反を検出・自動修正する |
 | `/impl-done`    | **全実装完了後に一回だけ実行**。steering・plans・specs を同期する |
 
-修正が必要な場合は `/plan → /plan-writer → /impl` を繰り返し、すべて完了したら `/impl-done` を一回実行する。
+修正が必要な場合は `/plan → /plan-writer → /impl → /arch-refactor` を繰り返し、すべて完了したら `/impl-done` を一回実行する。
 
 ## 推奨フロー
 
@@ -29,6 +30,8 @@
     ↓
   /impl
     ↓
+  /arch-refactor
+    ↓
   問題なし？ ─── No ──→ /plan に戻る
     │
    Yes
@@ -41,7 +44,7 @@
 ### ルール
 
 - `/impl-done` は「全ての実装が完了した」最後の一回だけ実行する。修正サイクル中は実行しない
-- 修正サイクル中は `/plan → /plan-writer → /impl` を繰り返すだけでよい
+- 修正サイクル中は `/plan → /plan-writer → /impl → /arch-refactor` を繰り返すだけでよい
 - `/plan-writer` は差分 Edit 対応済みのため、PRD の更新箇所だけが書き換わる
 
 ### ドキュメントの責務分離

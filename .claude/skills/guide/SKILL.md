@@ -18,7 +18,7 @@ allowed-tools: Read, AskUserQuestion
 
 ```
 新機能を作るとき:
-  /plan → /plan-writer → /plan-checker（任意）→ /impl → /impl-done
+  /plan → /plan-writer → /plan-checker（任意）→ /impl → /arch-refactor → /impl-done
 
 スキルの管理:
   /skill-link  — サービスのスキルを api-context / front-context にリンクする
@@ -37,10 +37,11 @@ allowed-tools: Read, AskUserQuestion
 | 2 | `plan-writer` | **`/plan` で要件が固まった後**。合意内容を `plans/{機能名}/{verb-noun}/prd.md` または `plans/shared/{処理名}.md` に書き出す |
 | 3 | `plan-checker` | **`/impl` の前に PRD を検証したいとき**。アーキテクチャ規約との整合性を確認する |
 | 4 | `impl` | **PRD が存在するとき**。TDD で実装する。バックエンド / フロントエンドのエージェントに委譲 |
-| 5 | `impl-done` | **`/impl` が完了した後**。steering と specs/ をコードに同期する |
+| 5 | `arch-refactor` | **`/impl` 完了後・`/impl-done` 前**。スキルを絶対的な正としてアーキテクチャ違反を検出・自動修正する |
+| 6 | `impl-done` | **`/arch-refactor` が完了した後**。steering と specs/ をコードに同期する |
 | 6 | `api-context` | **バックエンドの実装前**（主にエージェントが自動ロード）。Go Clean Architecture の規約を確認する |
 | 7 | `front-context` | **フロントエンドの実装前**（主にエージェントが自動ロード）。FSD v2.1 の規約を確認する |
-| 8 | `arch-review` | **実装後にアーキテクチャ規約への適合を確認・自動修正したいとき**。スキルを絶対的な正として違反を ralph-loop で修正する |
+| 8 | `arch-refactor` | **実装後にアーキテクチャ規約への適合を確認・自動修正したいとき**。スキルを絶対的な正として違反を ralph-loop で修正する |
 | 9 | `skill-link` | **新しいスキルを api-context / front-context に登録したいとき** |
 | 10 | `spec-update` | **実装後に仕様書を最新化したいとき** |
 
@@ -56,17 +57,17 @@ allowed-tools: Read, AskUserQuestion
      2. `plan-writer` — 合意済みの要件を PRD ファイルに書き出す
      3. `plan-checker` — PRD をアーキテクチャ規約でチェックする
      4. `impl` — PRD をもとに TDD で実装する
-     5. `impl-done` — 実装完了後に steering と specs を同期する
-     6. `api-context` — バックエンドの実装規約を確認する
-     7. `front-context` — フロントエンドの実装規約を確認する
-     8. `arch-review` — アーキテクチャ規約への適合をチェック・自動修正する
+     5. `arch-refactor` — impl 完了後にアーキテクチャ規約への適合をチェック・自動修正する
+     6. `impl-done` — arch-refactor 完了後に steering と specs を同期する
+     7. `api-context` — バックエンドの実装規約を確認する
+     8. `front-context` — フロントエンドの実装規約を確認する
      9. `skill-link` — スキルを api-context / front-context にリンクする
      10. `spec-update` — specs/ を最新の実装に同期する
 
 2. 選択に応じて返信候補をチャットに提示する。
 
    > **重要**: 以下のスキルは Skill ツールを呼ばず、返信候補のテキストをチャットに提示するだけにする。
-   > `plan` / `plan-writer` / `plan-checker` / `impl` / `impl-done` / `api-context` / `front-context`
+   > `plan` / `plan-writer` / `plan-checker` / `impl` / `arch-refactor` / `impl-done` / `api-context` / `front-context`
 
    ### plan-writer / plan-checker / impl / impl-done の前作業チェック
 
@@ -79,13 +80,14 @@ allowed-tools: Read, AskUserQuestion
    | `plan-writer` | `/plan` | `plans/` 配下にディレクトリまたはメモが存在する、もしくは会話内で要件合意が取れている |
    | `plan-checker` | `/plan-writer` | `plans/{機能名}/{verb-noun}/prd.md` または `plans/shared/{処理名}.md` が存在する |
    | `impl` | `/plan-writer`（`/plan-checker` は任意） | `plans/{機能名}/{verb-noun}/prd.md` または `plans/shared/{処理名}.md` が存在する |
-   | `impl-done` | `/impl` | 実装ファイルへの変更が git 差分として存在する、またはテストがパスしている |
+   | `arch-refactor` | `/impl` | 実装ファイルへの変更が git 差分として存在する、またはテストがパスしている |
+   | `impl-done` | `/arch-refactor` | arch-refactor が完了し、アーキテクチャ違反が解消されている |
 
    - **前ステップ完了の場合**: `次のステップは /〇〇 を実行してください。` と返信する
    - **前ステップ未完了の場合**: 以下のフローをチャットに共有して案内する
 
    ```
-   /plan → /plan-writer → /plan-checker（任意）→ /impl → /impl-done
+   /plan → /plan-writer → /plan-checker（任意）→ /impl → /arch-refactor → /impl-done
    ```
 
    ### 返信候補一覧
@@ -98,6 +100,7 @@ allowed-tools: Read, AskUserQuestion
    | `plan-writer` | 前作業チェック後に `次のステップは /plan-writer を実行してください。` | 返信のみ |
    | `plan-checker` | 前作業チェック後に `次のステップは /plan-checker を実行してください。` | 返信のみ |
    | `impl` | 前作業チェック後に `次のステップは /impl を実行してください。` | 返信のみ |
+   | `arch-refactor` | 前作業チェック後に `次のステップは /arch-refactor を実行してください。` | 返信のみ |
    | `impl-done` | 前作業チェック後に `次のステップは /impl-done を実行してください。` | 返信のみ |
    | `api-context` | `次のステップは /api-context を実行してください。` | 返信のみ |
    | `front-context` | `次のステップは /front-context を実行してください。` | 返信のみ |

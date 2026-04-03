@@ -1,5 +1,5 @@
 ---
-name: arch-review
+name: arch-refactor
 description: >
   sample-api と sample-front のコードが api-context / front-context スキルの
   アーキテクチャ標準に適合しているかチェックし、違反を ralph-loop で自動修正する。
@@ -8,7 +8,7 @@ description: >
   「実装がスキルに準拠しているか」などのリクエストで使う。
 ---
 
-# /arch-review — アーキテクチャ適合チェック & 自動修正スキル
+# /arch-refactor — アーキテクチャ適合チェック & 自動修正スキル
 
 api-context / front-context スキルを絶対的な正として、
 sample-api / sample-front のコードが各アーキテクチャルールに従っているかチェックし、
@@ -155,7 +155,7 @@ Read and follow .claude/ralph-review.md --completion-promise REVIEWED --max-iter
 ## 完了後の出力フォーマット
 
 ```
-## arch-review 完了
+## arch-refactor 完了
 
 ### チェック結果
 - バックエンド (sample-api): pass / violations found & fixed / skipped
