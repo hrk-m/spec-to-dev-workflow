@@ -1,11 +1,11 @@
 ---
 name: plan-writer
-description: 合意済みの要件を `plans/tasks/{タスク名}/prd.md` に書き出す。/plan コマンドで目的・ゴール・フローの合意が取れた後に使用する。
+description: 合意済みの要件を `plans/{機能名}/{verb-noun}/prd.md` に書き出す。/plan コマンドで目的・ゴール・フローの合意が取れた後に使用する。
 ---
 
 # plan-writer
 
-合意済みの内容を `plans/tasks/{タスク名}/prd.md` に書き出す。
+合意済みの内容を `plans/{機能名}/{verb-noun}/prd.md` に書き出す。
 
 ## 手順
 
@@ -16,19 +16,47 @@ description: 合意済みの要件を `plans/tasks/{タスク名}/prd.md` に書
 
 2. 選択に応じて処理を分岐する:
    - **`/plan` 済み** → ステップ 3 へ進む
-   - **`/plan` 未実行** → 以下のメッセージを表示してスキルを終了する。解決したい課題は何ですかとユーザーへ確認を取る
+   - **`/plan` 未実行** → 以下のメッセージを表示してスキルを終了する
      ```
      /plan を先に実行してください。
      目的・ゴール・処理フローが確定してから plan-writer を使用してください。
      ```
 
-3. **実装可能性チェック**（prd.md 書き出し前に必ず実施する）
+3. **最低要件の確定と実装可能性チェック**（prd 書き出し前に必ず実施する）
 
    3-1. **最低要件の確定**
 
-   `AskUserQuestion` でユーザーに確認し、今回の実装で必ず満たすべき最低要件を明確にする。
-   - 例：「今回の実装で必須となる最低要件を教えてください」
-   - ユーザーの回答をもとに最低要件リストを整理する
+   以下の手順で最低要件を確定する。
+
+   **Step A — 候補リストの生成**
+
+   `/plan` で合意した目的・ゴール・処理フローをもとに、今回の実装で必ず満たすべき最低要件の候補を AI が自律的に洗い出し、チャットに番号付きリストで提示する。
+
+   例：
+   ```
+   【最低要件 候補リスト】
+   1. ユーザーが認証なしでアクセスした場合に 401 を返す
+   2. 一覧取得 API は페이지네ーション対応（limit/offset）
+   3. ...
+   ```
+
+   **Step B — AskUserQuestion で確認**
+
+   候補リストを提示した直後に `AskUserQuestion` を呼び出し、以下の形式で確認する。
+
+   - **質問文**: 「上記の最低要件候補を確認してください。」
+   - **選択肢**:
+     - `yes` — このまま確定する
+     - `修正` — 修正・追加・削除したい要件がある（どれを変えるか教えてください）
+     - `コメント` — 補足コメントや注意点を追加したい
+
+   **Step C — 回答に応じた分岐**
+
+   | 回答 | 処理 |
+   |------|------|
+   | `yes` | 候補リストをそのまま最低要件として確定し、ステップ 3-2 へ進む |
+   | `修正` | ユーザーの指摘内容を反映してリストを更新し、Step B に戻って再確認する |
+   | `コメント` | コメントをリストの末尾に追記し、Step B に戻って再確認する |
 
    3-2. **エージェントによる実装可能性チェック**
 
@@ -52,21 +80,43 @@ description: 合意済みの要件を `plans/tasks/{タスク名}/prd.md` に書
    - **一致している場合**（エージェントの報告がスキル内容と整合しており懸念点もない場合）
      → そのままステップ 4 へ進む
 
-4. 確定した要件を `plans/tasks/{タスク名}/prd.md` に書き出す
+4. **書き出し先の決定**
 
-5. **各スキルとの照合チェック**（prd.md 書き出し後に必ず実施する）
+   @references/api-sync/SKILL.md の Step 7 に従って書き出す。
 
-   **ステップ 5-1**: Write ツールで `plans/tasks/{タスク名}/.ralph-alignment.md` に以下の内容を書き出す（{タスク名} は実際の名前に置換）：
+5. **schema-sync**（DB スキーマに変更がある場合のみ実施する）
+
+   `/plan` で合意した要件に DB テーブルの追加・変更・削除が含まれる場合、`@references/schema-sync/SKILL.md` に従って `plans/schema.md` を更新する。
+
+   - スキーマ変更なし → スキップしてステップ 6 へ進む
+   - スキーマ変更あり → schema-sync を実行してからステップ 6 へ進む
+
+6. **各スキルとの照合チェック**（prd 書き出し後に必ず実施する）
+
+   **ステップ A**: `.ralph-alignment.md` を更新する。
+   - 共通処理の場合: `plans/shared/.ralph-alignment.md`
+   - 機能固有の場合: `plans/{機能名}/{verb-noun}/.ralph-alignment.md`
+
+   **更新ルール（必ず以下の順で判断する）**:
+   1. 対象ファイルが存在するか確認する
+   2. **存在しない場合** → `Write` ツールで新規作成する
+   3. **存在する場合** → `Read` ツールで内容を読み、現在の PRD パス・内容と比較する
+      - 差分がある箇所のみ `Edit` ツールで更新する
+      - 差分がなければ更新しない
+      - 変更のない箇所は触らない
+      - 既存の補足メモがあり、今回の PRD と矛盾しない箇所は保持する
+
+   ファイルの内容テンプレート（{PRDパス} は実際のパスに置換）:
 
    ```
-   Check plans/tasks/{タスク名}/prd.md alignment with skills. Skip already-fixed issues from prior iterations.
+   Check {PRDパス} alignment with skills. Skip already-fixed issues from prior iterations.
 
    Steps:
    1. Read .claude/skills/api-context/SKILL.md
    2. Read sample-api/.claude/skills/go-clean-arch/SKILL.md (referenced in api-context)
    3. Read .claude/skills/front-context/SKILL.md
    4. Read sample-front/.claude/skills/feature-sliced-design/SKILL.md (referenced in front-context)
-   5. Read plans/tasks/{タスク名}/prd.md
+   5. Read {PRDパス}
    6. Check backend PRD against go-clean-arch/SKILL.md Section 9 checklist:
       - Interface declared in consumer layer (service.go→Repository IF; handler→Service IF)
       - domain/ has zero external package imports
@@ -81,15 +131,17 @@ description: 合意済みの要件を `plans/tasks/{タスク名}/prd.md` に書
       - No cross-imports between slices on the same layer
       - No business logic in shared/ (only infra: UI kit, utils, API client)
       - Single-use code placed in pages/ (no premature entity/feature extraction)
-   8. Fix any mismatches directly with Edit tool on prd.md
+   8. Fix any mismatches directly with Edit tool on the PRD file
    9. When all checks pass with zero mismatches, output: <promise>ALIGNED</promise>
    ```
 
-   **ステップ 5-2**: `Skill` ツールで `ralph-loop:ralph-loop` を以下の引数で起動する：
+   **ステップ B**: `Skill` ツールで `ralph-loop:ralph-loop` を以下の引数で起動する：
 
    ```
-   Read and follow plans/tasks/{タスク名}/.ralph-alignment.md --completion-promise ALIGNED --max-iterations 5
+   Read and follow {alignmentパス} --completion-promise ALIGNED --max-iterations 5
    ```
+
+   > {alignmentパス} は `plans/shared/.ralph-alignment.md`（共通処理）または `plans/{機能名}/{verb-noun}/.ralph-alignment.md`（機能固有）
 
    > **重要**: args には上記の1行の英語プロンプトのみを渡す。多行・日本語プロンプトを直接渡すとシェルパースエラーになる。
 

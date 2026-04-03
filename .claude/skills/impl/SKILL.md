@@ -1,7 +1,7 @@
 ---
 name: impl
 description: >
-  `plans/tasks/{タスク名}/prd.md` を参照して TDD で実装する。
+  `plans/{機能名}/{verb-noun}/prd.md` を参照して TDD で実装する。
   `/impl` または「実装して」「実装を開始」などのトリガーで起動。
   バックエンドは `sample-api-agent`、フロントエンドは `sample-front-agent` に委譲する。
   `/plan` や `/plan-writer` で要件が確定した後に使用する。
@@ -9,36 +9,48 @@ description: >
 
 # /impl — タスク実装コマンド
 
-`plans/tasks/{タスク名}/prd.md` の要件に従い、TDD サイクルで実装する。
+`plans/{機能名}/{verb-noun}/prd.md` の要件に従い、TDD サイクルで実装する。
+
+## 用語
+
+| 用語 | 意味 | 例 |
+|---|---|---|
+| `{機能名}` | エンドポイントパスのリソース名（複数形のまま使用） | `groups` |
+| `{verb-noun}` | API 操作単位の名前 | `list-groups` |
 
 ## いつ使うか
 
-- `/plan` と `/plan-writer` で要件が確定し、`plans/tasks/{タスク名}/prd.md` が存在する場合
+- `/plan` と `/plan-writer` で要件が確定し、`plans/{機能名}/{verb-noun}/prd.md` が存在する場合（例: `plans/groups/list-groups/prd.md`）
 - 「実装して」「コードを書いて」「impl を実行して」などの指示があった場合
 
 ---
 
-## 1. タスク名の特定
+## 1. 実装対象の特定
 
-`plans/tasks/` 配下のディレクトリを列挙し、`AskUserQuestion` でどのタスクを実装するか選択させる。
-ユーザーがタスク名を明示している場合はそのまま使用する。
+`plans/` 配下のディレクトリ（`shared/` を含む）を列挙し、`AskUserQuestion` でどの PRD を実装するか選択させる。
+ユーザーが明示している場合はそのまま使用する。
+
+選択された PRD のパスを以下のルールで解決する:
+- `plans/shared/` 配下のファイルが選択された場合 → `plans/shared/{処理名}.md`（共通処理）
+- それ以外 → `plans/{機能名}/{verb-noun}/prd.md`（機能固有）
 
 ---
 
 ## 2. 事前チェック
 
-`plans/tasks/{タスク名}/prd.md` が存在しない場合は以下を案内して停止する:
+対象の PRD ファイルが存在しない場合は以下を案内して停止する:
 
 ```
-plans/tasks/{タスク名}/prd.md が見つかりません。
+{PRDパス} が見つかりません。
 先に /plan → /plan-writer を実行して要件を確定してください。
+({PRDパス} は plans/shared/{処理名}.md または plans/{機能名}/{verb-noun}/prd.md)
 ```
 
 ---
 
 ## 3. PRD 読込と実装対象の確定
 
-`plans/tasks/{タスク名}/prd.md` を読み、以下を整理する:
+ステップ 1 で解決した PRD パス（`plans/shared/{処理名}.md` または `plans/{機能名}/{verb-noun}/prd.md`）を読み、以下を整理する:
 
 | 項目 | 確認内容 |
 |---|---|
@@ -56,10 +68,23 @@ plans/tasks/{タスク名}/prd.md が見つかりません。
 
 ### ステップ 4-1: ループプロンプトファイルの書き出し
 
-Write ツールで `plans/tasks/{タスク名}/.ralph-impl.md` に以下の内容を書き出す（{タスク名} と {prd セクション} は実際の内容に置換）：
+`.ralph-impl.md` を以下のルールで更新する。
+- 共通処理の場合: `plans/shared/.ralph-impl.md`
+- 機能固有の場合: `plans/{機能名}/{verb-noun}/.ralph-impl.md`
+
+**更新ルール（必ず以下の順で判断する）**:
+1. 対象ファイルが存在するか確認する
+2. **存在しない場合** → `Write` ツールで新規作成する
+3. **存在する場合** → `Read` ツールで内容を読み、現在の PRD パス・PRD から抽出した実装セクションと比較する
+   - 差分がある箇所のみ `Edit` ツールで更新する
+   - 差分がなければ更新しない
+   - 変更のない箇所は触らない
+   - 既存の補足メモがあり、今回の PRD と矛盾しない箇所は保持する
+
+（{機能名}・{verb-noun}・{処理名} と {prd セクション} は実際の内容に置換）
 
 ```
-Implement task {タスク名} following plans/tasks/{タスク名}/prd.md. Skip completed steps, resume from failed ones.
+Implement {PRDパス}. Skip completed steps, resume from failed ones.
 
 Step 1: Delegate implementation in parallel.
 Run sample-api-agent for backend and sample-front-agent for frontend simultaneously.
@@ -67,11 +92,14 @@ Each agent must run tests, lint, and build after implementation and report resul
 
 Backend agent instructions (sample-api-agent):
 Implement in sample-api/ using TDD (RED->GREEN->REFACTOR).
+Read plans/{機能名}/{verb-noun}/prd.md for API spec, validation, DB operations, and test cases.
 {prd のバックエンド関連セクション（英語または日本語）}
 
 Frontend agent instructions (sample-front-agent):
 Implement in sample-front/ using TDD (RED->GREEN->REFACTOR).
-{prd のフロントエンド関連セクション（英語または日本語）}
+Read specs/{機能画面}/README.md for screen layout and UX requirements.
+Read specs/{機能画面}/{機能名}.md for frontend flow, components, and state management.
+{spec の該当画面・機能セクション（英語または日本語）}
 
 Step 2: Validation gate.
 If any test/lint/build fails -> ask the agent to fix it.
@@ -107,7 +135,7 @@ If any violation -> ask sample-front-agent to fix all violations, end this itera
 If all pass -> proceed to Step 3.
 
 Step 3: Requirements check.
-Launch prd-checker agent with TASK_NAME={タスク名} and REQUIREMENTS from plans/tasks/{タスク名}/prd.md.
+Launch prd-checker agent with TASK_NAME={PRD識別子} and REQUIREMENTS from {PRDパス}.
 If all requirements met -> proceed to Step 4.
 If any fail/partial -> ask the relevant agent to fix, end this iteration.
 
@@ -120,8 +148,10 @@ Only when Step 2 and Step 3 both fully pass, output: <promise>IMPL COMPLETE</pro
 `Skill` ツールで `ralph-loop:ralph-loop` を以下の**1行の短いプロンプト**で起動する：
 
 ```
-Read and follow plans/tasks/{タスク名}/.ralph-impl.md --completion-promise IMPL COMPLETE --max-iterations 5
+Read and follow {implパス} --completion-promise IMPL COMPLETE --max-iterations 5
 ```
+
+> {implパス} は `plans/shared/.ralph-impl.md`（共通処理）または `plans/{機能名}/{verb-noun}/.ralph-impl.md`（機能固有）
 
 > **重要**: args には上記の1行の英語プロンプトのみを渡す。多行・日本語プロンプトを直接渡すとシェルパースエラーになる。
 
@@ -162,6 +192,10 @@ Read and follow plans/tasks/{タスク名}/.ralph-impl.md --completion-promise I
 
 ### 残課題
 - {あれば記載、なければ「なし」}
+
+### 次のステップ
+- 修正が必要な場合: `/plan` に戻って要件を見直し、`/plan-writer` → `/impl` を繰り返す
+- 全ての実装が完了したら: `/impl-done` を一回だけ実行してドキュメントを同期する
 ```
 
 ---

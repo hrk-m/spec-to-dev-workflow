@@ -34,7 +34,7 @@ allowed-tools: Read, AskUserQuestion
 | # | スキル | タイミング |
 |---|--------|-----------|
 | 1 | `plan` | **新機能の開発を始める前**。何を・なぜ・どう作るかをユーザーと合意する |
-| 2 | `plan-writer` | **`/plan` で要件が固まった後**。合意内容を `plans/tasks/{タスク名}/prd.md` に書き出す |
+| 2 | `plan-writer` | **`/plan` で要件が固まった後**。合意内容を `plans/{機能名}/{verb-noun}/prd.md` または `plans/shared/{処理名}.md` に書き出す |
 | 3 | `plan-checker` | **`/impl` の前に PRD を検証したいとき**。アーキテクチャ規約との整合性を確認する |
 | 4 | `impl` | **PRD が存在するとき**。TDD で実装する。バックエンド / フロントエンドのエージェントに委譲 |
 | 5 | `impl-done` | **`/impl` が完了した後**。steering と specs/ をコードに同期する |
@@ -74,9 +74,9 @@ allowed-tools: Read, AskUserQuestion
 
    | 選択スキル | 前ステップ | 完了の証拠 |
    |-----------|-----------|-----------|
-   | `plan-writer` | `/plan` | `plans/tasks/` 配下にディレクトリまたはメモが存在する、もしくは会話内で要件合意が取れている |
-   | `plan-checker` | `/plan-writer` | `plans/tasks/{タスク名}/prd.md` が存在する |
-   | `impl` | `/plan-writer`（`/plan-checker` は任意） | `plans/tasks/{タスク名}/prd.md` が存在する |
+   | `plan-writer` | `/plan` | `plans/` 配下にディレクトリまたはメモが存在する、もしくは会話内で要件合意が取れている |
+   | `plan-checker` | `/plan-writer` | `plans/{機能名}/{verb-noun}/prd.md` または `plans/shared/{処理名}.md` が存在する |
+   | `impl` | `/plan-writer`（`/plan-checker` は任意） | `plans/{機能名}/{verb-noun}/prd.md` または `plans/shared/{処理名}.md` が存在する |
    | `impl-done` | `/impl` | 実装ファイルへの変更が git 差分として存在する、またはテストがパスしている |
 
    - **前ステップ完了の場合**: `次のステップは /〇〇 を実行してください。` と返信する

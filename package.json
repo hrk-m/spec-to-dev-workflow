@@ -8,7 +8,7 @@
     "lint:md:fix": "markdownlint-cli2 --fix \"**/*.md\"",
     "test": "echo \"Error: no test specified\" && exit 1",
     "prepare": "husky",
-    "screenshot": "bun run .claude/skills/add-screenshot/scripts/screenshot.ts"
+    "screenshot": "bun run .claude/skills/spec-update/references/spec-screenshot/scripts/screenshot.ts"
   },
   "repository": {
     "type": "git",
