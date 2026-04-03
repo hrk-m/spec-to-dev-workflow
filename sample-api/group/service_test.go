@@ -189,9 +189,9 @@ func TestService_ListGroups_OK(t *testing.T) {
 	groups := []domain.Group{
 		{ID: 1, Name: "group1", Description: "desc1", MemberCount: 1},
 	}
-	repo.On("ListGroups", mock.Anything, "", 1, 20).Return(groups, 1, nil)
+	repo.On("ListGroups", mock.Anything, "", 500, 0).Return(groups, 1, nil)
 
-	result, total, err := svc.ListGroups(context.Background(), "", 1, 20)
+	result, total, err := svc.ListGroups(context.Background(), "", 500, 0)
 
 	assert.NoError(t, err)
 	assert.Len(t, result, 1)
@@ -207,31 +207,39 @@ func TestService_ListGroups_WithSearch(t *testing.T) {
 	groups := []domain.Group{
 		{ID: 2, Name: "dev-team", Description: "developers", MemberCount: 0},
 	}
-	repo.On("ListGroups", mock.Anything, "dev", 1, 10).Return(groups, 1, nil)
+	repo.On("ListGroups", mock.Anything, "dev", 20, 0).Return(groups, 5, nil)
 
-	result, _, err := svc.ListGroups(context.Background(), "dev", 1, 10)
+	result, total, err := svc.ListGroups(context.Background(), "dev", 20, 0)
 
 	assert.NoError(t, err)
 	assert.Len(t, result, 1)
 	assert.Equal(t, "dev-team", result[0].Name)
+	assert.Equal(t, 5, total)
 	repo.AssertExpectations(t)
 }
 
-func TestService_ListGroups_InvalidPage(t *testing.T) {
+func TestService_ListGroups_WithOffset(t *testing.T) {
 	repo := new(mocks.MockGroupRepository)
 	svc := group.NewService(repo)
 
-	_, _, err := svc.ListGroups(context.Background(), "", 0, 20)
+	groups := []domain.Group{
+		{ID: 3, Name: "group3", Description: "desc3", MemberCount: 2},
+	}
+	repo.On("ListGroups", mock.Anything, "", 500, 500).Return(groups, 42, nil)
 
-	assert.ErrorIs(t, err, domain.ErrBadParamInput)
-	repo.AssertNotCalled(t, "ListGroups")
+	result, total, err := svc.ListGroups(context.Background(), "", 500, 500)
+
+	assert.NoError(t, err)
+	assert.Len(t, result, 1)
+	assert.Equal(t, 42, total)
+	repo.AssertExpectations(t)
 }
 
 func TestService_ListGroups_InvalidLimitTooLow(t *testing.T) {
 	repo := new(mocks.MockGroupRepository)
 	svc := group.NewService(repo)
 
-	_, _, err := svc.ListGroups(context.Background(), "", 1, 0)
+	_, _, err := svc.ListGroups(context.Background(), "", 0, 0)
 
 	assert.ErrorIs(t, err, domain.ErrBadParamInput)
 	repo.AssertNotCalled(t, "ListGroups")
@@ -241,7 +249,17 @@ func TestService_ListGroups_InvalidLimitTooHigh(t *testing.T) {
 	repo := new(mocks.MockGroupRepository)
 	svc := group.NewService(repo)
 
-	_, _, err := svc.ListGroups(context.Background(), "", 1, 101)
+	_, _, err := svc.ListGroups(context.Background(), "", 501, 0)
+
+	assert.ErrorIs(t, err, domain.ErrBadParamInput)
+	repo.AssertNotCalled(t, "ListGroups")
+}
+
+func TestService_ListGroups_InvalidOffsetNegative(t *testing.T) {
+	repo := new(mocks.MockGroupRepository)
+	svc := group.NewService(repo)
+
+	_, _, err := svc.ListGroups(context.Background(), "", 500, -1)
 
 	assert.ErrorIs(t, err, domain.ErrBadParamInput)
 	repo.AssertNotCalled(t, "ListGroups")
@@ -251,10 +269,10 @@ func TestService_ListGroups_RepositoryError(t *testing.T) {
 	repo := new(mocks.MockGroupRepository)
 	svc := group.NewService(repo)
 
-	repo.On("ListGroups", mock.Anything, "", 1, 20).
+	repo.On("ListGroups", mock.Anything, "", 500, 0).
 		Return([]domain.Group(nil), 0, domain.ErrInternalServerError)
 
-	_, _, err := svc.ListGroups(context.Background(), "", 1, 20)
+	_, _, err := svc.ListGroups(context.Background(), "", 500, 0)
 
 	assert.ErrorIs(t, err, domain.ErrInternalServerError)
 	repo.AssertExpectations(t)

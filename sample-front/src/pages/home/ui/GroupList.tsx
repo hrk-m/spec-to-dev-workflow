@@ -1,9 +1,9 @@
 import { Box, Button, Callout, Flex, Heading, Skeleton, Text, TextField } from "@radix-ui/themes";
-import { FaArrowDown, FaMagnifyingGlass } from "react-icons/fa6";
+import { FaChevronLeft, FaChevronRight, FaMagnifyingGlass } from "react-icons/fa6";
 import { useNavigate } from "react-router";
 
 import type { Group } from "@/pages/home/model/group";
-import { useGroupList } from "@/pages/home/model/useGroupList";
+import { PER_PAGE_OPTIONS, useGroupList } from "@/pages/home/model/useGroupList";
 import { PageContainer } from "@/shared/ui";
 import { styles } from "./GroupList.styles";
 
@@ -93,19 +93,22 @@ export function GroupList() {
   const navigate = useNavigate();
   const {
     groups,
-    pagination,
-    search,
-    setSearch,
-    setPage,
-    loadNextPage,
+    total,
+    currentPage,
+    totalPages,
+    perPage,
+    searchQuery,
     error,
-    isInitialLoading,
-    isLoadingMore,
+    isLoading,
     isWideLayout,
-    hasNextPage,
+    setCurrentPage,
+    setPerPage,
+    setSearchQuery,
     groupCountLabel,
     visibleGroupCountLabel,
   } = useGroupList();
+
+  const isInitialLoading = isLoading && groups.length === 0;
 
   return (
     <PageContainer>
@@ -125,17 +128,30 @@ export function GroupList() {
           variant="surface"
           style={styles.searchField}
           placeholder="Search by name or description"
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setPage(1);
-          }}
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
         >
           <TextField.Slot>
             <FaMagnifyingGlass aria-hidden="true" style={styles.searchFieldIcon} />
           </TextField.Slot>
         </TextField.Root>
       </Box>
+
+      <Flex style={styles.perPageSection}>
+        {PER_PAGE_OPTIONS.map((option) => (
+          <button
+            key={option}
+            type="button"
+            style={{
+              ...styles.perPageButton,
+              ...(perPage === option ? styles.perPageButtonActive : styles.perPageButtonInactive),
+            }}
+            onClick={() => setPerPage(option)}
+          >
+            {option}
+          </button>
+        ))}
+      </Flex>
 
       {error && groups.length === 0 && (
         <Callout.Root color="red" style={styles.errorCard}>
@@ -204,26 +220,35 @@ export function GroupList() {
         </Callout.Root>
       )}
 
-      {pagination && !isInitialLoading && (
+      {!isInitialLoading && total > 0 && (
         <Flex style={styles.footerSection}>
           <Text as="p" style={styles.footerMeta}>
-            Page {pagination.page} of {Math.max(1, Math.ceil(pagination.total / pagination.limit))}
+            Page {currentPage} of {totalPages}
           </Text>
-          {hasNextPage && (
+          <Flex style={styles.paginationButtons}>
             <Button
               type="button"
-              size="3"
+              size="2"
               radius="full"
-              color="blue"
               variant="soft"
-              style={styles.loadMoreButton}
-              disabled={isLoadingMore}
-              onClick={loadNextPage}
+              disabled={currentPage <= 1}
+              onClick={() => setCurrentPage(currentPage - 1)}
             >
-              <FaArrowDown aria-hidden="true" />
-              {isLoadingMore ? "Loading more..." : "Load More"}
+              <FaChevronLeft aria-hidden="true" />
+              Previous
             </Button>
-          )}
+            <Button
+              type="button"
+              size="2"
+              radius="full"
+              variant="soft"
+              disabled={currentPage >= totalPages}
+              onClick={() => setCurrentPage(currentPage + 1)}
+            >
+              Next
+              <FaChevronRight aria-hidden="true" />
+            </Button>
+          </Flex>
         </Flex>
       )}
     </PageContainer>

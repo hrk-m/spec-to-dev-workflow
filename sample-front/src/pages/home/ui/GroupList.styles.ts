@@ -149,8 +149,34 @@ export const styles = {
     fontSize: 13,
     color: colors.textSecondary,
   },
-  loadMoreButton: {
-    minWidth: 132,
+  paginationButtons: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+  },
+  perPageSection: {
+    display: "flex",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 16,
+  },
+  perPageButton: {
+    minWidth: 48,
+    fontSize: 13,
+    fontWeight: 500,
+    borderRadius: 999,
+    cursor: "pointer",
+    padding: "5px 12px",
+    border: "none",
+    transition: "background 0.15s ease",
+  },
+  perPageButtonActive: {
+    background: colors.accent,
+    color: "#FFFFFF",
+  },
+  perPageButtonInactive: {
+    background: colors.searchBackground,
+    color: colors.textSecondary,
   },
   emptyState: {
     marginTop: 26,

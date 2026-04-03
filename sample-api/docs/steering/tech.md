@@ -36,7 +36,7 @@ db/migrations/              →  DB schema migration
 ### エラーハンドリング
 
 - `domain/errors.go` にセンチネルエラーを集約
-- `internal/rest/errors.go` でエラーを HTTP ステータスコードにマッピング
+- `internal/rest/errors.go` でエラーを HTTP ステータスコードにマッピング（`ErrBadParamInput` → 400、`ErrNotFound` → 404、`ErrConflict` → 409、`ErrInternalServerError` → 500、その他 → 500）
 - ハンドラは `ResponseError{Message}` で JSON エラーレスポンスを返す
 
 ## コーディング規約

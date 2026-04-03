@@ -111,7 +111,7 @@
 |---|---|---|---|
 | `id` が整数に変換不可 | Handler | 400 Bad Request | `{ "message": "given param is not valid" }` |
 | `id` が 1 未満 | Handler | 400 Bad Request | `{ "message": "given param is not valid" }` |
-| 該当グループが存在しない | Service / Repository | 404 Not Found | `{ "message": "not found" }` |
+| 該当グループが存在しない | Service / Repository | 404 Not Found | `{ "message": "your requested item is not found" }` |
 | DB エラー | Repository | 500 Internal Server Error | `{ "message": "internal server error" }` |
 | ネットワークエラー | フロントエンド: API クライアント層 | — | エラーメッセージ表示 |
 
@@ -149,6 +149,7 @@
 | `sample-api/internal/rest/group_test.go` | Handler ユニットテスト（GetByID）|
 | `sample-api/internal/rest/mocks/group_service_mock.go` | GroupService の手動 mock（GetByID 追加）|
 | `sample-api/internal/repository/mysql/group.go` | MySQL 実装（GetByID）|
+| `sample-api/db/migrations/001_create_groups_tables.sql` | テーブル定義・マイグレーション |
 
 ### sample-front
 

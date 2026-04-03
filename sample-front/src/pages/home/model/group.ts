@@ -5,19 +5,13 @@ export type Group = {
   member_count: number;
 };
 
-export type Pagination = {
-  total: number;
-  page: number;
-  limit: number;
-};
-
 export type GroupsResponse = {
   groups: Group[];
-  pagination: Pagination;
+  total: number;
 };
 
-export type GroupSearchParams = {
-  search: string;
-  page: number;
-  limit: number;
+export type FetchGroupsParams = {
+  q?: string;
+  limit?: number;
+  offset?: number;
 };

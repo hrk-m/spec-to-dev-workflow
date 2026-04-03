@@ -8,9 +8,10 @@ import (
 )
 
 const (
-	minPage  = 1
-	minLimit = 1
-	maxLimit = 100
+	defaultLimit = 500
+	minLimit     = 1
+	maxLimit     = 500
+	minOffset    = 0
 
 	minID              = 1
 	minMemberLimit     = 1
@@ -21,7 +22,7 @@ const (
 
 // GroupRepository defines the interface for group data access.
 type GroupRepository interface {
-	ListGroups(ctx context.Context, search string, page, limit int) ([]domain.Group, int, error)
+	ListGroups(ctx context.Context, q string, limit, offset int) ([]domain.Group, int, error)
 	GetByID(ctx context.Context, id uint64) (domain.Group, error)
 	ListGroupMembers(ctx context.Context, id, limit, offset uint64, q string) ([]domain.GroupMember, int, error)
 }
@@ -71,14 +72,14 @@ func (s *Service) ListGroupMembers(ctx context.Context, id, limit, offset uint64
 	return members, total, nil
 }
 
-// ListGroups returns a paginated list of groups filtered by search.
-func (s *Service) ListGroups(ctx context.Context, search string, page, limit int) ([]domain.Group, int, error) {
-	if page < minPage {
-		return nil, 0, domain.ErrBadParamInput
-	}
+// ListGroups returns a paginated list of groups filtered by q keyword.
+func (s *Service) ListGroups(ctx context.Context, q string, limit, offset int) ([]domain.Group, int, error) {
 	if limit < minLimit || limit > maxLimit {
 		return nil, 0, domain.ErrBadParamInput
 	}
+	if offset < minOffset {
+		return nil, 0, domain.ErrBadParamInput
+	}
 
-	return s.repo.ListGroups(ctx, search, page, limit)
+	return s.repo.ListGroups(ctx, q, limit, offset)
 }

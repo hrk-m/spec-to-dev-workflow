@@ -12,6 +12,10 @@ import (
 )
 
 const (
+	defaultGroupLimit = 500
+	minGroupLimit     = 1
+	maxGroupLimit     = 500
+
 	defaultMemberLimit = 500
 	minMemberLimit     = 1
 	maxMemberLimit     = 500
@@ -19,7 +23,7 @@ const (
 
 // GroupService defines the interface for the group use case.
 type GroupService interface {
-	ListGroups(ctx context.Context, search string, page, limit int) ([]domain.Group, int, error)
+	ListGroups(ctx context.Context, q string, limit, offset int) ([]domain.Group, int, error)
 	GetByID(ctx context.Context, id uint64) (domain.Group, error)
 	ListGroupMembers(ctx context.Context, id, limit, offset uint64, q string) ([]domain.GroupMember, int, error)
 }
@@ -38,14 +42,8 @@ func NewGroupHandler(e *echo.Echo, svc GroupService) {
 }
 
 type groupListResponse struct {
-	Groups     []domain.Group `json:"groups"`
-	Pagination paginationMeta `json:"pagination"`
-}
-
-type paginationMeta struct {
-	Total int `json:"total"`
-	Page  int `json:"page"`
-	Limit int `json:"limit"`
+	Groups []domain.Group `json:"groups"`
+	Total  int            `json:"total"`
 }
 
 type groupMemberListResponse struct {
@@ -111,38 +109,52 @@ func (h *GroupHandler) ListGroupMembers(c echo.Context) error {
 func (h *GroupHandler) ListGroups(c echo.Context) error {
 	ctx := c.Request().Context()
 
-	pageStr := c.QueryParam("page")
-	limitStr := c.QueryParam("limit")
-
-	if pageStr == "" || limitStr == "" {
+	limit, limitErr := parseGroupLimit(c.QueryParam("limit"))
+	if limitErr != nil {
 		return c.JSON(http.StatusBadRequest, ResponseError{Message: domain.ErrBadParamInput.Error()})
 	}
 
-	page, err := strconv.Atoi(pageStr)
-	if err != nil {
+	offset, offsetErr := parseGroupOffset(c.QueryParam("offset"))
+	if offsetErr != nil {
 		return c.JSON(http.StatusBadRequest, ResponseError{Message: domain.ErrBadParamInput.Error()})
 	}
 
-	limit, err := strconv.Atoi(limitStr)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, ResponseError{Message: domain.ErrBadParamInput.Error()})
-	}
+	q := c.QueryParam("q")
 
-	search := c.QueryParam("search")
-
-	groups, total, err := h.Service.ListGroups(ctx, search, page, limit)
+	groups, total, err := h.Service.ListGroups(ctx, q, limit, offset)
 	if err != nil {
 		return c.JSON(getStatusCode(err), ResponseError{Message: err.Error()})
 	}
 
-	return c.JSON(http.StatusOK, groupListResponse{
-		Groups: groups,
-		Pagination: paginationMeta{
-			Total: total,
-			Page:  page,
-			Limit: limit,
-		},
-	})
+	return c.JSON(http.StatusOK, groupListResponse{Groups: groups, Total: total})
+}
+
+// parseGroupLimit parses and validates the limit query parameter for group listing.
+func parseGroupLimit(s string) (int, error) {
+	if s == "" {
+		return defaultGroupLimit, nil
+	}
+
+	l, err := strconv.Atoi(s)
+	if err != nil || l < minGroupLimit || l > maxGroupLimit {
+		return 0, domain.ErrBadParamInput
+	}
+
+	return l, nil
+}
+
+// parseGroupOffset parses and validates the offset query parameter for group listing.
+func parseGroupOffset(s string) (int, error) {
+	if s == "" {
+		return 0, nil
+	}
+
+	o, err := strconv.Atoi(s)
+	if err != nil || o < 0 {
+		return 0, domain.ErrBadParamInput
+	}
+
+	return o, nil
 }
 
 // parseMemberLimit parses and validates the limit query parameter for member listing.

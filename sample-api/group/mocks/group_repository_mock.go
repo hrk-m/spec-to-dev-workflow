@@ -14,8 +14,8 @@ type MockGroupRepository struct {
 	mock.Mock
 }
 
-func (m *MockGroupRepository) ListGroups(ctx context.Context, search string, page, limit int) ([]domain.Group, int, error) {
-	args := m.Called(ctx, search, page, limit)
+func (m *MockGroupRepository) ListGroups(ctx context.Context, q string, limit, offset int) ([]domain.Group, int, error) {
+	args := m.Called(ctx, q, limit, offset)
 	return args.Get(0).([]domain.Group), args.Int(1), args.Error(2)
 }
 

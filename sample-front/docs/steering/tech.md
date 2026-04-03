@@ -84,13 +84,15 @@ Prettier +
 
 - `printWidth: 100`, `singleQuote: false`, `semi: true`, `trailingComma: "all"`
 - `tabWidth: 2`, `arrowParens: "always"`, `proseWrap: "always"`, `endOfLine: "lf"`
-- インポート順: React → サードパーティ → `@/app` → `@/pages` → `@/shared` → 相対パス
+- インポート順: React → サードパーティ → `@/app` → `@/pages` → `@/shared` → 親相対パス(`../`) → 同階層相対パス(`./`)
+- 注意: `@/widgets` は `.prettierrc.mjs` の `importOrder` に明示指定されていないため、サードパーティと `@/app` の間にフォールバック配置される
 
 ### テスト構成
 
 - `vitest.config.ts` で React plugin と jsdom を設定済み
+- `globals: true` により `describe`, `it`, `expect` 等をインポート不要で使用可能
 - セットアップファイル: `src/test/setup.ts`（`@testing-library/jest-dom` のインポート）
-- カバレッジ: `vitest run --coverage`（v8 プロバイダー）
+- カバレッジ: `vitest run --coverage`（v8 プロバイダー、レポーター: `text` + `lcov`）
 
 ## コマンド
 

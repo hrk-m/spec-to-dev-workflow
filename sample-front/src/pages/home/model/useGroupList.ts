@@ -1,18 +1,25 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { fetchGroups } from "@/pages/home/api/fetch-groups";
-import type { Group, Pagination } from "@/pages/home/model/group";
+import type { Group } from "@/pages/home/model/group";
 
-const DEFAULT_LIMIT = 10;
+const FETCH_LIMIT = 500;
+const DEFAULT_PER_PAGE = 20;
 const WIDE_LAYOUT_BREAKPOINT = 1024;
 
+type PerPage = 20 | 50 | 100;
+
+export const PER_PAGE_OPTIONS = [20, 50, 100] as const;
+
 export function useGroupList() {
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [pagination, setPagination] = useState<Pagination | null>(null);
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
+  const [cachedGroups, setCachedGroups] = useState<Group[]>([]);
+  const [total, setTotal] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [perPage, setPerPage] = useState<PerPage>(DEFAULT_PER_PAGE);
+  const [searchQuery, setSearchQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [fetchedOffset, setFetchedOffset] = useState(0);
   const [isWideLayout, setIsWideLayout] = useState(
     () => typeof window !== "undefined" && window.innerWidth >= WIDE_LAYOUT_BREAKPOINT,
   );
@@ -34,85 +41,82 @@ export function useGroupList() {
     };
   }, []);
 
-  useEffect(() => {
-    let isActive = true;
-
+  const doFetch = useCallback((offset: number, query: string, append: boolean) => {
     setIsLoading(true);
     setError(null);
 
-    fetchGroups({ search, page, limit: DEFAULT_LIMIT })
+    fetchGroups({ limit: FETCH_LIMIT, offset, q: query || undefined })
       .then((data) => {
-        if (!isActive) {
-          return;
-        }
-
-        setGroups((prev) => {
-          if (page === 1) {
-            return data.groups;
+        setCachedGroups((prev) => {
+          if (append) {
+            const existingIds = new Set(prev.map((g) => g.id));
+            const newGroups = data.groups.filter((g) => !existingIds.has(g.id));
+            return [...prev, ...newGroups];
           }
-
-          const nextGroups = data.groups.filter(
-            (candidate) => !prev.some((group) => group.id === candidate.id),
-          );
-
-          return [...prev, ...nextGroups];
+          return data.groups;
         });
-        setPagination(data.pagination);
+        setTotal(data.total);
+        setFetchedOffset(offset + FETCH_LIMIT);
       })
       .catch((err: unknown) => {
-        if (!isActive) {
-          return;
-        }
-
         setError(String(err));
-        if (page === 1) {
-          setGroups([]);
-          setPagination(null);
-        }
       })
       .finally(() => {
-        if (!isActive) {
-          return;
-        }
-
         setIsLoading(false);
       });
+  }, []);
 
-    return () => {
-      isActive = false;
-    };
-  }, [search, page]);
+  useEffect(() => {
+    setCachedGroups([]);
+    setCurrentPage(1);
+    setFetchedOffset(0);
+    doFetch(0, searchQuery, false);
+  }, [searchQuery, doFetch]);
 
-  const totalPages = pagination ? Math.ceil(pagination.total / pagination.limit) : 0;
-  const hasNextPage = pagination ? page < totalPages : false;
-  const isInitialLoading = isLoading && page === 1;
-  const isLoadingMore = isLoading && page > 1;
-  const groupCountLabel = pagination ? `${pagination.total} groups` : "Loading groups...";
-  const visibleGroupCountLabel = pagination
-    ? `Showing ${groups.length} of ${pagination.total} groups`
-    : "Preparing your list...";
+  const totalPages = Math.max(1, Math.ceil(total / perPage));
+
+  const startIndex = (currentPage - 1) * perPage;
+  const endIndex = startIndex + perPage;
+
+  const needsMoreData = endIndex > cachedGroups.length && cachedGroups.length < total;
+
+  useEffect(() => {
+    if (needsMoreData && !isLoading) {
+      doFetch(fetchedOffset, searchQuery, true);
+    }
+  }, [needsMoreData, isLoading, fetchedOffset, searchQuery, doFetch]);
+
+  const visibleGroups = cachedGroups.slice(startIndex, endIndex);
+
+  const handleSearch = useCallback((query: string) => {
+    setSearchQuery(query);
+    setCurrentPage(1);
+  }, []);
+
+  const handlePerPageChange = useCallback((newPerPage: PerPage) => {
+    setPerPage(newPerPage);
+    setCurrentPage(1);
+  }, []);
+
+  const groupCountLabel = total > 0 ? `${String(total)} groups` : "Loading groups...";
+  const visibleGroupCountLabel =
+    total > 0
+      ? `Showing ${String(visibleGroups.length)} of ${String(total)} groups`
+      : "Preparing your list...";
 
   return {
-    groups,
-    pagination,
-    search,
-    setSearch,
-    page,
-    setPage,
-    loadNextPage: () => {
-      if (isLoading || !hasNextPage) {
-        return;
-      }
-
-      setPage((prev) => prev + 1);
-    },
+    groups: visibleGroups,
+    total,
+    currentPage,
+    totalPages,
+    perPage,
+    searchQuery,
     error,
     isLoading,
-    isInitialLoading,
-    isLoadingMore,
     isWideLayout,
-    totalPages,
-    hasNextPage,
+    setCurrentPage,
+    setPerPage: handlePerPageChange,
+    setSearchQuery: handleSearch,
     groupCountLabel,
     visibleGroupCountLabel,
   };

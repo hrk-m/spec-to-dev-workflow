@@ -25,7 +25,7 @@ export function Header({ onMenuClick }: HeaderProps) {
             </IconButton>
           </Flex>
           <Text as="span" style={styles.title}>
-            Groups
+            Sample Front
           </Text>
           <Flex style={styles.trailing}>
             <Box style={styles.accountAvatar} role="img" aria-label="Account">

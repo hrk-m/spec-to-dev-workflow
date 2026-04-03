@@ -25,9 +25,7 @@ export const styles = {
   },
   inner: {
     height: 52,
-    maxWidth: 1240,
-    margin: "0 auto",
-    padding: "0 16px",
+    padding: "0 24px",
     display: "grid",
     gridTemplateColumns: "40px 1fr 40px",
     alignItems: "center",

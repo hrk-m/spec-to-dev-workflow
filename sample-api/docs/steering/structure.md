@@ -27,10 +27,13 @@ sample-api/
 │       ├── errors.go          # エラー → HTTP ステータスコードのマッピング
 │       └── mocks/             # テスト用 mock（手動保守）
 │           └── {feature}_service_mock.go
+├── .env                     # 環境変数（ローカル用）
 ├── .env.example             # 環境変数のサンプル
 ├── .golangci.yml            # golangci-lint 設定
+├── bin/                     # ビルド成果物
 ├── docker-compose.yml       # MySQL コンテナ定義
-└── Makefile                 # ビルド・テスト・lint コマンド
+├── Makefile                 # ビルド・テスト・lint コマンド
+└── README.md                # プロジェクト説明
 ```
 
 ## 命名パターン

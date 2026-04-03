@@ -35,8 +35,18 @@ const designGroup: Group = {
 
 const mockGroupsResponse: GroupsResponse = {
   groups: [engineeringGroup, designGroup],
-  pagination: { total: 2, page: 1, limit: 10 },
+  total: 2,
 };
+
+function createManyGroups(count: number): GroupsResponse {
+  const groups = Array.from({ length: Math.min(count, 500) }, (_, i) => ({
+    id: i + 1,
+    name: `Group${String(i + 1)}`,
+    description: `Description ${String(i + 1)}`,
+    member_count: i + 1,
+  }));
+  return { groups, total: count };
+}
 
 describe("GroupList", () => {
   beforeEach(() => {
@@ -104,7 +114,7 @@ describe("GroupList", () => {
       .mockResolvedValueOnce(mockGroupsResponse)
       .mockResolvedValueOnce({
         groups: [engineeringGroup],
-        pagination: { total: 1, page: 1, limit: 10 },
+        total: 1,
       });
 
     renderWithRouter();
@@ -119,48 +129,9 @@ describe("GroupList", () => {
 
     await waitFor(() => {
       expect(vi.mocked(fetchGroups)).toHaveBeenLastCalledWith(
-        expect.objectContaining({ search: "Eng" }),
+        expect.objectContaining({ q: "Eng" }),
       );
     });
-  });
-
-  it("Load More ボタンで次のページに遷移できる", async () => {
-    const user = userEvent.setup();
-    const multiPageResponse: GroupsResponse = {
-      ...mockGroupsResponse,
-      pagination: { total: 20, page: 1, limit: 10 },
-    };
-    vi.mocked(fetchGroups)
-      .mockResolvedValueOnce(multiPageResponse)
-      .mockResolvedValueOnce({
-        ...mockGroupsResponse,
-        pagination: { total: 20, page: 2, limit: 10 },
-      });
-
-    renderWithRouter();
-
-    await waitFor(() => {
-      expect(screen.getByText("Engineering")).toBeInTheDocument();
-    });
-
-    const loadMoreButton = screen.getByRole("button", { name: "Load More" });
-    await user.click(loadMoreButton);
-
-    await waitFor(() => {
-      expect(vi.mocked(fetchGroups)).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2 }));
-    });
-  });
-
-  it("最終ページでは Load More ボタンを表示しない", async () => {
-    vi.mocked(fetchGroups).mockResolvedValueOnce(mockGroupsResponse);
-
-    renderWithRouter();
-
-    await waitFor(() => {
-      expect(screen.getByText("Engineering")).toBeInTheDocument();
-    });
-
-    expect(screen.queryByRole("button", { name: "Load More" })).not.toBeInTheDocument();
   });
 
   it("タイトルを表示する", () => {
@@ -181,5 +152,147 @@ describe("GroupList", () => {
     });
 
     expect(screen.getByText("All Groups")).toBeInTheDocument();
+  });
+
+  it("perPage 切り替えボタンを表示する", async () => {
+    vi.mocked(fetchGroups).mockResolvedValueOnce(mockGroupsResponse);
+
+    renderWithRouter();
+
+    await waitFor(() => {
+      expect(screen.getByText("Engineering")).toBeInTheDocument();
+    });
+
+    expect(screen.getByRole("button", { name: "20" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "50" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "100" })).toBeInTheDocument();
+  });
+
+  it("デフォルトで 20 件/ページ表示する", async () => {
+    const manyGroups = createManyGroups(50);
+    vi.mocked(fetchGroups).mockResolvedValueOnce(manyGroups);
+
+    renderWithRouter();
+
+    await waitFor(() => {
+      expect(screen.getByText("Group1")).toBeInTheDocument();
+    });
+
+    expect(screen.getByText("Group20")).toBeInTheDocument();
+    expect(screen.queryByText("Group21")).not.toBeInTheDocument();
+    expect(screen.getByText("Page 1 of 3")).toBeInTheDocument();
+  });
+
+  it("perPage を 50 に切り替えられる", async () => {
+    const user = userEvent.setup();
+    const manyGroups = createManyGroups(100);
+    vi.mocked(fetchGroups).mockResolvedValueOnce(manyGroups);
+
+    renderWithRouter();
+
+    await waitFor(() => {
+      expect(screen.getByText("Group1")).toBeInTheDocument();
+    });
+
+    const button50 = screen.getByRole("button", { name: "50" });
+    await user.click(button50);
+
+    await waitFor(() => {
+      expect(screen.getByText("Group50")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("Group51")).not.toBeInTheDocument();
+  });
+
+  it("Next / Previous ボタンでページを切り替えられる", async () => {
+    const user = userEvent.setup();
+    const manyGroups = createManyGroups(50);
+    vi.mocked(fetchGroups).mockResolvedValueOnce(manyGroups);
+
+    renderWithRouter();
+
+    await waitFor(() => {
+      expect(screen.getByText("Page 1 of 3")).toBeInTheDocument();
+    });
+
+    const nextButton = screen.getByRole("button", { name: "Next" });
+    await user.click(nextButton);
+
+    await waitFor(() => {
+      expect(screen.getByText("Page 2 of 3")).toBeInTheDocument();
+    });
+    expect(screen.getByText("Group21")).toBeInTheDocument();
+
+    const prevButton = screen.getByRole("button", { name: "Previous" });
+    await user.click(prevButton);
+
+    await waitFor(() => {
+      expect(screen.getByText("Page 1 of 3")).toBeInTheDocument();
+    });
+  });
+
+  it("500 件キャッシュを超えるページに遷移すると offset=500 で追加フェッチする", async () => {
+    const user = userEvent.setup();
+
+    const initialResponse = createManyGroups(520);
+    vi.mocked(fetchGroups).mockResolvedValueOnce(initialResponse);
+
+    const additionalGroups = Array.from({ length: 20 }, (_, i) => ({
+      id: 501 + i,
+      name: `Group${String(501 + i)}`,
+      description: `Description ${String(501 + i)}`,
+      member_count: 501 + i,
+    }));
+    vi.mocked(fetchGroups).mockResolvedValueOnce({
+      groups: additionalGroups,
+      total: 520,
+    });
+
+    renderWithRouter();
+
+    await waitFor(() => {
+      expect(screen.getByText("Group1")).toBeInTheDocument();
+    });
+
+    const button100 = screen.getByRole("button", { name: "100" });
+    await user.click(button100);
+
+    const nextButton = screen.getByRole("button", { name: "Next" });
+    await user.click(nextButton);
+    await user.click(nextButton);
+    await user.click(nextButton);
+    await user.click(nextButton);
+    await user.click(nextButton);
+
+    await waitFor(() => {
+      expect(vi.mocked(fetchGroups)).toHaveBeenCalledWith(
+        expect.objectContaining({ offset: 500, limit: 500 }),
+      );
+    });
+  });
+
+  it("最終ページでは Next ボタンが無効になる", async () => {
+    vi.mocked(fetchGroups).mockResolvedValueOnce(mockGroupsResponse);
+
+    renderWithRouter();
+
+    await waitFor(() => {
+      expect(screen.getByText("Engineering")).toBeInTheDocument();
+    });
+
+    const nextButton = screen.getByRole("button", { name: "Next" });
+    expect(nextButton).toBeDisabled();
+  });
+
+  it("最初のページでは Previous ボタンが無効になる", async () => {
+    vi.mocked(fetchGroups).mockResolvedValueOnce(mockGroupsResponse);
+
+    renderWithRouter();
+
+    await waitFor(() => {
+      expect(screen.getByText("Engineering")).toBeInTheDocument();
+    });
+
+    const prevButton = screen.getByRole("button", { name: "Previous" });
+    expect(prevButton).toBeDisabled();
   });
 });

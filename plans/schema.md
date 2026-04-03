@@ -75,8 +75,8 @@
 | 種別 | 名前 | 対象カラム | 説明 |
 |---|---|---|---|
 | PRIMARY KEY | `PRIMARY` | `id` | 中間テーブルの一意識別子 |
-| FOREIGN KEY | `group_members_ibfk_1` | `group_id` → `groups(id)` | 所属グループの参照整合性を保証 |
-| FOREIGN KEY | `group_members_ibfk_2` | `user_id` → `users(id)` | 所属ユーザーの参照整合性を保証 |
+| FOREIGN KEY | `group_members_ibfk_1` | `group_id` → `groups(id)` | 所属グループの参照整合性を保証（001 で暗黙設定） |
+| FOREIGN KEY | `fk_group_members_user_id` | `user_id` → `users(id)` | 所属ユーザーの参照整合性を保証（003 で明示命名） |
 
 #### インデックス
 

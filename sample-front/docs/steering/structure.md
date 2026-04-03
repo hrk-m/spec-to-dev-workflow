@@ -25,8 +25,8 @@ src/
 ### `app/`
 
 - `index.tsx` — React DOM のマウント（`StrictMode` + `createRoot` +
-  `render`）。HMR 対応（`import.meta.hot` による root の再利用）
-- `App.tsx` — ルートコンポーネント。App Shell パターン（`Header` + `Sidebar` + `RouterProvider`）で構成
+  `render`）。Radix UI `Theme`（`appearance="light"`, `accentColor="gray"`, `grayColor="slate"`, `radius="large"`）でアプリ全体をラップ。HMR 対応（`import.meta.hot` による root の再利用）
+- `App.tsx` — ルートコンポーネント。App Shell パターン（`Header` + `Sidebar` + `RouterProvider`）で構成。Sidebar 開閉に連動して `body.style.overflow` を制御しスクロールをロック
 - `router.tsx` — `createBrowserRouter` によるルート定義（`/`, `/groups`, `/groups/:id`）
 - `styles/index.css` — グローバルスタイル
 

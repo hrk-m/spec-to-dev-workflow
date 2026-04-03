@@ -24,9 +24,9 @@ func NewGroupRepository(db *sql.DB) *GroupRepository {
 	return &GroupRepository{db: db}
 }
 
-// ListGroups returns a paginated, filtered list of groups from MySQL.
-func (r *GroupRepository) ListGroups(ctx context.Context, search string, page, limit int) ([]domain.Group, int, error) {
-	total, err := r.countGroups(ctx, search)
+// ListGroups returns a filtered list of groups with unfiltered total count.
+func (r *GroupRepository) ListGroups(ctx context.Context, q string, limit, offset int) ([]domain.Group, int, error) {
+	total, err := r.countGroups(ctx)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -35,7 +35,7 @@ func (r *GroupRepository) ListGroups(ctx context.Context, search string, page, l
 		return []domain.Group{}, 0, nil
 	}
 
-	groups, err := r.selectGroups(ctx, search, page, limit)
+	groups, err := r.selectGroups(ctx, q, limit, offset)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -43,31 +43,28 @@ func (r *GroupRepository) ListGroups(ctx context.Context, search string, page, l
 	return groups, total, nil
 }
 
-// countGroups returns the total number of non-deleted groups matching the search.
-func (r *GroupRepository) countGroups(ctx context.Context, search string) (int, error) {
+// countGroups returns the total number of non-deleted groups (unfiltered).
+func (r *GroupRepository) countGroups(ctx context.Context) (int, error) {
 	query := "SELECT COUNT(*) FROM `groups` g WHERE g.deleted_at IS NULL"
-	searchCondition, args := buildSearchCondition(search)
-	query += searchCondition
 
 	var total int
-	if err := r.db.QueryRowContext(ctx, query, args...).Scan(&total); err != nil {
+	if err := r.db.QueryRowContext(ctx, query).Scan(&total); err != nil {
 		return 0, domain.ErrInternalServerError
 	}
 
 	return total, nil
 }
 
-// selectGroups returns a page of non-deleted groups with member counts matching the search.
-func (r *GroupRepository) selectGroups(ctx context.Context, search string, page, limit int) ([]domain.Group, error) {
+// selectGroups returns non-deleted groups with member counts, optionally filtered by q.
+func (r *GroupRepository) selectGroups(ctx context.Context, q string, limit, offset int) ([]domain.Group, error) {
 	query := "SELECT " + groupBaseColumns + ", COUNT(gm.id) AS member_count" +
 		" FROM `groups` g LEFT JOIN group_members gm ON g.id = gm.group_id" +
 		" WHERE g.deleted_at IS NULL"
 
-	searchCondition, args := buildSearchCondition(search)
+	searchCondition, args := buildSearchCondition(q)
 	query += searchCondition //nolint:gosec // search condition uses parameterized placeholders
 
 	query += " GROUP BY " + groupBaseColumns
-	offset := (page - 1) * limit
 	query += " ORDER BY g.id DESC LIMIT ? OFFSET ?"
 	args = append(args, limit, offset)
 

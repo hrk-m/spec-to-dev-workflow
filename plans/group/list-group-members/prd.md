@@ -141,7 +141,7 @@
 | `id` が 1 未満 | Handler | 400 Bad Request | `{ "message": "given param is not valid" }` |
 | `limit` が整数でない / 1〜500 の範囲外 | Handler | 400 Bad Request | `{ "message": "given param is not valid" }` |
 | `offset` が整数でない / 0 未満 | Handler | 400 Bad Request | `{ "message": "given param is not valid" }` |
-| 対象グループが存在しない | Service / Repository | 404 Not Found | `{ "message": "not found" }` |
+| 対象グループが存在しない | Service / Repository | 404 Not Found | `{ "message": "your requested item is not found" }` |
 | DB エラー | Repository | 500 Internal Server Error | `{ "message": "internal server error" }` |
 | ネットワークエラー | フロントエンド: API クライアント層 | — | エラーメッセージ表示 |
 

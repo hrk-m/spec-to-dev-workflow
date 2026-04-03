@@ -361,7 +361,7 @@ func TestGroupHandler_ListGroupMembers_InternalError(t *testing.T) {
 
 func TestGroupHandler_ListGroups_OK(t *testing.T) {
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/groups?search=dev&page=1&limit=20", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/groups?q=dev&limit=20&offset=0", nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 
@@ -369,7 +369,7 @@ func TestGroupHandler_ListGroups_OK(t *testing.T) {
 	groups := []domain.Group{
 		{ID: 1, Name: "dev-team", Description: "developers", MemberCount: 1},
 	}
-	svc.On("ListGroups", mock.Anything, "dev", 1, 20).Return(groups, 1, nil)
+	svc.On("ListGroups", mock.Anything, "dev", 20, 0).Return(groups, 42, nil)
 
 	h := &rest.GroupHandler{Service: svc}
 	err := h.ListGroups(c)
@@ -378,28 +378,24 @@ func TestGroupHandler_ListGroups_OK(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rec.Code)
 
 	var result struct {
-		Groups     []domain.Group `json:"groups"`
-		Pagination struct {
-			Total int `json:"total"`
-			Page  int `json:"page"`
-			Limit int `json:"limit"`
-		} `json:"pagination"`
+		Groups []domain.Group `json:"groups"`
+		Total  int            `json:"total"`
 	}
 	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
 	assert.Len(t, result.Groups, 1)
 	assert.Equal(t, "dev-team", result.Groups[0].Name)
-	assert.Equal(t, 1, result.Pagination.Total)
+	assert.Equal(t, 42, result.Total)
 	svc.AssertExpectations(t)
 }
 
-func TestGroupHandler_ListGroups_DefaultSearch(t *testing.T) {
+func TestGroupHandler_ListGroups_DefaultParams(t *testing.T) {
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/groups?page=1&limit=10", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/groups", nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 
 	svc := new(mocks.MockGroupService)
-	svc.On("ListGroups", mock.Anything, "", 1, 10).Return([]domain.Group{}, 0, nil)
+	svc.On("ListGroups", mock.Anything, "", 500, 0).Return([]domain.Group{}, 0, nil)
 
 	h := &rest.GroupHandler{Service: svc}
 	err := h.ListGroups(c)
@@ -409,104 +405,182 @@ func TestGroupHandler_ListGroups_DefaultSearch(t *testing.T) {
 	svc.AssertExpectations(t)
 }
 
-func TestGroupHandler_ListGroups_InvalidPage(t *testing.T) {
+func TestGroupHandler_ListGroups_WithOffset(t *testing.T) {
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/groups?page=abc&limit=10", nil)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-
-	h := &rest.GroupHandler{Service: new(mocks.MockGroupService)}
-	err := h.ListGroups(c)
-
-	assert.NoError(t, err)
-	assert.Equal(t, http.StatusBadRequest, rec.Code)
-
-	var result map[string]string
-	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
-	assert.Equal(t, "given param is not valid", result["message"])
-}
-
-func TestGroupHandler_ListGroups_InvalidLimit(t *testing.T) {
-	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/groups?page=1&limit=abc", nil)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-
-	h := &rest.GroupHandler{Service: new(mocks.MockGroupService)}
-	err := h.ListGroups(c)
-
-	assert.NoError(t, err)
-	assert.Equal(t, http.StatusBadRequest, rec.Code)
-
-	var result map[string]string
-	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
-	assert.Equal(t, "given param is not valid", result["message"])
-}
-
-func TestGroupHandler_ListGroups_MissingPage(t *testing.T) {
-	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/groups?limit=10", nil)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-
-	h := &rest.GroupHandler{Service: new(mocks.MockGroupService)}
-	err := h.ListGroups(c)
-
-	assert.NoError(t, err)
-	assert.Equal(t, http.StatusBadRequest, rec.Code)
-
-	var result map[string]string
-	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
-	assert.Equal(t, "given param is not valid", result["message"])
-}
-
-func TestGroupHandler_ListGroups_MissingLimit(t *testing.T) {
-	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/groups?page=1", nil)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-
-	h := &rest.GroupHandler{Service: new(mocks.MockGroupService)}
-	err := h.ListGroups(c)
-
-	assert.NoError(t, err)
-	assert.Equal(t, http.StatusBadRequest, rec.Code)
-
-	var result map[string]string
-	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
-	assert.Equal(t, "given param is not valid", result["message"])
-}
-
-func TestGroupHandler_ListGroups_ServiceBadParam(t *testing.T) {
-	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/groups?page=0&limit=10", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/groups?limit=500&offset=500", nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 
 	svc := new(mocks.MockGroupService)
-	svc.On("ListGroups", mock.Anything, "", 0, 10).
-		Return([]domain.Group(nil), 0, domain.ErrBadParamInput)
+	svc.On("ListGroups", mock.Anything, "", 500, 500).Return([]domain.Group{}, 42, nil)
 
 	h := &rest.GroupHandler{Service: svc}
 	err := h.ListGroups(c)
 
 	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var result struct {
+		Groups []domain.Group `json:"groups"`
+		Total  int            `json:"total"`
+	}
+	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
+	assert.Equal(t, 42, result.Total)
+	svc.AssertExpectations(t)
+}
+
+func TestGroupHandler_ListGroups_InvalidLimit(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/groups?limit=abc", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	h := &rest.GroupHandler{Service: new(mocks.MockGroupService)}
+	err := h.ListGroups(c)
+
+	assert.NoError(t, err)
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 
 	var result map[string]string
 	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
 	assert.Equal(t, "given param is not valid", result["message"])
+}
+
+func TestGroupHandler_ListGroups_LimitTooHigh(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/groups?limit=501", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	h := &rest.GroupHandler{Service: new(mocks.MockGroupService)}
+	err := h.ListGroups(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+
+	var result map[string]string
+	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
+	assert.Equal(t, "given param is not valid", result["message"])
+}
+
+func TestGroupHandler_ListGroups_LimitZero(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/groups?limit=0", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	h := &rest.GroupHandler{Service: new(mocks.MockGroupService)}
+	err := h.ListGroups(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+
+	var result map[string]string
+	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
+	assert.Equal(t, "given param is not valid", result["message"])
+}
+
+func TestGroupHandler_ListGroups_LimitMax(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/groups?limit=500", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	svc := new(mocks.MockGroupService)
+	svc.On("ListGroups", mock.Anything, "", 500, 0).Return([]domain.Group{}, 0, nil)
+
+	h := &rest.GroupHandler{Service: svc}
+	err := h.ListGroups(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, rec.Code)
+	svc.AssertExpectations(t)
+}
+
+func TestGroupHandler_ListGroups_InvalidOffset(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/groups?offset=abc", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	h := &rest.GroupHandler{Service: new(mocks.MockGroupService)}
+	err := h.ListGroups(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+
+	var result map[string]string
+	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
+	assert.Equal(t, "given param is not valid", result["message"])
+}
+
+func TestGroupHandler_ListGroups_NegativeOffset(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/groups?offset=-1", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	h := &rest.GroupHandler{Service: new(mocks.MockGroupService)}
+	err := h.ListGroups(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+
+	var result map[string]string
+	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
+	assert.Equal(t, "given param is not valid", result["message"])
+}
+
+func TestGroupHandler_ListGroups_OffsetZero(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/groups?offset=0", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	svc := new(mocks.MockGroupService)
+	svc.On("ListGroups", mock.Anything, "", 500, 0).Return([]domain.Group{}, 0, nil)
+
+	h := &rest.GroupHandler{Service: svc}
+	err := h.ListGroups(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, rec.Code)
+	svc.AssertExpectations(t)
+}
+
+func TestGroupHandler_ListGroups_EmptyResult(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/groups", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	svc := new(mocks.MockGroupService)
+	svc.On("ListGroups", mock.Anything, "", 500, 0).Return([]domain.Group{}, 0, nil)
+
+	h := &rest.GroupHandler{Service: svc}
+	err := h.ListGroups(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var result struct {
+		Groups []domain.Group `json:"groups"`
+		Total  int            `json:"total"`
+	}
+	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
+	assert.Empty(t, result.Groups)
+	assert.Equal(t, 0, result.Total)
 	svc.AssertExpectations(t)
 }
 
 func TestGroupHandler_ListGroups_ServiceInternalError(t *testing.T) {
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/groups?page=1&limit=20", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/groups", nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 
 	svc := new(mocks.MockGroupService)
-	svc.On("ListGroups", mock.Anything, "", 1, 20).
+	svc.On("ListGroups", mock.Anything, "", 500, 0).
 		Return([]domain.Group(nil), 0, domain.ErrInternalServerError)
 
 	h := &rest.GroupHandler{Service: svc}
