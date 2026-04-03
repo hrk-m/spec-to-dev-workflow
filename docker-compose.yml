@@ -1,0 +1,34 @@
+services:
+  mysql:
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: sample
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-u", "root", "-ppassword"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: ./sample-api
+    ports:
+      - "8080:8080"
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: "3306"
+      MYSQL_USER: root
+      MYSQL_PASSWORD: password
+      MYSQL_DATABASE: sample
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  front:
+    build: ./sample-front
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
