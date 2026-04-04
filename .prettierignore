@@ -1,0 +1,6 @@
+node_modules
+.claude
+.agents
+sample-api
+sample-front
+plans/**/.ralph-*.md

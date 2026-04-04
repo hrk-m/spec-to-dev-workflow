@@ -4,6 +4,8 @@
   "description": "仕様（spec）から開発（dev）へのワークフローを管理するリポジトリです。",
   "main": "index.js",
   "scripts": {
+    "format:md": "prettier --write \"**/*.md\"",
+    "format:md:check": "prettier --check \"**/*.md\"",
     "lint:md": "markdownlint-cli2 \"**/*.md\"",
     "lint:md:fix": "markdownlint-cli2 --fix \"**/*.md\"",
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -22,10 +24,11 @@
   },
   "homepage": "https://github.com/hrk-m/spec-to-dev-workflow#readme",
   "devDependencies": {
+    "@playwright/test": "^1.50.0",
     "@types/bun": "latest",
     "husky": "^9.1.7",
     "markdownlint-cli2": "^0.22.0",
-    "@playwright/test": "^1.50.0",
-    "playwright": "^1.58.2"
+    "playwright": "^1.58.2",
+    "prettier": "^3.8.1"
   }
 }
