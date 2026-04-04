@@ -33,7 +33,12 @@ export function GroupDetailPage() {
 
   return (
     <PageContainer>
-      <button type="button" style={styles.backButton} onClick={() => navigate("/")}>
+      <button
+        type="button"
+        data-testid="back-button"
+        style={styles.backButton}
+        onClick={() => navigate("/")}
+      >
         <FaChevronLeft aria-hidden="true" />
         Groups
       </button>

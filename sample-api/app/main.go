@@ -47,6 +47,8 @@ func main() {
 	e := echo.New()
 	e.Use(middleware.CORS())
 
+	rest.RegisterHealthHandler(e, db)
+
 	groupRepo := mysqlRepo.NewGroupRepository(db)
 	gSvc := groupSvc.NewService(groupRepo)
 	rest.NewGroupHandler(e, gSvc)

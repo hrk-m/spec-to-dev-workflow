@@ -1,0 +1,53 @@
+services:
+  mysql:
+    image: mysql:8
+    command: --mysql-native-password=ON
+    ports:
+      - "13306:3306"
+    volumes:
+      - ./e2e/mysql-init.sql:/docker-entrypoint-initdb.d/01_auth.sql
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: sample
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-u", "root", "-ppassword"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: e2e/api.Dockerfile
+    ports:
+      - "18080:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 60s
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: "3306"
+      MYSQL_USER: root
+      MYSQL_PASSWORD: password
+      MYSQL_DATABASE: sample
+
+  front:
+    build: ./sample-front
+    ports:
+      - "13000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bun", "-e", "fetch('http://localhost:3000').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    environment:
+      BUN_PUBLIC_API_URL: http://localhost:18080

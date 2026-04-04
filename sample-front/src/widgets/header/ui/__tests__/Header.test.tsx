@@ -6,7 +6,7 @@ describe("Header", () => {
   it("画面タイトルを表示する", () => {
     render(<Header />);
 
-    expect(screen.getByText("Groups")).toBeInTheDocument();
+    expect(screen.getByText("Sample Front")).toBeInTheDocument();
   });
 
   it("アカウント表示を表示する", () => {
