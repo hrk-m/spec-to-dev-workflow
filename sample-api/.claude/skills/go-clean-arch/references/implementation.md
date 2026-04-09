@@ -9,10 +9,10 @@
 ### Migration（`db/migrate/`）
 
 - ツール: `golang-migrate`
-- ファイル命名: `YYYYMMDDHHMMSS_{table_name}.up.sql` / `YYYYMMDDHHMMSS_{table_name}.down.sql`
-  - 例: `20260403120000_create_groups.up.sql` / `20260403120000_create_groups.down.sql`
+- ファイル命名: `YYYYMMDDHHMMSS_{table_name}.up.sql`
+  - 例: `20260403120000_create_groups.up.sql`
 - 内容: DDL のみ（CREATE TABLE, ALTER TABLE, DROP TABLE など）
-- Makefile: `make db-migrate` / `make db-rollback`
+- Makefile: `make db-migrate` / `make db-reset`（開発環境限定）
 
 ### Seed（`db/seed/`）
 

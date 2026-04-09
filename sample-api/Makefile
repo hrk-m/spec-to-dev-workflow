@@ -60,31 +60,16 @@ db-create:
 db-migrate:
 	$(MIGRATE_CMD) -path db/migrate -database "$(DB_URL)" up
 
-db-rollback:
-	@applied=$$($(MYSQL) \
-		-s --skip-column-names \
-		-e "SELECT COUNT(*) FROM schema_migrations;" 2>/dev/null); \
-	if [ -z "$$applied" ] || [ "$$applied" = "0" ]; then \
-		echo "No migrations to roll back."; \
-		exit 0; \
-	fi; \
-	latest=$$($(MYSQL) \
-		-s --skip-column-names \
-		-e "SELECT version FROM schema_migrations ORDER BY version DESC LIMIT 1;" 2>/dev/null); \
-	echo "Rolling back $$latest..."; \
-	target=$$((applied - 1)); \
-	$(DOCKER_MYSQL) \
-		-e "DROP DATABASE IF EXISTS sample; CREATE DATABASE sample;" 2>/dev/null; \
-	if [ "$$target" -gt 0 ]; then \
-		$(MIGRATE_CMD) -path db/migrate -database "$(DB_URL)" up $$target; \
-	fi
-
 db-seed:
 	for f in db/seed/*.sql; do \
 		$(MYSQL) < $$f; \
 	done
 
 db-reset:
+	@if [ "$(APP_ENV)" != "development" ]; then \
+		echo "Error: db-reset is only allowed in development environment (APP_ENV=development)."; \
+		exit 1; \
+	fi
 	$(DOCKER_MYSQL) \
 		-e "DROP DATABASE IF EXISTS sample; CREATE DATABASE sample;"
 	$(MAKE) db-migrate

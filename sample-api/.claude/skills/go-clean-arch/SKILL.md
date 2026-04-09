@@ -86,7 +86,7 @@ internal/
   rest/                    ← HTTP ハンドラ + Service Interface
   rest/mocks/              ← handler/service テスト用 mock（手動保守）
 db/
-  migrate/               ← DB schema migration（golang-migrate, .up.sql / .down.sql）
+  migrate/               ← DB schema migration（golang-migrate, .up.sql のみ）
   seed/                  ← 初期データ（DML のみ、スキーマ変更は含めない）
 app/main.go                ← DI 配線・サーバー起動
 ```
@@ -284,11 +284,14 @@ DB schema 変更を入れるときは、migration file は repo ルートの `db
 
 **Migration（`db/migrate/`）**
 - ツール: `golang-migrate`
-- ファイル命名: `YYYYMMDDHHMMSS_{table_name}.up.sql` / `YYYYMMDDHHMMSS_{table_name}.down.sql`
-  - 例: `20260403120000_create_groups.up.sql` / `20260403120000_create_groups.down.sql`
+- ファイル命名: `YYYYMMDDHHMMSS_{table_name}.up.sql`
+  - 例: `20260403120000_create_groups.up.sql`
 - 内容: DDL のみ（CREATE TABLE, ALTER TABLE, DROP TABLE など）
 - 適用履歴は `schema_migrations` テーブルで自動管理
-- Makefile: `make db-migrate`（未適用を順番に実行）/ `make db-rollback`（1 つ戻す）
+- Makefile:
+  - `make db-migrate` — 未適用の `.up.sql` を順番に実行
+  - `make db-reset` — 開発環境限定・DB を完全削除して `db-migrate` で再構築（`APP_ENV=development` が必要）
+  - `make db-state` — 適用済み / 未適用のマイグレーション一覧を表示
 
 **Seed（`db/seed/`）**
 - ファイル命名: `001_groups.sql`, `002_users.sql`（連番で管理）
@@ -424,7 +427,7 @@ domain.ErrInternalServerError → 500
 - 追加前に対象ドメインの service / handler / repository / test / mock を読んだか
 - 写経元にする既存実装を 1 つ決めたか
 - 追加先は既存ドメインか新規ドメインか、または既存コード整列か
-- DB schema 変更（DDL）なら `db/migrate/` に `.up.sql` / `.down.sql` ペアで置いているか
+- DB schema 変更（DDL）なら `db/migrate/` に `.up.sql` で置いているか
 - Seed データ（DML）なら `db/seed/` に置き、`db/migrate/` と混在していないか
 - service / handler / repository / test のどこまで触る必要があるか整理したか
 - interface を変えたなら実装・mock・テストを同時に更新したか
