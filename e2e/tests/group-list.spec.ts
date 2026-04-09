@@ -21,7 +21,11 @@ test.describe("グループ一覧ページ", () => {
     await page.goto("/");
     await page.waitForLoadState("networkidle");
 
-    await page.getByRole("button").filter({ hasText: /Group/ }).first().click();
+    await page
+      .getByRole("button")
+      .filter({ hasText: /Group \d+/ })
+      .first()
+      .click();
     await page.waitForURL(/\/groups\/\d+/);
 
     expect(page.url()).toMatch(/\/groups\/\d+/);
@@ -50,10 +54,10 @@ test.describe("グループ一覧ページ", () => {
 
     // Wait for groups to render
     await expect(
-      page.getByRole("button").filter({ hasText: /Group/ }).first(),
+      page.getByRole("button").filter({ hasText: /Group \d+/ }).first(),
     ).toBeVisible();
 
-    const groupCards = page.getByRole("button").filter({ hasText: /Group/ });
+    const groupCards = page.getByRole("button").filter({ hasText: /Group \d+/ });
     const count = await groupCards.count();
     expect(count).toBeLessThanOrEqual(20);
     expect(count).toBeGreaterThanOrEqual(1);
@@ -91,7 +95,7 @@ test.describe("グループ一覧ページ", () => {
     await expect(page.getByText("Page 1 of 1")).toBeVisible();
 
     // All 30 groups should be visible on the single page
-    const groupCards = page.getByRole("button").filter({ hasText: /Group/ });
+    const groupCards = page.getByRole("button").filter({ hasText: /Group \d+/ });
     const count = await groupCards.count();
     expect(count).toBe(30);
   });
@@ -108,7 +112,7 @@ test.describe("グループ一覧ページ", () => {
 
     const filteredCount = await page
       .getByRole("button")
-      .filter({ hasText: /Group/ })
+      .filter({ hasText: /Group \d+/ })
       .count();
     expect(filteredCount).toBeGreaterThanOrEqual(1);
 
@@ -151,7 +155,7 @@ test.describe("グループ一覧ページ", () => {
 
     // Wait for at least one group card to appear (max 5 seconds)
     await expect(
-      page.getByRole("button").filter({ hasText: /Group/ }).first(),
+      page.getByRole("button").filter({ hasText: /Group \d+/ }).first(),
     ).toBeVisible({
       timeout: 5000,
     });
@@ -176,7 +180,7 @@ test.describe("グループ一覧ページ", () => {
     await expect(page.getByText("Page 1 of 1")).toBeVisible();
 
     // All 30 groups should be visible on the single page
-    const groupCards = page.getByRole("button").filter({ hasText: /Group/ });
+    const groupCards = page.getByRole("button").filter({ hasText: /Group \d+/ });
     const count = await groupCards.count();
     expect(count).toBe(30);
   });

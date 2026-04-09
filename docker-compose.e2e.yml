@@ -50,4 +50,4 @@ services:
       timeout: 3s
       retries: 10
     environment:
-      BUN_PUBLIC_API_URL: http://localhost:18080
+      BUN_PUBLIC_API_URL: http://api:8080

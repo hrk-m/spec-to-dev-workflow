@@ -13,6 +13,7 @@ inclusion: always
 | ルーティング            | react-router v7                                  |
 | UI コンポーネント       | Radix UI Themes                                  |
 | アイコン                | react-icons                                      |
+| スクロール制御          | react-remove-scroll-bar                          |
 | 言語                    | TypeScript (strict)                              |
 | テスト                  | Vitest + Testing Library (jsdom)                 |
 | リント                  | oxlint                                           |
@@ -41,10 +42,17 @@ import { apiFetch } from "@/shared/api/client";
 import { apiFetch } from "../../shared/api/client";
 ```
 
+### サーバーサイド API プロキシ
+
+`src/index.ts` の Bun サーバーが `/api/*` パスへのリクエストをバックエンド（`BUN_PUBLIC_API_URL`
+環境変数、デフォルト
+`http://localhost:8080`）へ中継する。ブラウザからは同一オリジンへのリクエストとなるため、`API_BASE_URL`
+は空文字列。CORS を気にせずフロントエンドから API を呼び出せる。
+
 ### 環境変数
 
-`BUN_PUBLIC_*` プレフィックスを使用。`.env` に `BUN_PUBLIC_API_URL`
-を設定することで API ベース URL を上書き可能。デフォルトは `http://localhost:8080`。
+`BUN_PUBLIC_*` プレフィックスを使用。`BUN_PUBLIC_API_URL`
+でバックエンド API のアップストリーム先を上書き可能（デフォルト: `http://localhost:8080`）。
 
 ### リント構成
 

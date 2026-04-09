@@ -1,3 +1,3 @@
-export const API_BASE_URL =
-  // BUN_PUBLIC_API_URL=http://... を .env に設定することで上書き可能
-  import.meta.env?.BUN_PUBLIC_API_URL || "http://localhost:8080";
+// API リクエストはフロントエンドサーバー自身の /api/* をプロキシ経由で転送する。
+// ブラウザからは同一オリジンへのリクエストとなるため、ベース URL は空文字列。
+export const API_BASE_URL = "";

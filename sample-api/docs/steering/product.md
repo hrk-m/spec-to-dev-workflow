@@ -32,6 +32,14 @@
   - レスポンス: グループ情報（id, name, description, member_count）
   - エラー: 不正な ID → 400、存在しない ID → 404
 
+### グループ作成
+
+- `POST /api/v1/groups` — 新しいグループを作成するエンドポイント
+  - リクエストボディ: `{"name": "string", "description": "string"}`
+  - バリデーション: name は必須かつ 100 文字以内（前後の空白はトリム）
+  - レスポンス: 作成されたグループ情報（id, name, description, member_count）(201)
+  - エラー: リクエスト不正 → 400、バリデーション失敗（空文字・100 文字超過）→ 400
+
 ### グループメンバー一覧取得
 
 - `GET /api/v1/groups/:id/members` — 指定グループのメンバー一覧を返すエンドポイント

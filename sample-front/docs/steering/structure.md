@@ -11,7 +11,7 @@ inclusion: always
 
 ```
 src/
-  index.ts      ← Bun エントリーポイント（サーバー起動）
+  index.ts      ← Bun エントリーポイント（サーバー起動 + /api/* プロキシ）
   index.html    ← HTML テンプレート
   app/          ← アプリ初期化・ルーティング・グローバルスタイル・React マウント
   pages/        ← ルート単位のページコンポーネント
@@ -28,10 +28,12 @@ src/
   `Theme`（`appearance="light"`, `accentColor="gray"`, `grayColor="slate"`,
   `radius="large"`）でアプリ全体をラップ。HMR 対応（`import.meta.hot` による root の再利用）
 - `App.tsx` — ルートコンポーネント。App Shell パターン（`Header` + `Sidebar` +
-  `RouterProvider`）で構成。Sidebar 開閉に連動して `body.style.overflow` を制御しスクロールをロック
+  `RouterProvider`）で構成。Sidebar 開閉時に
+  `RemoveScrollBar`（`react-remove-scroll-bar`）でスクロールバーを非表示化
 - `router.tsx` — `createBrowserRouter` によるルート定義（`/` と `/groups` は同一の `HomePage`
   を表示、`/groups/:id` は `GroupDetailPage` を表示）
-- `styles/index.css` — グローバルスタイル
+- `styles/index.css` — グローバルスタイル。Radix
+  Dialog のオーバーレイ z-index 調整（`.rt-BaseDialogOverlay`）、スクロールバー非表示時のヘッダー幅補正（`--removed-body-scroll-bar-size`）を含む
 
 ### `pages/<page-name>/`
 
@@ -43,10 +45,10 @@ src/
 
 **現在のページスライス:**
 
-| スライス       | 状態                                                                                                                                                                                                            |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `home`         | 実装済み（`HomePage` + `GroupList` コンポーネント、`api/fetch-groups.ts`、`model/group.ts`、`model/useGroupList.ts`、`GroupList.styles.ts`、テスト）                                                            |
-| `group-detail` | 実装済み（`GroupDetailPage` + `MemberList` コンポーネント、`api/fetch-group.ts`、`api/fetch-group-members.ts`、`model/group-detail.ts`、`model/useGroupDetail.ts`、`model/useMemberList.ts`、スタイル、テスト） |
+| スライス       | 状態                                                                                                                                                                                                                                                        |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `home`         | 実装済み（`HomePage` + `GroupList` + `CreateGroupDialog` コンポーネント、`api/fetch-groups.ts`、`api/create-group.ts`、`model/group.ts`、`model/useGroupList.ts`、`model/useCreateGroup.ts`、`GroupList.styles.ts`、`CreateGroupDialog.styles.ts`、テスト） |
+| `group-detail` | 実装済み（`GroupDetailPage` + `MemberList` コンポーネント、`api/fetch-group.ts`、`api/fetch-group-members.ts`、`model/group-detail.ts`、`model/useGroupDetail.ts`、`model/useMemberList.ts`、スタイル、テスト）                                             |
 
 ### `widgets/`
 
@@ -62,7 +64,8 @@ FSD の widgets レイヤー。ページ横断で使われる独立した UI ブ
 ### `shared/`
 
 - `api/client.ts` — 汎用 fetch ラッパー（`apiFetch<T>`）。レスポンスエラー検知・JSON 変換を担う
-- `config/env.ts` — 環境変数の集約・エクスポート（`API_BASE_URL`）
+- `config/env.ts` — 環境変数の集約・エクスポート（`API_BASE_URL`
+  は空文字列。サーバーサイドプロキシ経由のため同一オリジン）
 - `ui/index.ts` — 共通 UI コンポーネントの barrel export
 - `ui/PageContainer.tsx` — 全ページ共通のコンテンツラッパー（パディング制御）
 - `ui/theme.ts` — アプリ共通のカラーパレット（`appColors`）

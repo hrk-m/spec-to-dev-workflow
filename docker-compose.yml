@@ -33,3 +33,5 @@ services:
       - "3000:3000"
     depends_on:
       - api
+    environment:
+      BUN_PUBLIC_API_URL: http://api:8080
