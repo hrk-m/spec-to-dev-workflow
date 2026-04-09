@@ -277,3 +277,79 @@ func TestService_ListGroups_RepositoryError(t *testing.T) {
 	assert.ErrorIs(t, err, domain.ErrInternalServerError)
 	repo.AssertExpectations(t)
 }
+
+func TestService_Store_OK(t *testing.T) {
+	repo := new(mocks.MockGroupRepository)
+	svc := group.NewService(repo)
+
+	expected := domain.Group{ID: 1, Name: "Test Group", Description: "A test group", MemberCount: 0}
+	repo.On("Store", mock.Anything, "Test Group", "A test group").Return(expected, nil)
+
+	result, err := svc.Store(context.Background(), "Test Group", "A test group")
+
+	assert.NoError(t, err)
+	assert.Equal(t, expected, result)
+	repo.AssertExpectations(t)
+}
+
+func TestService_Store_TrimsName(t *testing.T) {
+	repo := new(mocks.MockGroupRepository)
+	svc := group.NewService(repo)
+
+	expected := domain.Group{ID: 1, Name: "Trimmed", Description: "", MemberCount: 0}
+	repo.On("Store", mock.Anything, "Trimmed", "").Return(expected, nil)
+
+	result, err := svc.Store(context.Background(), "  Trimmed  ", "")
+
+	assert.NoError(t, err)
+	assert.Equal(t, expected, result)
+	repo.AssertExpectations(t)
+}
+
+func TestService_Store_EmptyName(t *testing.T) {
+	repo := new(mocks.MockGroupRepository)
+	svc := group.NewService(repo)
+
+	_, err := svc.Store(context.Background(), "", "desc")
+
+	assert.ErrorIs(t, err, domain.ErrBadParamInput)
+	repo.AssertNotCalled(t, "Store")
+}
+
+func TestService_Store_WhitespaceOnlyName(t *testing.T) {
+	repo := new(mocks.MockGroupRepository)
+	svc := group.NewService(repo)
+
+	_, err := svc.Store(context.Background(), "   ", "desc")
+
+	assert.ErrorIs(t, err, domain.ErrBadParamInput)
+	repo.AssertNotCalled(t, "Store")
+}
+
+func TestService_Store_NameTooLong(t *testing.T) {
+	repo := new(mocks.MockGroupRepository)
+	svc := group.NewService(repo)
+
+	longName := make([]byte, 101)
+	for i := range longName {
+		longName[i] = 'a'
+	}
+
+	_, err := svc.Store(context.Background(), string(longName), "desc")
+
+	assert.ErrorIs(t, err, domain.ErrBadParamInput)
+	repo.AssertNotCalled(t, "Store")
+}
+
+func TestService_Store_RepositoryError(t *testing.T) {
+	repo := new(mocks.MockGroupRepository)
+	svc := group.NewService(repo)
+
+	repo.On("Store", mock.Anything, "Valid", "desc").
+		Return(domain.Group{}, domain.ErrInternalServerError)
+
+	_, err := svc.Store(context.Background(), "Valid", "desc")
+
+	assert.ErrorIs(t, err, domain.ErrInternalServerError)
+	repo.AssertExpectations(t)
+}

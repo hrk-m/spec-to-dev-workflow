@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/labstack/echo/v4"
@@ -585,6 +586,81 @@ func TestGroupHandler_ListGroups_ServiceInternalError(t *testing.T) {
 
 	h := &rest.GroupHandler{Service: svc}
 	err := h.ListGroups(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+
+	var result map[string]string
+	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
+	assert.Equal(t, "internal server error", result["message"])
+	svc.AssertExpectations(t)
+}
+
+func TestGroupHandler_Store_OK(t *testing.T) {
+	e := echo.New()
+	body := strings.NewReader(`{"name":"Test","description":"Desc"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/groups", body)
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	svc := new(mocks.MockGroupService)
+	resp := domain.Group{ID: 1, Name: "Test", Description: "Desc", MemberCount: 0}
+	svc.On("Store", mock.Anything, "Test", "Desc").Return(resp, nil)
+
+	h := &rest.GroupHandler{Service: svc}
+	err := h.Store(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusCreated, rec.Code)
+
+	var result domain.Group
+	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
+	assert.Equal(t, uint64(1), result.ID)
+	assert.Equal(t, "Test", result.Name)
+	assert.Equal(t, "Desc", result.Description)
+	assert.Equal(t, 0, result.MemberCount)
+	svc.AssertExpectations(t)
+}
+
+func TestGroupHandler_Store_BadParam(t *testing.T) {
+	e := echo.New()
+	body := strings.NewReader(`{"name":"","description":"Desc"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/groups", body)
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	svc := new(mocks.MockGroupService)
+	svc.On("Store", mock.Anything, "", "Desc").
+		Return(domain.Group{}, domain.ErrBadParamInput)
+
+	h := &rest.GroupHandler{Service: svc}
+	err := h.Store(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+
+	var result map[string]string
+	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
+	assert.Equal(t, "given param is not valid", result["message"])
+	svc.AssertExpectations(t)
+}
+
+func TestGroupHandler_Store_InternalError(t *testing.T) {
+	e := echo.New()
+	body := strings.NewReader(`{"name":"Test","description":"Desc"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/groups", body)
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	svc := new(mocks.MockGroupService)
+	svc.On("Store", mock.Anything, "Test", "Desc").
+		Return(domain.Group{}, domain.ErrInternalServerError)
+
+	h := &rest.GroupHandler{Service: svc}
+	err := h.Store(c)
 
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)

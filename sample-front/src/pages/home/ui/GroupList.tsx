@@ -5,6 +5,7 @@ import { useNavigate } from "react-router";
 import type { Group } from "@/pages/home/model/group";
 import { PER_PAGE_OPTIONS, useGroupList } from "@/pages/home/model/useGroupList";
 import { PageContainer } from "@/shared/ui";
+import { CreateGroupDialog } from "./CreateGroupDialog";
 import { styles } from "./GroupList.styles";
 
 const SKELETON_ROWS = 5;
@@ -112,14 +113,17 @@ export function GroupList() {
 
   return (
     <PageContainer>
-      <Box style={styles.heroSection}>
-        <Heading as="h1" style={styles.pageTitle}>
-          Groups
-        </Heading>
-        <Text as="p" style={styles.pageSubtitle}>
-          {groupCountLabel}
-        </Text>
-      </Box>
+      <Flex style={styles.heroSection} justify="between" align="start">
+        <Box>
+          <Heading as="h1" style={styles.pageTitle}>
+            Groups
+          </Heading>
+          <Text as="p" style={styles.pageSubtitle}>
+            {groupCountLabel}
+          </Text>
+        </Box>
+        <CreateGroupDialog />
+      </Flex>
 
       <Box style={styles.searchSection}>
         <TextField.Root

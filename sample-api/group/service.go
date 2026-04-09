@@ -3,6 +3,7 @@ package group
 
 import (
 	"context"
+	"strings"
 
 	"github.com/hrk-m/spec-to-dev-workflow/sample-api/domain"
 )
@@ -18,6 +19,8 @@ const (
 	maxMemberLimit     = 500
 	defaultMemberLimit = 500
 	minMemberOffset    = 0
+
+	maxNameLength = 100
 )
 
 // GroupRepository defines the interface for group data access.
@@ -25,6 +28,7 @@ type GroupRepository interface {
 	ListGroups(ctx context.Context, q string, limit, offset int) ([]domain.Group, int, error)
 	GetByID(ctx context.Context, id uint64) (domain.Group, error)
 	ListGroupMembers(ctx context.Context, id, limit, offset uint64, q string) ([]domain.GroupMember, int, error)
+	Store(ctx context.Context, name, description string) (domain.Group, error)
 }
 
 // Service handles group business logic.
@@ -70,6 +74,16 @@ func (s *Service) ListGroupMembers(ctx context.Context, id, limit, offset uint64
 	}
 
 	return members, total, nil
+}
+
+// Store creates a new group after validating the name.
+func (s *Service) Store(ctx context.Context, name, description string) (domain.Group, error) {
+	name = strings.TrimSpace(name)
+	if name == "" || len(name) > maxNameLength {
+		return domain.Group{}, domain.ErrBadParamInput
+	}
+
+	return s.repo.Store(ctx, name, description)
 }
 
 // ListGroups returns a paginated list of groups filtered by q keyword.

@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/hrk-m/spec-to-dev-workflow/sample-api/domain"
 	mysqlRepo "github.com/hrk-m/spec-to-dev-workflow/sample-api/internal/repository/mysql"
 )
 
@@ -122,4 +123,33 @@ func TestListGroups_ExcludesDeleted(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, 30, total) // g999 excluded
+}
+
+func TestStore_OK(t *testing.T) {
+	db := testDB(t)
+	defer db.Close()
+
+	repo := mysqlRepo.NewGroupRepository(db)
+	g, err := repo.Store(context.Background(), "New Group", "A new group description")
+
+	require.NoError(t, err)
+	assert.NotZero(t, g.ID)
+	assert.Equal(t, "New Group", g.Name)
+	assert.Equal(t, "A new group description", g.Description)
+	assert.Equal(t, 0, g.MemberCount)
+
+	// Cleanup
+	defer db.Exec("DELETE FROM `groups` WHERE id = ?", g.ID) //nolint:errcheck
+}
+
+func TestStore_DBError(t *testing.T) {
+	db := testDB(t)
+	// Close the DB connection to force an INSERT failure.
+	db.Close()
+
+	repo := mysqlRepo.NewGroupRepository(db)
+	g, err := repo.Store(context.Background(), "Should Fail", "desc")
+
+	assert.ErrorIs(t, err, domain.ErrInternalServerError)
+	assert.Equal(t, domain.Group{}, g)
 }

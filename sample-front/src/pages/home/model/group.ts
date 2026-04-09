@@ -15,3 +15,10 @@ export type FetchGroupsParams = {
   limit?: number;
   offset?: number;
 };
+
+export type CreateGroupRequest = {
+  name: string;
+  description: string;
+};
+
+export type CreateGroupResponse = Group;

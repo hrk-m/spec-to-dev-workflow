@@ -96,6 +96,28 @@ func (r *GroupRepository) selectGroups(ctx context.Context, q string, limit, off
 	return groups, nil
 }
 
+// Store inserts a new group and returns the created entity.
+func (r *GroupRepository) Store(ctx context.Context, name, description string) (domain.Group, error) {
+	query := "INSERT INTO `groups` (name, description) VALUES (?, ?)"
+
+	result, err := r.db.ExecContext(ctx, query, name, description)
+	if err != nil {
+		return domain.Group{}, domain.ErrInternalServerError
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil || id < 0 {
+		return domain.Group{}, domain.ErrInternalServerError
+	}
+
+	return domain.Group{
+		ID:          uint64(id), //nolint:gosec // id is validated non-negative above
+		Name:        name,
+		Description: description,
+		MemberCount: 0,
+	}, nil
+}
+
 // GetByID returns a single group by ID with its member count.
 func (r *GroupRepository) GetByID(ctx context.Context, id uint64) (domain.Group, error) {
 	query := "SELECT g.id, g.name, g.description, COUNT(gm.id) AS member_count" +

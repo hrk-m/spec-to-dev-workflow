@@ -28,3 +28,8 @@ func (m *MockGroupService) ListGroupMembers(ctx context.Context, id, limit, offs
 	args := m.Called(ctx, id, limit, offset, q)
 	return args.Get(0).([]domain.GroupMember), args.Int(1), args.Error(2)
 }
+
+func (m *MockGroupService) Store(ctx context.Context, name, description string) (domain.Group, error) {
+	args := m.Called(ctx, name, description)
+	return args.Get(0).(domain.Group), args.Error(1)
+}

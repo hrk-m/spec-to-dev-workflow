@@ -26,6 +26,7 @@ type GroupService interface {
 	ListGroups(ctx context.Context, q string, limit, offset int) ([]domain.Group, int, error)
 	GetByID(ctx context.Context, id uint64) (domain.Group, error)
 	ListGroupMembers(ctx context.Context, id, limit, offset uint64, q string) ([]domain.GroupMember, int, error)
+	Store(ctx context.Context, name, description string) (domain.Group, error)
 }
 
 // GroupHandler handles HTTP requests for the group endpoints.
@@ -39,6 +40,7 @@ func NewGroupHandler(e *echo.Echo, svc GroupService) {
 	e.GET("/api/v1/groups", h.ListGroups)
 	e.GET("/api/v1/groups/:id", h.GetByID)
 	e.GET("/api/v1/groups/:id/members", h.ListGroupMembers)
+	e.POST("/api/v1/groups", h.Store)
 }
 
 type groupListResponse struct {
@@ -49,6 +51,28 @@ type groupListResponse struct {
 type groupMemberListResponse struct {
 	Members []domain.GroupMember `json:"members"`
 	Total   int                  `json:"total"`
+}
+
+type storeGroupRequest struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
+// Store handles POST /api/v1/groups.
+func (h *GroupHandler) Store(c echo.Context) error {
+	ctx := c.Request().Context()
+
+	var req storeGroupRequest
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, ResponseError{Message: err.Error()})
+	}
+
+	result, err := h.Service.Store(ctx, req.Name, req.Description)
+	if err != nil {
+		return c.JSON(getStatusCode(err), ResponseError{Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusCreated, result)
 }
 
 // GetByID handles GET /api/v1/groups/:id.
