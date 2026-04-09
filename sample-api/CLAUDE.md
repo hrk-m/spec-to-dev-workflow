@@ -5,8 +5,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## プロジェクトコンテキスト
 
 ### パス
+- Plans: `../plans/`（要件・設計の正本）
+- Specs: `../specs/`（`/impl-done` で同期される UX ドキュメント。実装中は補助参照）
 - Steering: `docs/steering/`
-- Specs: `docs/specs/`
 
 ### Makefile ショートカット
 

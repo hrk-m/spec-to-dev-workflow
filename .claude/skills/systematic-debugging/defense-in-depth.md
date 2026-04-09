@@ -1,96 +1,122 @@
-# 多層防御バリデーション
+# Defense-in-Depth Validation
 
-## 概要
+## Overview
 
-不正なデータによるバグを修正するとき、1 箇所にバリデーションを追加するだけでは十分ではない。リファクタリング、別のコードパス、モックによってそのチェックが迂回される可能性がある。
+When you fix a bug caused by invalid data, adding validation at one place feels sufficient. But that single check can be bypassed by different code paths, refactoring, or mocks.
 
-**核心原則：データが通過するすべてのレイヤーでバリデートする。バグを構造的に不可能にする。**
+**Core principle:** Validate at EVERY layer data passes through. Make the bug structurally impossible.
 
-## なぜ複数レイヤーが必要か
+## Why Multiple Layers
 
-単一のバリデーション：「バグを修正した」  
-複数レイヤー：「バグを不可能にした」
+Single validation: "We fixed the bug"
+Multiple layers: "We made the bug impossible"
 
-各レイヤーが異なるケースを捕捉する：
+Different layers catch different cases:
+- Entry validation catches most bugs
+- Business logic catches edge cases
+- Environment guards prevent context-specific dangers
+- Debug logging helps when other layers fail
 
-- エントリバリデーション：ほとんどのバグを捕捉
-- ビジネスロジックバリデーション：エッジケースを捕捉
-- ドメインバリデーション：不変条件を保証
-- デバッグログ：他のレイヤーが失敗したときのフォレンジック
+## The Four Layers
 
-## 4 つのレイヤー
+### Layer 1: Entry Point Validation
+**Purpose:** Reject obviously invalid input at API boundary
 
-### Layer 1: エントリポイントバリデーション（delivery 層）
+```typescript
+function createProject(name: string, workingDirectory: string) {
+  if (!workingDirectory || workingDirectory.trim() === '') {
+    throw new Error('workingDirectory cannot be empty');
+  }
+  if (!existsSync(workingDirectory)) {
+    throw new Error(`workingDirectory does not exist: ${workingDirectory}`);
+  }
+  if (!statSync(workingDirectory).isDirectory()) {
+    throw new Error(`workingDirectory is not a directory: ${workingDirectory}`);
+  }
+  // ... proceed
+}
+```
 
-**目的：** API 境界で明らかに不正な入力を拒否する
+### Layer 2: Business Logic Validation
+**Purpose:** Ensure data makes sense for this operation
 
-**sample-api：** `internal/rest/` ハンドラで `c.Bind()` のエラー、必須フィールドの空チェック、型変換のエラー（`strconv.Atoi` など）を捕捉する。エラーレスポンスは `c.JSON(statusCode, ResponseError{Message: ...})` パターンで返す。
+```typescript
+function initializeWorkspace(projectDir: string, sessionId: string) {
+  if (!projectDir) {
+    throw new Error('projectDir required for workspace initialization');
+  }
+  // ... proceed
+}
+```
 
-**sample-front：** `pages/` 層のフォームコンポーネントでユーザー入力をバリデートし、不正なままで API を呼ばない。
+### Layer 3: Environment Guards
+**Purpose:** Prevent dangerous operations in specific contexts
 
-### Layer 2: ビジネスロジックバリデーション（use case 層）
+```typescript
+async function gitInit(directory: string) {
+  // In tests, refuse git init outside temp directories
+  if (process.env.NODE_ENV === 'test') {
+    const normalized = normalize(resolve(directory));
+    const tmpDir = normalize(resolve(tmpdir()));
 
-**目的：** この操作に対してデータが意味をなすことを保証する
+    if (!normalized.startsWith(tmpDir)) {
+      throw new Error(
+        `Refusing git init outside temp dir during tests: ${directory}`
+      );
+    }
+  }
+  // ... proceed
+}
+```
 
-**sample-api：** use case 層（`hello/` などの機能パッケージ）で、ビジネスルール違反を `domain.ErrBadParamInput` などのセンチネルエラーで返す。delivery 層に依存しない独立したバリデーション。
+### Layer 4: Debug Instrumentation
+**Purpose:** Capture context for forensics
 
-### Layer 3: ドメインバリデーション（domain 層）
+```typescript
+async function gitInit(directory: string) {
+  const stack = new Error().stack;
+  logger.debug('About to git init', {
+    directory,
+    cwd: process.cwd(),
+    stack,
+  });
+  // ... proceed
+}
+```
 
-**目的：** ビジネスの不変条件を強制する
+## Applying the Pattern
 
-**sample-api：** `domain/` 層でエンティティの制約を保証する。実際の `domain/errors.go` に定義されているセンチネルエラー（`ErrNotFound`, `ErrBadParamInput`, `ErrConflict`, `ErrInternalServerError`）を使う。
+When you find a bug:
 
-### Layer 4: デバッグ計装
+1. **Trace the data flow** - Where does bad value originate? Where used?
+2. **Map all checkpoints** - List every point data passes through
+3. **Add validation at each layer** - Entry, business, environment, debug
+4. **Test each layer** - Try to bypass layer 1, verify layer 2 catches it
 
-**目的：** フォレンジック用のコンテキストを記録する
+## Example from Session
 
-問題を調査するときのみ一時的に追加する診断ログ。各レイヤーの入力値・出力値を記録し、どこで値が壊れているかを特定する。調査が終わったら削除する。
+Bug: Empty `projectDir` caused `git init` in source code
 
-## パターンの適用
+**Data flow:**
+1. Test setup → empty string
+2. `Project.create(name, '')`
+3. `WorkspaceManager.createWorkspace('')`
+4. `git init` runs in `process.cwd()`
 
-バグを見つけたとき：
+**Four layers added:**
+- Layer 1: `Project.create()` validates not empty/exists/writable
+- Layer 2: `WorkspaceManager` validates projectDir not empty
+- Layer 3: `WorktreeManager` refuses git init outside tmpdir in tests
+- Layer 4: Stack trace logging before git init
 
-1. **データフローをたどる** — 不正な値はどこで生まれ、どこで使われるか？
-2. **すべてのチェックポイントをマップする** — データが通過するすべての点をリストアップする
-3. **各レイヤーでバリデーションを追加する** — エントリ、ユースケース、ドメイン、デバッグ
-4. **各レイヤーをテストする** — Layer 1 を迂回して Layer 2 が捕捉することを確認する
+**Result:** All 1847 tests passed, bug impossible to reproduce
 
-## 実例：空の入力値が保存される
+## Key Insight
 
-**バグ：** 空の値でリソースが作成されてしまう
+All four layers were necessary. During testing, each layer caught bugs the others missed:
+- Different code paths bypassed entry validation
+- Mocks bypassed business logic checks
+- Edge cases on different platforms needed environment guards
+- Debug logging identified structural misuse
 
-**データフロー：** POST リクエスト（空の値）がハンドラ・サービス層・保存処理のいずれもバリデーションなしに素通りし、空値のまま保存される。
-
-**追加すべき 4 つのレイヤー：**
-
-- Layer 1: ハンドラが空文字列を 400 で拒否（`c.JSON + ResponseError` パターン）
-- Layer 2: サービスが `domain.ErrBadParamInput` を返す
-- Layer 3: ドメインレベルのバリデーションを追加（ファクトリ関数や不変条件チェック）
-- Layer 4: 調査時に一時的なデバッグログを追加
-
-**sample-front 側：**
-
-- `pages/` 層のフォームでユーザーへのエラー表示
-- `shared/api/client.ts` の `apiFetch` は `!res.ok` でエラーをスロー（`new Error(\`${res.status} ${res.statusText}\`)`）するので、API エラーは自動的に伝播する
-
-## テストで各レイヤーを検証する
-
-**sample-api：**
-- delivery 層テスト（`internal/rest/` の `*_test.go`）：バリデーション拒否を `httptest` で確認
-- use case 層テスト（機能パッケージの `*_test.go`）：センチネルエラーの返却を `assert.ErrorIs` で確認
-- テストは `make test` で実行、モックはテストファイル内にインライン定義する（`mocks/` ディレクトリは使わない）
-
-**sample-front：**
-- `waitFor` + `expect(screen.getByText(...))` でエラーメッセージの表示を確認
-- `vi.fn()` で `fetch` をモックしてエラーレスポンスを返す
-
-## 重要な洞察
-
-4 つのレイヤーはすべて必要だ。テスト中、各レイヤーが他のレイヤーでは捕捉されないバグを捕捉する：
-
-- 別のコードパスがエントリバリデーションを迂回する
-- モックがビジネスロジックチェックを迂回する
-- エッジケースがドメインバリデーションを必要とする
-- デバッグログが構造的な誤用を特定する
-
-**1 つのバリデーションポイントで止まるな。** すべてのレイヤーでチェックを追加する。
+**Don't stop at one validation point.** Add checks at every layer.

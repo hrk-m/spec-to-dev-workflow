@@ -1,4 +1,4 @@
-.PHONY: help build run test test-verbose lint fix db-up db-down db-create db-migrate db-rollback db-seed db-reset db-state clean
+.PHONY: help build run test test-verbose lint fix db-up db-down db-create db-migrate db-seed db-reset db-state clean
 
 MIGRATE_CMD  = go run -tags 'mysql' -mod=mod github.com/golang-migrate/migrate/v4/cmd/migrate@latest
 DB_URL       = mysql://root:password@tcp(localhost:3306)/sample
@@ -19,7 +19,6 @@ help:
 	@echo "  docker-down  MySQL コンテナを停止"
 	@echo "  db-create    DB を作成"
 	@echo "  db-migrate   マイグレーションを実行"
-	@echo "  db-rollback  マイグレーションを 1 つ戻す"
 	@echo "  db-seed      シードデータを投入"
 	@echo "  db-reset     DB をリセットして再構築"
 	@echo "  db-state     マイグレーションの適用状況を表示"
@@ -33,7 +32,7 @@ clean:
 	rm -rf bin/
 
 run:
-	go run ./app/main.go
+	APP_ENV=development go run ./app/main.go
 
 test:
 	go test ./...

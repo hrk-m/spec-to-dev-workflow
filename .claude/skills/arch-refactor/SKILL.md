@@ -1,11 +1,7 @@
 ---
 name: arch-refactor
 description: >
-  sample-api と sample-front のコードが api-context / front-context スキルの
-  アーキテクチャ標準に適合しているかチェックし、違反を ralph-loop で自動修正する。
-  「スキルに沿っているか確認して」「アーキテクチャレビュー」「FSD チェック」
-  「Clean Architecture チェック」「コード規約を見て」「整合性チェック」
-  「実装がスキルに準拠しているか」などのリクエストで使う。
+  修正サイクルの締めとして `/impl` 完了後に、sample-api / sample-front の実コードを api-context / front-context に照らして検査し、違反を ralph-loop で最小修正する。
 ---
 
 # /arch-refactor — アーキテクチャ適合チェック & 自動修正スキル
@@ -13,15 +9,16 @@ description: >
 api-context / front-context スキルを絶対的な正として、
 sample-api / sample-front のコードが各アーキテクチャルールに従っているかチェックし、
 ralph-loop で違反を自動修正する。
+開始条件・停止条件・戻り先・完了条件の正本は `AGENTS.md` と `.claude/rules/workflow.md` とし、このスキルはそこから逸脱しない。
 
 ---
 
 ## いつ使うか
 
-- 実装後にスキルへの適合確認をしたいとき
-- `plans/` の `.ralph-alignment.md` 実行後に実コードを検証したいとき
-- リファクタリング後に drift が残っていないか確認したいとき
-- 「スキルに沿っているか見て」「アーキテクチャのチェックをして」と言われたとき
+- **`/impl` 完了後の修正サイクル内で必ず実行する**（REVIEWED 出力時点で修正サイクルを抜け、`/e2e-gen` へ進む。違反が残る場合は `/plan` または `/impl` に戻る）
+- 修正サイクル中の実装後にスキルへの適合確認をしたいとき
+- 修正サイクル中のリファクタリング後に drift が残っていないか確認したいとき
+- 「スキルに沿っているか見て」「アーキテクチャのチェックをして」と言われたとき（開始タイミングは `/impl` 完了後に限る）
 
 ---
 
@@ -39,7 +36,7 @@ ralph-loop で違反を自動修正する。
 
 ---
 
-### ステップ 2: .ralph-review.md の書き出し
+### ステップ 2: ralph-review.md の書き出し
 
 `.claude/ralph-review.md` を以下のルールで更新する。
 
@@ -67,7 +64,7 @@ When all violations are resolved and all tests pass, output: <promise>REVIEWED</
 
 Step B-1: Read context skills.
 1. Read .claude/skills/api-context/SKILL.md
-2. Read .claude/skills/api-context/references/go-clean-arch/SKILL.md
+2. Read sample-api/.claude/skills/go-clean-arch/SKILL.md
    Focus on: Section 7 MUST ルール, Section 11 レビュー時のチェックリスト
 
 Step B-2: Scan sample-api/ and identify violations.
@@ -90,6 +87,7 @@ Delegate ALL backend fixes to sample-api-agent with the following instructions:
 - Fix ONLY the listed violations, minimum diff
 - Run `make test && make lint && make build` after fixing
 - Report: test/lint/build results and list of changed files
+If no violations found, run `make test && make lint && make build` and confirm all pass.
 If sample-api-agent reports failures → ask it to fix, end this iteration.
 If all pass → proceed to frontend check (or completion if backend-only).
 ```
@@ -101,9 +99,9 @@ If all pass → proceed to frontend check (or completion if backend-only).
 
 Step F-1: Read context skills.
 1. Read .claude/skills/front-context/SKILL.md
-2. Read .claude/skills/front-context/references/feature-sliced-design/SKILL.md
+2. Read sample-front/.claude/skills/feature-sliced-design/SKILL.md
    Focus on: Section 4 "Architectural Rules (MUST)"
-3. Read .claude/skills/front-context/references/vitest/SKILL.md (for test pattern compliance)
+3. Read sample-front/.claude/skills/vitest/SKILL.md (for test pattern compliance)
 
 Step F-2: Scan sample-front/src/ and identify violations.
 Check ALL of the following (these are absolute rules — no exceptions):
@@ -122,8 +120,9 @@ Step F-4: Fix violations (if any).
 Delegate ALL frontend fixes to sample-front-agent with the following instructions:
 - Read .claude/skills/front-context/SKILL.md and the feature-sliced-design skill first
 - Fix ONLY the listed violations, minimum diff
-- Run `make check` after fixing
+- Run `make check && make build` after fixing
 - Report: test/lint/build results and list of changed files
+If no violations found, run `make check && make build` and confirm all pass.
 If sample-front-agent reports failures → ask it to fix, end this iteration.
 If all pass → proceed to completion.
 ```
@@ -146,9 +145,11 @@ Read and follow .claude/ralph-review.md --completion-promise REVIEWED --max-iter
 
 | 状態 | 動作 |
 |---|---|
-| 全違反が解消され tests/lint/build が全 pass | `<promise>REVIEWED</promise>` を出力 → ループ終了 |
+| 全違反が解消され、対象ごとの検証コマンドが全 pass | `<promise>REVIEWED</promise>` を出力 → ループ終了 |
 | 違反が残っている、またはテスト失敗 | エージェントへ修正依頼を出してイテレーション終了 → 次のイテレーションで再チェック |
-| max-iterations（5 回）到達 | ループ強制終了 → 残課題を報告 |
+| 設計変更が必要な違反（PRD 修正を要する）を検出 | ループを停止 → `/plan` に戻って修正サイクル全体（`/plan` から `/arch-refactor` REVIEWED まで）を回す |
+| 実装修正のみでよい違反（PRD 変更不要）を検出 | ループを停止 → `/impl` に戻って実装修正のみ行い、再度 `/arch-refactor` を実行する |
+| max-iterations（5 回）到達 | ループ強制終了 → 残課題を報告し、完了後の出力フォーマットの「次のステップ」に従って戻り先を判断する |
 
 ---
 
@@ -167,6 +168,14 @@ Read and follow .claude/ralph-review.md --completion-promise REVIEWED --max-iter
 
 ### 残課題
 - あれば記載、なければ「なし」
+
+### 次のステップ
+
+| 状態 | 戻り先 |
+|---|---|
+| API 仕様・処理フロー・レイヤー責務の変更が必要（PRD 修正を要する）| `/plan` に戻って修正サイクル全体（`/plan` から `/arch-refactor` REVIEWED まで）を回す |
+| mock/test 漏れ・import 方向・パターン修正のみ（PRD 変更不要）| `/impl` に戻って実装修正のみ行い、再度 `/arch-refactor` を実行する |
+| REVIEWED 出力（違反なし）| `/e2e-gen` へ進む |
 ```
 
 ---

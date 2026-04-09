@@ -1,36 +1,49 @@
 ---
 name: plan-checker
-description: `plan-writer` が生成した `plans/{機能名}/{verb-noun}/prd.md` を `.claude/skills/api-context/SKILL.md` と `.claude/skills/front-context/SKILL.md` に照らして検査し、不一致があれば `AskUserQuestion` で確認したうえで修正する。api-context / front-context に合う実装方針かを、`/impl` 前に詳細確認したいときに使う。
+description: 高リスク変更・判断が分かれる差分・PRD 手動修正がある場合に限り `/impl` 前に実行する任意工程。PRD を api-context / front-context へ照合し、一次チェック漏れや差分をユーザー確認付きで解消する。
 ---
 
 # plan-checker
 
-`plan-writer` が生成した PRD の「実装方針」を、プロジェクトのアーキテクチャスキルに照らして詳細チェックする。
+`plan-writer` が生成した、または手動で修正された PRD の「実装方針」を、プロジェクトのアーキテクチャスキルに照らして詳細チェックする。
 判定基準そのものは `api-context` / `front-context` に依存し、このスキルは PRD 読み取り・差異整理・ユーザー確認・再チェックの進行役だけを担う。
+`plan-writer` で一次の自動整合チェックを通していても、このスキルでは同じ観点を **最終確認として再チェック** してよい。目的は重複排除ではなく、漏れを残さないことにある。
+開始条件・停止条件・戻り先・完了条件の正本は `AGENTS.md` と `.claude/rules/workflow.md` とし、このスキルはそこから逸脱しない。
+
+## `plan-writer` との役割分担
+
+- `plan-writer`: PRD 作成と、機械的に判断できる範囲の一次整合チェックを担う
+- `plan-checker`: 一次チェックの漏れを拾い、要件解釈や構成方針に踏み込む差分を最終確認する
+- `plan-checker` では、`plan-writer` が自動修正してはいけない差分を優先的に扱う
+- 同じ観点で再度 `fail` になっても問題ない。最終的に `fail=0` にすることを優先する
 
 ## 用語
 
 | 用語 | 意味 | 例 |
 |---|---|---|
-| `{機能名}` | エンドポイントパスのリソース名（複数形のまま使用） | `groups` |
+| `{ドメイン名}` | `plans/` 配下のドメインディレクトリ名（単数形） | `group` |
 | `{verb-noun}` | API 操作単位の名前 | `list-groups` |
 
 ## いつ使うか
 
-- `plan-writer` で `plans/{機能名}/{verb-noun}/prd.md` を書き出した直後
-- `/impl` の前
-- PRD を手修正したあとに再検査したいとき
+以下の **3 条件いずれかに該当する場合のみ** 実行する（`.claude/rules/workflow.md` の「/plan-checker を挟む基準」が正）。必ず `/impl` 前に実行する。
+
+- 高リスク変更（DB スキーマ変更、認証・認可、外部 API 連携など）
+- 判断が分かれる差分がある場合（発生元を問わない）
+- PRD を手動で修正したとき
+
+起動要否が会話だけでは確定できないとき → `.claude/rules/workflow.md` の「/plan-checker を挟む基準」に照らして自動判定し、該当すれば続行・しなければ停止して案内する
 
 ## 前提
 
 1. 以下いずれかの PRD ファイルが存在すること
-   - 機能固有: `plans/{機能名}/{verb-noun}/prd.md`（例: `plans/groups/list-groups/prd.md`）
+   - 機能固有: `plans/{ドメイン名}/{verb-noun}/prd.md`（例: `plans/group/list-groups/prd.md`）
    - 共通処理: `plans/shared/{処理名}.md`
 2. 次のスキルを必ず読むこと
    - `.claude/skills/api-context/SKILL.md`
    - `.claude/skills/front-context/SKILL.md`
 
-`prd.md` が存在しない場合は停止し、`plan-writer` を先に実行するよう案内する。
+対象の PRD ファイルが存在しない場合は停止し、`plan-writer` を先に実行するよう案内する。
 
 ## 判定の優先順位
 
@@ -52,7 +65,7 @@ description: `plan-writer` が生成した `plans/{機能名}/{verb-noun}/prd.md
 ## 実行手順
 
 1. PRD パスを特定して読む
-   - 機能固有: `plans/{機能名}/{verb-noun}/prd.md`（例: `plans/groups/list-groups/prd.md`）
+   - 機能固有: `plans/{ドメイン名}/{verb-noun}/prd.md`（例: `plans/group/list-groups/prd.md`）
    - 共通処理: `plans/shared/{処理名}.md`
    - 存在しない場合は `plan-writer` を先に実行するよう案内して停止する
 2. PRD から以下を抽出する
@@ -63,9 +76,11 @@ description: `plan-writer` が生成した `plans/{機能名}/{verb-noun}/prd.md
 4. `api-context` の `PRD 照合観点` に従ってバックエンド整合性チェックを実施する
 5. `front-context` の `PRD 照合観点` に従ってフロントエンド整合性チェックを実施する
 6. `fail` があれば、差異と修正案を整理して `AskUserQuestion` でユーザーに確認する
-7. ユーザー回答に応じて PRD を修正する
-8. 修正後、ステップ 4 から再実施する
-9. `fail` が 0 になったら結果を報告する
+7. ユーザー回答に応じて分岐する
+   - **PRD を修正** → ステップ 4 から再実施する
+   - **要件変更が必要**（`/plan` に戻す）→ `/plan` へ戻るよう案内してスキルを終了する
+8. ステップ 6-7 を全 `fail` に対して繰り返す
+9. `fail` が 0 になったら結果を報告し、`/impl` を案内する
 
 ## 判定レベル
 
@@ -100,7 +115,7 @@ description: `plan-writer` が生成した `plans/{機能名}/{verb-noun}/prd.md
 
 引用元が不明な場合は「スキルに明示的な定義なし（判断理由: {根拠}）」と記載する。
 
-選択肢では「提案どおり修正する」「要件を見直す」「今回は修正しない」を最低限提示する。"Other" での補足は優先して反映する。
+選択肢では「提案どおり修正する」「要件を見直す（`/plan` に戻す）」を最低限提示する。"Other" での補足は優先して反映する。要件変更が必要な場合は `/plan` へ戻す。
 
 ### 2. PRD を修正する
 
@@ -121,7 +136,7 @@ description: `plan-writer` が生成した `plans/{機能名}/{verb-noun}/prd.md
 ## 出力形式
 
 ```text
-## plan-checker result: plans/{機能名}/{verb-noun}/prd.md
+## plan-checker result: {PRDパス}
 
 ### summary
 - backend: pass / fail
@@ -134,7 +149,7 @@ description: `plan-writer` が生成した `plans/{機能名}/{verb-noun}/prd.md
 
 ### next action
 - fail が 1 つでもあれば `AskUserQuestion` で確認し、回答に応じて PRD を修正して再実行
-- fail が 0 で実装へ進める状態なら `/impl` の実行を案内
+- fail が 0 なら `/impl` の実行を案内
 ```
 
 ## 完了条件
@@ -145,5 +160,6 @@ description: `plan-writer` が生成した `plans/{機能名}/{verb-noun}/prd.md
 完了時は、チェック結果の報告に加えて次を案内する:
 
 ```text
-チェックが完了しました。実装を進める場合は `/impl` を実行してください。
+チェックが完了しました。fail が 0 になりました。
+- `/impl` を実行してください。
 ```

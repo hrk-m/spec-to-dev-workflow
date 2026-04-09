@@ -1,72 +1,119 @@
-# 作成ログ：Systematic Debugging スキル
+# Creation Log: Systematic Debugging Skill
 
-## 経緯
+Reference example of extracting, structuring, and bulletproofing a critical skill.
 
-体系的なデバッグフレームワークを、このプロジェクトのスタック（Go Clean Architecture + FSD v2.1）に合わせたスキルとして整備した。
+## Source Material
 
-## スタック
+Extracted debugging framework from `/Users/jesse/.claude/CLAUDE.md`:
+- 4-phase systematic process (Investigation → Pattern Analysis → Hypothesis → Implementation)
+- Core mandate: ALWAYS find root cause, NEVER fix symptoms
+- Rules designed to resist time pressure and rationalization
 
-- **sample-api**: Go 1.25 / Echo v4 / Clean Architecture (domain → use case → delivery)
-- **sample-front**: React 19 / TypeScript strict / Vitest + Testing Library / FSD v2.1
+## Extraction Decisions
 
-## 設計方針
+**What to include:**
+- Complete 4-phase framework with all rules
+- Anti-shortcuts ("NEVER fix symptom", "STOP and re-analyze")
+- Pressure-resistant language ("even if faster", "even if I seem in a hurry")
+- Concrete steps for each phase
 
-### 含めるもの
+**What to leave out:**
+- Project-specific context
+- Repetitive variations of same rule
+- Narrative explanations (condensed to principles)
 
-- 完全な 4 フェーズフレームワーク（調査 → パターン分析 → 仮説 → 実装）
-- プロジェクト固有のコマンド（`make test`, `make check` など）
-- Go と TypeScript 両方のデバッグ例
-- 「3 回失敗したらアーキテクチャを疑え」ルール
-- 学びの記録先（`.agents/tasks/lessons.md`）
+## Structure Following skill-creation/SKILL.md
 
-### 含めないもの
+1. **Rich when_to_use** - Included symptoms and anti-patterns
+2. **Type: technique** - Concrete process with steps
+3. **Keywords** - "root cause", "symptom", "workaround", "debugging", "investigation"
+4. **Flowchart** - Decision point for "fix failed" → re-analyze vs add more fixes
+5. **Phase-by-phase breakdown** - Scannable checklist format
+6. **Anti-patterns section** - What NOT to do (critical for this skill)
 
-- 他プロジェクト固有のコンテキスト
-- 同じルールの繰り返し
-- 不要な技術詳細
+## Bulletproofing Elements
 
-## ファイル構成
+Framework designed to resist rationalization under pressure:
 
-| ファイル | 内容 |
-|---|---|
-| `SKILL.md` | メインスキル（4 フェーズプロセス） |
-| `root-cause-tracing.md` | コールスタックを後方にたどる手法 |
-| `defense-in-depth.md` | 複数レイヤーのバリデーション追加 |
-| `condition-based-waiting.md` | 任意タイムアウトを条件待機に置き換える |
-| `test-academic.md` | スキル内容の理解確認テスト |
-| `test-pressure-1.md` | プレッシャーテスト：PR レビュー前日のバグ |
-| `test-pressure-2.md` | プレッシャーテスト：消耗と埋没費用 |
-| `test-pressure-3.md` | プレッシャーテスト：権威と社会的プレッシャー |
+### Language Choices
+- "ALWAYS" / "NEVER" (not "should" / "try to")
+- "even if faster" / "even if I seem in a hurry"
+- "STOP and re-analyze" (explicit pause)
+- "Don't skip past" (catches the actual behavior)
 
-## テストシナリオ
+### Structural Defenses
+- **Phase 1 required** - Can't skip to implementation
+- **Single hypothesis rule** - Forces thinking, prevents shotgun fixes
+- **Explicit failure mode** - "IF your first fix doesn't work" with mandatory action
+- **Anti-patterns section** - Shows exactly what shortcuts look like
 
-### 学術テスト（プレッシャーなし）
+### Redundancy
+- Root cause mandate in overview + when_to_use + Phase 1 + implementation rules
+- "NEVER fix symptom" appears 4 times in different contexts
+- Each phase has explicit "don't skip" guidance
 
-- スキルの 4 フェーズを正しく理解できるか
-- 引用に基づいた回答ができるか
+## Testing Approach
 
-### プレッシャーテスト 1：PR 前日のバグ
+Created 4 validation tests following skills/meta/testing-skills-with-subagents:
 
-- 既存パターンに見えるバグ
-- 「先週も同じ修正で直った」という誘惑
-- プロセスを守れるか
+### Test 1: Academic Context (No Pressure)
+- Simple bug, no time pressure
+- **Result:** Perfect compliance, complete investigation
 
-### プレッシャーテスト 2：消耗と埋没費用
+### Test 2: Time Pressure + Obvious Quick Fix
+- User "in a hurry", symptom fix looks easy
+- **Result:** Resisted shortcut, followed full process, found real root cause
 
-- 4 時間のデバッグの後
-- `setTimeout` 増加という合理化
-- Phase 1 に戻ることができるか
+### Test 3: Complex System + Uncertainty
+- Multi-layer failure, unclear if can find root cause
+- **Result:** Systematic investigation, traced through all layers, found source
 
-### プレッシャーテスト 3：権威と社会的プレッシャー
+### Test 4: Failed First Fix
+- Hypothesis doesn't work, temptation to add more fixes
+- **Result:** Stopped, re-analyzed, formed new hypothesis (no shotgun)
 
-- シニアエンジニアとテックリードが別の方向を主張
-- Clean Architecture の参照実装確認を求めることができるか
-- 経験の差を言い訳にしないか
+**All tests passed.** No rationalizations found.
 
-## 核心的洞察
+## Iterations
 
-**最も重要なバレット防御：** 「赤信号」セクションに、まさにその瞬間に正当に思える近道を具体的に列挙すること。Claude が「簡単な修正を追加しよう」と考えたとき、そのパターンが間違いとしてリストされているのを見ることで認知的摩擦が生まれる。
+### Initial Version
+- Complete 4-phase framework
+- Anti-patterns section
+- Flowchart for "fix failed" decision
+
+### Enhancement 1: TDD Reference
+- Added link to skills/testing/test-driven-development
+- Note explaining TDD's "simplest code" ≠ debugging's "root cause"
+- Prevents confusion between methodologies
+
+## Final Outcome
+
+Bulletproof skill that:
+- ✅ Clearly mandates root cause investigation
+- ✅ Resists time pressure rationalization
+- ✅ Provides concrete steps for each phase
+- ✅ Shows anti-patterns explicitly
+- ✅ Tested under multiple pressure scenarios
+- ✅ Clarifies relationship to TDD
+- ✅ Ready for use
+
+## Key Insight
+
+**Most important bulletproofing:** Anti-patterns section showing exact shortcuts that feel justified in the moment. When Claude thinks "I'll just add this one quick fix", seeing that exact pattern listed as wrong creates cognitive friction.
+
+## Usage Example
+
+When encountering a bug:
+1. Load skill: skills/debugging/systematic-debugging
+2. Read overview (10 sec) - reminded of mandate
+3. Follow Phase 1 checklist - forced investigation
+4. If tempted to skip - see anti-pattern, stop
+5. Complete all phases - root cause found
+
+**Time investment:** 5-10 minutes
+**Time saved:** Hours of symptom-whack-a-mole
 
 ---
 
-*作成：spec-to-dev-workflow プロジェクト用に整備*
+*Created: 2025-10-03*
+*Purpose: Reference example for skill extraction and bulletproofing*

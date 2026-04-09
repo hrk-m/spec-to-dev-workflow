@@ -7,7 +7,7 @@ sample-api/
 ├── app/
 │   └── main.go              # DI 配線とサーバー起動
 ├── db/
-│   ├── migrate/             # DB schema migration (golang-migrate, .up.sql / .down.sql)
+│   ├── migrate/             # DB schema migration (golang-migrate, .up.sql のみ)
 │   └── seed/                # 初期データ・開発用データ (DML のみ)
 ├── domain/                  # コアドメイン層（フレームワーク依存ゼロ）
 │   ├── *.go                 # ドメインモデル（struct + json タグ）

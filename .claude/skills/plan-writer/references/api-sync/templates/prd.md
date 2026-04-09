@@ -68,6 +68,36 @@
 
 ---
 
+## 確認ステップ 5-2-FE: フロントエンド処理フロー
+
+> フロントエンド処理が不要な場合（バックエンドのみの機能）はこのセクションを削除する。
+
+```
+1. 開始
+2. ユーザーが画面上で操作を行う（{トリガーアクション}）
+3. 入力バリデーション（フロントエンド側）
+   - {フィールド名} の形式チェック
+   - {その他条件} のチェック
+4. バリデーション通過？
+   - No →
+      - エラーメッセージを表示（インライン or トースト）
+      - 終了
+   - Yes →
+      5. ローディング状態を表示（スケルトン / スピナー）
+      6. API リクエストを送信（`{METHOD} /api/v1/{path}`）
+      7. レスポンス受信
+      8. HTTP ステータス判定
+         - 4xx/5xx →
+            - エラー UI を表示（{エラー表示方法}）
+            - 終了
+         - 2xx →
+            9. レスポンスデータを状態に反映
+            10. UI を更新（{表示内容}）
+            11. 終了
+```
+
+---
+
 ## 確認ステップ 5-3: DB 操作
 
 > DB 変更がない場合はこのセクションを削除する。
@@ -149,10 +179,10 @@ WHERE id = ? AND deleted_at IS NULL;
 
 | ファイル | 役割 |
 |---|---|
-| `sample-api/domain/{機能名}.go` | Entity・エラー定義 |
-| `sample-api/{機能名}/service.go` | Repository interface・ビジネスロジック |
-| `sample-api/internal/rest/{機能名}.go` | HTTP Handler |
-| `sample-api/internal/repository/mysql/{機能名}.go` | MySQL 実装 |
+| `sample-api/domain/{ドメイン名}.go` | Entity・エラー定義 |
+| `sample-api/{ドメイン名}/service.go` | Repository interface・ビジネスロジック |
+| `sample-api/internal/rest/{ドメイン名}.go` | HTTP Handler |
+| `sample-api/internal/repository/mysql/{ドメイン名}.go` | MySQL 実装 |
 
 ---
 

@@ -1,305 +1,296 @@
 ---
 name: systematic-debugging
-description: バグ・テスト失敗・予期しない動作に遭遇したとき、修正を提案する前に必ず使用する
+description: Use when encountering any bug, test failure, or unexpected behavior, before proposing fixes
 ---
 
 # Systematic Debugging
 
-## 概要
+## Overview
 
-場当たり的な修正は時間を無駄にし、新たなバグを生む。その場しのぎのパッチは問題の本質を隠す。
+Random fixes waste time and create new bugs. Quick patches mask underlying issues.
 
-**核心原則：根本原因を特定するまで、修正に着手しない。症状への対処は失敗である。**
+**Core principle:** ALWAYS find root cause before attempting fixes. Symptom fixes are failure.
 
-## 鉄の掟
+**Violating the letter of this process is violating the spirit of debugging.**
 
-**根本原因の調査なしに、修正を提案してはならない**
+## The Iron Law
 
-Phase 1 を完了していなければ、修正を提案できない。
+```
+NO FIXES WITHOUT ROOT CAUSE INVESTIGATION FIRST
+```
 
-## エージェント委譲ルール
+If you haven't completed Phase 1, you cannot propose fixes.
 
-`sample-api/` と `sample-front/` の調査・修正は、必ず対応するエージェントに委譲する。
+## When to Use
 
-| 対象 | 使用するエージェント |
-|---|---|
-| `sample-api/` の調査・修正 | `sample-api-agent`（`.claude/agents/sample-api-agent.md`） |
-| `sample-front/` の調査・修正 | `sample-front-agent`（`.claude/agents/sample-front-agent.md`） |
+Use for ANY technical issue:
+- Test failures
+- Bugs in production
+- Unexpected behavior
+- Performance problems
+- Build failures
+- Integration issues
 
-**調査フェーズ（Phase 1〜3）でも委譲する。** エビデンス収集のためのログ追加・コード調査・仮説検証も、それぞれのエージェントが行う。メインのコンテキストは調査結果の受け取りと次アクションの判断に集中する。
+**Use this ESPECIALLY when:**
+- Under time pressure (emergencies make guessing tempting)
+- "Just one quick fix" seems obvious
+- You've already tried multiple fixes
+- Previous fix didn't work
+- You don't fully understand the issue
 
-**修正フェーズ（Phase 4）でも委譲する。** 実際のコード変更・テスト実行・lint 確認はすべてエージェントが担当する。
+**Don't skip when:**
+- Issue seems simple (simple bugs have root causes too)
+- You're in a hurry (rushing guarantees rework)
+- Manager wants it fixed NOW (systematic is faster than thrashing)
 
-## 使用タイミング
+## The Four Phases
 
-あらゆる技術的問題に使用する：
+You MUST complete each phase before proceeding to the next.
 
-- テストの失敗
-- 本番のバグ
-- 予期しない動作
-- パフォーマンス問題
-- ビルドの失敗
-- 統合の問題
+### Phase 1: Root Cause Investigation
 
-**特に以下の状況では必ず使用する：**
+**BEFORE attempting ANY fix:**
 
-- 時間的プレッシャー下にあるとき（緊急事態ほど当て推量が誘惑される）
-- 「ちょっとした修正」が明白に見えるとき
-- すでに複数の修正を試みたとき
-- 前回の修正が効かなかったとき
-- 問題を完全に理解していないとき
+1. **Read Error Messages Carefully**
+   - Don't skip past errors or warnings
+   - They often contain the exact solution
+   - Read stack traces completely
+   - Note line numbers, file paths, error codes
 
-**スキップしてはいけない状況：**
+2. **Reproduce Consistently**
+   - Can you trigger it reliably?
+   - What are the exact steps?
+   - Does it happen every time?
+   - If not reproducible → gather more data, don't guess
 
-- 問題が単純に見えるとき（単純なバグにも根本原因はある）
-- 急いでいるとき（急ぐと必ずやり直しが発生する）
-- 今すぐ修正を求められているとき（体系的な方法は場当たり的試行より速い）
+3. **Check Recent Changes**
+   - What changed that could cause this?
+   - Git diff, recent commits
+   - New dependencies, config changes
+   - Environmental differences
 
-## 4 つのフェーズ
+4. **Gather Evidence in Multi-Component Systems**
 
-各フェーズを完了してから次へ進むこと。
+   **WHEN system has multiple components (CI → build → signing, API → service → database):**
 
-### Phase 1：根本原因の調査
+   **BEFORE proposing fixes, add diagnostic instrumentation:**
+   ```
+   For EACH component boundary:
+     - Log what data enters component
+     - Log what data exits component
+     - Verify environment/config propagation
+     - Check state at each layer
 
-**修正に着手する前に：**
+   Run once to gather evidence showing WHERE it breaks
+   THEN analyze evidence to identify failing component
+   THEN investigate that specific component
+   ```
 
-1. **エラーメッセージを丁寧に読む**
-   - エラーや警告を読み飛ばさない
-   - 解決策そのものが書かれていることが多い
-   - スタックトレースを最後まで読む
-   - 行番号、ファイルパス、エラーコードを記録する
+   **Example (multi-layer system):**
+   ```bash
+   # Layer 1: Workflow
+   echo "=== Secrets available in workflow: ==="
+   echo "IDENTITY: ${IDENTITY:+SET}${IDENTITY:-UNSET}"
 
-2. **再現性を確認する**
-   - 確実にトリガーできるか？
-   - 正確な手順は何か？
-   - 毎回発生するか？
-   - 再現できない場合 → 更多くのデータを集め、推測しない
+   # Layer 2: Build script
+   echo "=== Env vars in build script: ==="
+   env | grep IDENTITY || echo "IDENTITY not in environment"
 
-3. **直近の変更を確認する**
-   - 何が変わったことで発生したか？
-   - `git diff`、直近のコミット
-   - 新しい依存関係、設定の変更
-   - 環境の差異
+   # Layer 3: Signing script
+   echo "=== Keychain state: ==="
+   security list-keychains
+   security find-identity -v
 
-4. **多層システムでのエビデンス収集**
+   # Layer 4: Actual signing
+   codesign --sign "$IDENTITY" --verbose=4 "$APP"
+   ```
 
-   **システムに複数のコンポーネントがある場合（API → use case → domain、フロント → API → DB など）：**
+   **This reveals:** Which layer fails (secrets → workflow ✓, workflow → build ✗)
 
-   **修正を提案する前に、診断のためのログを追加する：**
+5. **Trace Data Flow**
 
-   各コンポーネント境界で、入力データ・出力データ・環境や設定の伝播・各レイヤーの状態をログに出す。一度実行してどこで壊れているかのエビデンスを集め、失敗しているコンポーネントを特定して詳しく調査する。
+   **WHEN error is deep in call stack:**
 
-   **sample-api（Go Clean Architecture）の場合：**
+   See `root-cause-tracing.md` in this directory for the complete backward tracing technique.
 
-   delivery 層（`internal/rest/`）の handler 関数の冒頭で受け取ったパラメータを `log.Printf` で出力し、use case 層（`hello/` など）への入力値と出力値も同様に記録する。domain 層では entity の状態をログに残す。書式は `"=== [レイヤー名]: [変数]=値 ==="` のように統一すると見やすい。テスト出力に確実に残るよう `fmt.Fprintf(os.Stderr, ...)` を使う方が `log.Printf` より確実な場合もある。
+   **Quick version:**
+   - Where does bad value originate?
+   - What called this with bad value?
+   - Keep tracing up until you find the source
+   - Fix at source, not at symptom
 
-   **sample-front（FSD + React）の場合：**
+### Phase 2: Pattern Analysis
 
-   pages 層のアクションが発火した直後に `console.error` でペイロードを出力する（`console.log` より確実にテスト出力に現れる）。`shared/api/client.ts` の `apiFetch` は `!res.ok` 時にスローするため、リクエスト内容を確認するには fetch を直接呼ぶか、`apiFetch` の呼び出し前後にログを差し込む。レスポンスのステータスコードとステータステキストを合わせて記録する。
+**Find the pattern before fixing:**
 
-   **これにより判明すること：** どのレイヤーで失敗しているか（delivery ✓ → use case ✗）
+1. **Find Working Examples**
+   - Locate similar working code in same codebase
+   - What works that's similar to what's broken?
 
-5. **データフローをたどる**
+2. **Compare Against References**
+   - If implementing pattern, read reference implementation COMPLETELY
+   - Don't skim - read every line
+   - Understand the pattern fully before applying
 
-   **エラーがコールスタックの深い場所にある場合：**
+3. **Identify Differences**
+   - What's different between working and broken?
+   - List every difference, however small
+   - Don't assume "that can't matter"
 
-   詳細な後方追跡技法は、このディレクトリの `root-cause-tracing.md` を参照。
+4. **Understand Dependencies**
+   - What other components does this need?
+   - What settings, config, environment?
+   - What assumptions does it make?
 
-   **クイック版：**
-   - 不正な値はどこで生まれるか？
-   - 何がその不正な値でこれを呼び出したか？
-   - ソースが見つかるまでたどり続ける
-   - 症状ではなく、ソースを修正する
+### Phase 3: Hypothesis and Testing
 
-### Phase 2：パターン分析
+**Scientific method:**
 
-**修正前にパターンを見つける：**
+1. **Form Single Hypothesis**
+   - State clearly: "I think X is the root cause because Y"
+   - Write it down
+   - Be specific, not vague
 
-1. **動作している例を探す**
-   - 同じコードベース内で類似する動作しているコードを探す
-   - 壊れたものと似た、何が動いているか？
+2. **Test Minimally**
+   - Make the SMALLEST possible change to test hypothesis
+   - One variable at a time
+   - Don't fix multiple things at once
 
-2. **参照実装と比較する**
-   - パターンを実装しているなら、参照実装を**完全に**読む
-   - ざっと読まない — 一行一行読む
-   - パターンを完全に理解してから適用する
+3. **Verify Before Continuing**
+   - Did it work? Yes → Phase 4
+   - Didn't work? Form NEW hypothesis
+   - DON'T add more fixes on top
 
-3. **差異を特定する**
-   - 動作している部分と壊れている部分の違いは何か？
-   - どんな些細な違いもリストアップする
-   - 「これは関係ないはず」と思い込まない
+4. **When You Don't Know**
+   - Say "I don't understand X"
+   - Don't pretend to know
+   - Ask for help
+   - Research more
 
-4. **依存関係を理解する**
-   - 他に何が必要か？
-   - 設定、環境の前提は？
-   - 暗黙の仮定は何か？
+### Phase 4: Implementation
 
-### Phase 3：仮説と検証
+**Fix the root cause, not the symptom:**
 
-**科学的手法：**
+1. **Create Failing Test Case**
+   - Simplest possible reproduction
+   - Automated test if possible
+   - One-off test script if no framework
+   - MUST have before fixing
+   - Use the `superpowers:test-driven-development` skill for writing proper failing tests
 
-1. **単一の仮説を立てる**
-   - 明確に述べる：「X が根本原因だと思う。なぜなら Y だから」
-   - 書き留める
-   - 漠然とではなく、具体的に
+2. **Implement Single Fix**
+   - Address the root cause identified
+   - ONE change at a time
+   - No "while I'm here" improvements
+   - No bundled refactoring
 
-2. **最小限の検証をする**
-   - 仮説を検証するための**最小限**の変更を加える
-   - 一度に一つの変数のみ
-   - 複数の修正を同時に行わない
+3. **Verify Fix**
+   - Test passes now?
+   - No other tests broken?
+   - Issue actually resolved?
 
-3. **継続前に確認する**
-   - 効果があった？ Yes → Phase 4
-   - 効果がなかった？ 新しい仮説を立てる
-   - 修正の上に修正を重ねない
-
-4. **わからない場合**
-   - 「X を理解できていない」と言う
-   - 知っているふりをしない
-   - 助けを求める
-   - さらに調査する
-
-### Phase 4：実装
-
-**症状ではなく根本原因を修正する：**
-
-1. **失敗するテストケースを作る**
-   - できる限りシンプルな再現方法
-   - 可能であれば自動テスト
-
-   **sample-api（Go）：** `make test` でテスト実行、`make test-verbose` で詳細出力。テストファイルは `package xxx_test`（外部テストパッケージ）を使用し、delivery 層のモックはテストファイル内にインラインで定義する。
-
-   **sample-front（TypeScript）：** `make test` で vitest 実行、`bun run typecheck` で型チェック、`make lint` で oxlint を実行。
-
-   修正前に失敗するテストが必須。
-
-2. **単一の修正を実装する**
-   - 特定した根本原因に対処する
-   - 一度に一つの変更のみ
-   - 「ついでに」の改善はしない
-   - リファクタリングを抱き合わせにしない
-   - **実装は `sample-api-agent` または `sample-front-agent` に委譲する**（「エージェント委譲ルール」参照）
-
-3. **修正を確認する**
-
-   **まず自動テストで確認する：**
-   - テストが通るようになったか？
-   - 他のテストを壊していないか？
-
-   sample-api は `make lint && make test`、sample-front は `make check`（typecheck + lint + format + test をまとめて実行）で確認する。
-
-   **ランタイム動作の確認には `Debug` エージェントを使う：**
-
-   テストが通っても「実際の動作で問題が解消されているか」を確認するには、`.claude/agents/ebug.agent.md` の `Debug` エージェントに委譲する。
-
-   | 確認したい状況 | Debug エージェントに委譲する |
-   |---|---|
-   | Flaky・タイミング依存だった問題 | `post-fix` の runId でログを取り直す |
-   | 本番に近い環境でしか再現しない問題 | HTTP ingest または NDJSON で再現前後を比較する |
-   | ログで CONFIRMED した根本原因が本当に消えたか | pre-fix との差分を仮説 ID で対比する |
-
-   Debug エージェントはステップ 7（post-fix 検証）とステップ 8（計測の掃除）まで実行させること。
-
-   - 問題が実際に解決されたか？（Debug エージェントのステップ 7 で確認）
-
-4. **修正が効かない場合**
+4. **If Fix Doesn't Work**
    - STOP
-   - 数える：何回修正を試みたか？
-   - 3 回未満：Phase 1 に戻り、新情報で再分析する
-   - **3 回以上：STOP してアーキテクチャを疑う（下記ステップ 5）**
-   - 新情報なしに 4 回目の修正を試みない
+   - Count: How many fixes have you tried?
+   - If < 3: Return to Phase 1, re-analyze with new information
+   - **If ≥ 3: STOP and question the architecture (step 5 below)**
+   - DON'T attempt Fix #4 without architectural discussion
 
-5. **3 回以上失敗した場合：アーキテクチャを疑う**
+5. **If 3+ Fixes Failed: Question Architecture**
 
-   **アーキテクチャ上の問題を示すパターン：**
-   - 各修正が別の場所に新たな共有状態・結合・問題を明らかにする
-   - 修正のために「大規模なリファクタリング」が必要になる
-   - 各修正が別の場所に新たな症状を生む
+   **Pattern indicating architectural problem:**
+   - Each fix reveals new shared state/coupling/problem in different place
+   - Fixes require "massive refactoring" to implement
+   - Each fix creates new symptoms elsewhere
 
-   **STOP して根本を疑う：**
-   - このパターン（Clean Architecture の層分離、FSD の境界など）は根本的に正しいか？
-   - 「惰性で続けている」のではないか？
-   - 症状を修正し続けるより、アーキテクチャをリファクタリングすべきか？
+   **STOP and question fundamentals:**
+   - Is this pattern fundamentally sound?
+   - Are we "sticking with it through sheer inertia"?
+   - Should we refactor architecture vs. continue fixing symptoms?
 
-   **これ以上の修正を試みる前に、ユーザーと相談する**
+   **Discuss with your human partner before attempting more fixes**
 
-   これは仮説が外れたのではなく、アーキテクチャが間違っているということだ。
+   This is NOT a failed hypothesis - this is a wrong architecture.
 
-## 赤信号 — STOP してプロセスに戻る
+## Red Flags - STOP and Follow Process
 
-以下のことを考えている自分に気づいたら：
+If you catch yourself thinking:
+- "Quick fix for now, investigate later"
+- "Just try changing X and see if it works"
+- "Add multiple changes, run tests"
+- "Skip the test, I'll manually verify"
+- "It's probably X, let me fix that"
+- "I don't fully understand but this might work"
+- "Pattern says X but I'll adapt it differently"
+- "Here are the main problems: [lists fixes without investigation]"
+- Proposing solutions before tracing data flow
+- **"One more fix attempt" (when already tried 2+)**
+- **Each fix reveals new problem in different place**
 
-- 「今はとりあえず修正して、あとで調べる」
-- 「X を変えてみてどうなるか試してみよう」
-- 「複数の変更を加えてテストを実行しよう」
-- 「テストはスキップして手動で確認しよう」
-- 「たぶん X だろう、修正してみよう」
-- 「完全には理解していないが、これが効くかもしれない」
-- 「パターンは X と言っているが、違うやり方で応用しよう」
-- 「主な問題はこれだ：[調査なしに修正をリストアップ]」
-- データフローをたどる前に解決策を提案している
-- **「もう一度修正を試みよう」（2 回以上試みた後）**
-- **各修正が別の場所に新たな問題を明らかにする**
+**ALL of these mean: STOP. Return to Phase 1.**
 
-**これらはすべて：STOP。Phase 1 に戻れ、を意味する。**
+**If 3+ fixes failed:** Question the architecture (see Phase 4.5)
 
-**3 回以上失敗した場合：** アーキテクチャを疑う（Phase 4.5 参照）
+## your human partner's Signals You're Doing It Wrong
 
-## ユーザーの軌道修正サイン
+**Watch for these redirections:**
+- "Is that not happening?" - You assumed without verifying
+- "Will it show us...?" - You should have added evidence gathering
+- "Stop guessing" - You're proposing fixes without understanding
+- "Ultrathink this" - Question fundamentals, not just symptoms
+- "We're stuck?" (frustrated) - Your approach isn't working
 
-**以下のリダイレクションに注目する：**
+**When you see these:** STOP. Return to Phase 1.
 
-- 「それは起きていないの？」— 確認せずに仮定した
-- 「それで確認できる？」— エビデンスの収集が必要だった
-- 「推測するな」— 根本原因を理解せずに修正を提案している
-- 「深く考えて」— 症状だけでなく根本を疑え
-- 「詰まった？」（苛立ちを感じる）— アプローチが機能していない
+## Common Rationalizations
 
-**これらを見かけたら：** STOP。Phase 1 に戻れ。
+| Excuse | Reality |
+|--------|---------|
+| "Issue is simple, don't need process" | Simple issues have root causes too. Process is fast for simple bugs. |
+| "Emergency, no time for process" | Systematic debugging is FASTER than guess-and-check thrashing. |
+| "Just try this first, then investigate" | First fix sets the pattern. Do it right from the start. |
+| "I'll write test after confirming fix works" | Untested fixes don't stick. Test first proves it. |
+| "Multiple fixes at once saves time" | Can't isolate what worked. Causes new bugs. |
+| "Reference too long, I'll adapt the pattern" | Partial understanding guarantees bugs. Read it completely. |
+| "I see the problem, let me fix it" | Seeing symptoms ≠ understanding root cause. |
+| "One more fix attempt" (after 2+ failures) | 3+ failures = architectural problem. Question pattern, don't fix again. |
 
-## 学びの記録
+## Quick Reference
 
-バグ修正後に根本原因と再発防止のパターンを `.agents/tasks/lessons.md` に記録する。
+| Phase | Key Activities | Success Criteria |
+|-------|---------------|------------------|
+| **1. Root Cause** | Read errors, reproduce, check changes, gather evidence | Understand WHAT and WHY |
+| **2. Pattern** | Find working examples, compare | Identify differences |
+| **3. Hypothesis** | Form theory, test minimally | Confirmed or new hypothesis |
+| **4. Implementation** | Create test, fix, verify | Bug resolved, tests pass |
 
-記録する項目：日付とバグの概要、症状（何が起きていたか）、根本原因（実際の問題）、修正（何を変えたか、sample-api / sample-front のどちらか）、再発防止（次回同じミスを避けるためのルール）。
+## When Process Reveals "No Root Cause"
 
-## よくある合理化
+If systematic investigation reveals issue is truly environmental, timing-dependent, or external:
 
-| 言い訳 | 現実 |
-|--------|------|
-| 「問題は単純だからプロセスは不要」 | 単純な問題にも根本原因はある。単純なバグほどプロセスは速い。 |
-| 「緊急事態だからプロセスの時間はない」 | 体系的なデバッグは当て推量のスラッシングより速い。 |
-| 「まずこれを試して、それから調査しよう」 | 最初の修正がパターンを決める。最初から正しくやる。 |
-| 「修正が効くことを確認してからテストを書く」 | テストされていない修正は定着しない。先にテストで証明する。 |
-| 「複数の修正を一度にやれば時間が節約できる」 | 何が効いたか切り分けられない。新たなバグを生む。 |
-| 「参照が長すぎる、パターンを応用しよう」 | 部分的な理解は必ずバグを生む。完全に読む。 |
-| 「問題が見えた、修正しよう」 | 症状が見える ≠ 根本原因を理解している。 |
-| 「もう一回試みよう」（2 回以上失敗の後） | 3 回以上の失敗 = アーキテクチャの問題。再度修正せず疑う。 |
+1. You've completed the process
+2. Document what you investigated
+3. Implement appropriate handling (retry, timeout, error message)
+4. Add monitoring/logging for future investigation
 
-## クイックリファレンス
+**But:** 95% of "no root cause" cases are incomplete investigation.
 
-| フェーズ | 主なアクティビティ | 完了基準 |
-|----------|-------------------|----------|
-| **1. 根本原因** | エラーを読む、再現する、変更を確認、エビデンス収集 | 何が・なぜ起きているかを理解する |
-| **2. パターン** | 動作例を探す、比較する | 差異を特定する |
-| **3. 仮説** | 理論を立てる、最小限で検証する | 確認または新仮説 |
-| **4. 実装** | テスト作成、修正、確認 | バグ解消、テスト通過 |
+## Supporting Techniques
 
-## 「根本原因なし」が判明した場合
+These techniques are part of systematic debugging and available in this directory:
 
-体系的な調査の結果、問題が環境依存・タイミング依存・外部要因によるものだと判明した場合：
+- **`root-cause-tracing.md`** - Trace bugs backward through call stack to find original trigger
+- **`defense-in-depth.md`** - Add validation at multiple layers after finding root cause
+- **`condition-based-waiting.md`** - Replace arbitrary timeouts with condition polling
 
-1. プロセスを完了した
-2. 調査内容をドキュメント化する
-3. 適切な処置を実装する（リトライ、タイムアウト、エラーメッセージ）
-4. 将来の調査のためにログを追加する
+**Related skills:**
+- **superpowers:test-driven-development** - For creating failing test case (Phase 4, Step 1)
+- **superpowers:verification-before-completion** - Verify fix worked before claiming success
 
-**ただし：** 「根本原因なし」のケースの 95% は調査が不完全である。
+## Real-World Impact
 
-## サポートテクニック
-
-このディレクトリで提供されている技法：
-
-- **`root-cause-tracing.md`** — コールスタックを後方にたどってバグの元のトリガーを見つける
-- **`defense-in-depth.md`** — 根本原因特定後に複数レイヤーでバリデーションを追加する
-- **`condition-based-waiting.md`** — 任意のタイムアウトを条件ポーリングに置き換える
+From debugging sessions:
+- Systematic approach: 15-30 minutes to fix
+- Random fixes approach: 2-3 hours of thrashing
+- First-time fix rate: 95% vs 40%
+- New bugs introduced: Near zero vs common

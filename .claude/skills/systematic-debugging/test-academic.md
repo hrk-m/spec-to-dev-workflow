@@ -1,12 +1,14 @@
-# 学術テスト：Systematic Debugging スキル
+# Academic Test: Systematic Debugging Skill
 
-`.claude/skills/systematic-debugging/SKILL.md` を参照して、スキルの内容のみに基づいて以下の質問に答えること：
+You have access to the systematic debugging skill at skills/debugging/systematic-debugging
 
-1. 体系的デバッグの 4 つのフェーズとは何か？
-2. 修正に着手する前に必ず何をしなければならないか？
-3. Phase 3 で最初の仮説が外れた場合、どうすべきか？
-4. 複数のことを一度に修正することについて、スキルは何と言っているか？
-5. 問題を完全に理解できていない場合、どうすべきか？
-6. 単純なバグに対してプロセスをスキップすることは許容されるか？
+Read the skill and answer these questions based SOLELY on what the skill says:
 
-スキルの該当箇所から直接引用して答えること。
+1. What are the four phases of systematic debugging?
+2. What must you do BEFORE attempting any fix?
+3. In Phase 3, what should you do if your first hypothesis doesn't work?
+4. What does the skill say about fixing multiple things at once?
+5. What should you do if you don't fully understand the issue?
+6. Is it ever acceptable to skip the process for simple bugs?
+
+Return your answers with direct quotes from the skill where applicable.

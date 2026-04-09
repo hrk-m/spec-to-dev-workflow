@@ -27,7 +27,8 @@ inclusion: always
 
 ### ルーティング
 
-react-router v7 を使用。`src/app/router.tsx` で `createBrowserRouter` によりルート定義を一元管理し、`App.tsx` で `RouterProvider` を通じてマウントする。
+react-router v7 を使用。`src/app/router.tsx` で `createBrowserRouter`
+によりルート定義を一元管理し、`App.tsx` で `RouterProvider` を通じてマウントする。
 
 ### パスエイリアス
 
@@ -84,8 +85,11 @@ Prettier +
 
 - `printWidth: 100`, `singleQuote: false`, `semi: true`, `trailingComma: "all"`
 - `tabWidth: 2`, `arrowParens: "always"`, `proseWrap: "always"`, `endOfLine: "lf"`
-- インポート順: React → サードパーティ → `@/app` → `@/pages` → `@/shared` → 親相対パス(`../`) → 同階層相対パス(`./`)
-- 注意: `@/widgets` は `.prettierrc.mjs` の `importOrder` に明示指定されていないため、サードパーティと `@/app` の間にフォールバック配置される
+- インポート順: React → サードパーティ → `@/app` → `@/pages` → `@/shared` → 親相対パス(`../`)
+  → 同階層相対パス(`./`)
+- 注意: `@/widgets`・`@/features`・`@/entities` は `.prettierrc.mjs` の `importOrder`
+  に明示指定されていないため、サードパーティと `@/app`
+  の間にフォールバック配置される。FSD レイヤーを追加した際は `importOrder` への追記を忘れないこと
 
 ### テスト構成
 

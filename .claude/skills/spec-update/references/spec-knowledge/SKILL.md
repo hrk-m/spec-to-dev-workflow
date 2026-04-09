@@ -1,6 +1,6 @@
 ---
 name: spec-knowledge
-description: specs/ を永続的なプロジェクト知識として管理する
+description: `/impl-done` 内、または収束後に `/spec-update` から手動で `specs/` を再同期したいときに、`specs/` を current code と `plans/` に合わせて生成・更新する。
 ---
 
 # /spec-knowledge — specs/ を永続的なプロジェクト知識として管理する
@@ -11,15 +11,21 @@ description: specs/ を永続的なプロジェクト知識として管理する
 - **同期**: spec とコードベースの整合を維持する（運用）
 - **保持**: ユーザーのカスタマイズを尊重し、更新は加筆中心で行う
 
+## 位置づけ
+
+- 通常フローでは `/impl-done` がこの手順を呼び出す
+- `/spec-update` から単体実行するのは、収束後に `specs/` だけ再同期したい場合に限る
+- 修正サイクル中の要件調整や `plans/` 更新には使わない
+
 ---
 
 ## 共通ルール
 
 - **言語**: 日本語（技術用語は英語）
-- **一次情報**: `specs/{機能画面}/README.md` を最優先で参照する
+- **一次情報**: `/impl-done` の最終同期では current code と `plans/` を優先し、既存 spec はユーザー記述を保持するための補助参照とする。`/spec-update` から単体で同期するときも、既存 spec を起点にしつつ current code と `plans/` で上書き確認する
 - `specs/` は**フロントエンド・UX 視点**を中心に記述する。バックエンドの詳細設計は `plans/` に委ねる
 - `specs/{機能画面}/README.md` は `templates/spec-screen.md` に従って生成すること
-- `specs/{機能画面}/{機能名}.md` は `templates/spec-feature.md` に従って生成すること
+- `specs/{機能画面}/{verb-noun}.md` は `templates/spec-feature.md` に従って生成すること
 - **用語統一**: spec を書く前に必ず `specs/glossary.md` を参照し、定義済みの用語を優先して使用する。新しいドメイン用語が登場したら `specs/glossary.md` に追記する
 
 ---
@@ -29,8 +35,8 @@ description: specs/ を永続的なプロジェクト知識として管理する
 | 用語 | 意味 | 例 |
 |---|---|---|
 | `{機能画面}` | 画面単位のディレクトリ名。`specs/` 配下で使用 | `group-list` |
-| `{機能名}` | エンドポイントのリソース名（複数形）。`plans/` 配下で使用 | `groups` |
-| `{verb-noun}` | API 操作単位の名前。`plans/{機能名}/` 配下で使用 | `list-groups` |
+| `{ドメイン名}` | `plans/` 配下のドメインディレクトリ名（単数形） | `group` |
+| `{verb-noun}` | API 操作単位の名前。`plans/{ドメイン名}/` 配下、および `specs/{機能画面}/` 配下の詳細ファイル名で使用 | `list-groups` |
 | `{screen-id}` | 画面 ID。`{機能画面}` と同義 | `group-list` |
 
 ---
@@ -50,7 +56,7 @@ specs/
   {機能画面}/                     # 画面単位でディレクトリを分割（例: group-list, group-detail）
     README.md                     # 画面全体の仕様（spec-screen.md テンプレート）
                                   #   目的・識別情報・レイアウト・操作・遷移・入力・前提・エラー・スクショ
-    {機能名}.md                   # 機能のフロントエンド詳細（spec-feature.md テンプレート）
+    {verb-noun}.md                # 機能のフロントエンド詳細（spec-feature.md テンプレート）
                                   #   処理フロー・コンポーネント・確認観点・plans/ へのリンク
     img/                          # スクリーンショット置き場
       {screen-id}.png
@@ -70,9 +76,9 @@ specs/
    - ディレクトリ名は `{ドメイン}-{役割}` 形式（例: `group-list`、`group-detail`）
 4. 各画面ディレクトリに以下を生成する:
    - `README.md`（画面全体の仕様。テンプレート: `templates/spec-screen.md`）
-   - `{機能名}.md`（機能のフロントエンド詳細。テンプレート: `templates/spec-feature.md`）
+   - `{verb-noun}.md`（機能のフロントエンド詳細。テンプレート: `templates/spec-feature.md`）
      - 1 画面に複数機能がある場合は機能ごとにファイルを作成する
-     - 各 `{機能名}.md` は対応する `plans/{機能名}/{verb-noun}/prd.md` へのリンクを含める
+     - 各 `{verb-noun}.md` は対応する `plans/{ドメイン名}/{verb-noun}/prd.md` へのリンクを含める
 5. `specs/README.md` を生成する:
    - サービス全体の概要を記述する
    - 各画面の1行説明と `specs/{機能画面}/README.md` へのリンクを表形式でまとめる
@@ -132,12 +138,12 @@ specs/
 ✅ spec 作成完了
 - specs/README.md: [サービス概要・機能一覧]
 - specs/{機能画面}/README.md: [画面概要]
-- specs/{機能画面}/{機能名}.md: [機能詳細]
+- specs/{機能画面}/{verb-noun}.md: [機能詳細]
 信頼できる一次情報としてレビュー・承認してください。
 
 ### 次のステップ
-画面の仕様（`## 画面` セクション）に変更があった場合は、スクリーンショットを追加してください:
-/add-screenshot
+- `/impl-done` 経由なら次の `spec-screenshot` は自動実行されます
+- 単体実行で画面の仕様（`## 画面` セクション）も更新したい場合は、`/spec-update` を実行して `spec-screenshot` を選択してください。
 ```
 
 **同期**:
@@ -148,12 +154,12 @@ specs/
 - コードドリフト: [警告があれば]
 
 ### 次のステップ
-画面の仕様（`## 画面` セクション）に変更があった場合は、スクリーンショットを追加してください:
-/add-screenshot
+- `/impl-done` 経由なら次の `spec-screenshot` は自動実行されます
+- 単体実行で画面の仕様（`## 画面` セクション）も更新したい場合は、`/spec-update` を実行して `spec-screenshot` を選択してください。
 ```
 
 ## 安全性とフォールバック
 
 - キー・パスワード・シークレットは絶対に含めない
-- 不確実な場合は `AskUserQuestion` で確認する
+- 不確実な場合は `AskUserQuestion` で確認する（ただし `/impl-done` 経由で呼び出された場合は呼び出し元の指示に従い、確認なしで加筆優先とし `AskUserQuestion` は最小限にとどめる）
 - 迷ったら置換ではなく追加する

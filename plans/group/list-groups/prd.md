@@ -2,13 +2,13 @@
 
 ## 概要
 
-| 項目 | 内容 |
-|---|---|
-| 機能名 | `list-groups` |
-| 目的 | グループをキーワード・offset 条件で絞り込んで一覧取得する。フロントエンドは 500 件一括取得してクライアントキャッシュで表示する |
-| API | `GET /api/v1/groups` |
-| 認証 | 不要 |
-| データソース | MySQL (`sample-api/internal/repository/mysql`) |
+| 項目         | 内容                                                                                                                           |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| 機能名       | `list-groups`                                                                                                                  |
+| 目的         | グループをキーワード・offset 条件で絞り込んで一覧取得する。フロントエンドは 500 件一括取得してクライアントキャッシュで表示する |
+| API          | `GET /api/v1/groups`                                                                                                           |
+| 認証         | 不要                                                                                                                           |
+| データソース | MySQL (`sample-api/internal/repository/mysql`)                                                                                 |
 
 ---
 
@@ -18,20 +18,20 @@
 
 #### リクエスト仕様
 
-| フィールド | 型 | 必須 | 説明 |
-|---|---|---|---|
-| `q` | string (query) | — | 検索キーワード。name / description の LIKE 検索 |
-| `limit` | integer (query) | — | 取得件数上限。1〜500（デフォルト: 500） |
-| `offset` | integer (query) | — | 取得開始位置。0 以上（デフォルト: 0） |
+| フィールド | 型              | 必須 | 説明                                            |
+| ---------- | --------------- | ---- | ----------------------------------------------- |
+| `q`        | string (query)  | —    | 検索キーワード。name / description の LIKE 検索 |
+| `limit`    | integer (query) | —    | 取得件数上限。1〜500（デフォルト: 500）         |
+| `offset`   | integer (query) | —    | 取得開始位置。0 以上（デフォルト: 0）           |
 
 #### バリデーション一覧
 
-| # | 対象フィールド | ルール | エラー時の挙動 |
-|---|---|---|---|
-| 1 | `limit` | 指定される場合は整数に変換できること | 400 Bad Request |
-| 2 | `limit` | 指定される場合は 1 以上 500 以下であること | 400 Bad Request |
-| 3 | `offset` | 指定される場合は整数に変換できること | 400 Bad Request |
-| 4 | `offset` | 指定される場合は 0 以上であること | 400 Bad Request |
+| #   | 対象フィールド | ルール                                     | エラー時の挙動  |
+| --- | -------------- | ------------------------------------------ | --------------- |
+| 1   | `limit`        | 指定される場合は整数に変換できること       | 400 Bad Request |
+| 2   | `limit`        | 指定される場合は 1 以上 500 以下であること | 400 Bad Request |
+| 3   | `offset`       | 指定される場合は整数に変換できること       | 400 Bad Request |
+| 4   | `offset`       | 指定される場合は 0 以上であること          | 400 Bad Request |
 
 ---
 
@@ -91,7 +91,7 @@
 
 ## 確認ステップ 5-3: DB 操作
 
-→ [plans/schema.md#group--list-groups](../../schema.md#group--list-groups) を参照。
+→ [plans/schema.md](../../schema.md) を参照。
 
 ---
 
@@ -122,14 +122,14 @@
 
 ### エラーケース一覧
 
-| 条件 | 発生レイヤー | ステータス | レスポンス |
-|---|---|---|---|
-| `limit` が整数に変換不可 | Handler | 400 Bad Request | `{ "message": "given param is not valid" }` |
-| `limit` が 1〜500 の範囲外 | Handler | 400 Bad Request | `{ "message": "given param is not valid" }` |
-| `offset` が整数に変換不可 | Handler | 400 Bad Request | `{ "message": "given param is not valid" }` |
-| `offset` が 0 未満 | Handler | 400 Bad Request | `{ "message": "given param is not valid" }` |
-| DB エラー（COUNT / SELECT 失敗） | Repository | 500 Internal Server Error | `{ "message": "internal server error" }` |
-| ネットワークエラー | フロントエンド: API クライアント層 | — | エラーメッセージ表示 |
+| 条件                             | 発生レイヤー                       | ステータス                | レスポンス                                  |
+| -------------------------------- | ---------------------------------- | ------------------------- | ------------------------------------------- |
+| `limit` が整数に変換不可         | Handler                            | 400 Bad Request           | `{ "message": "given param is not valid" }` |
+| `limit` が 1〜500 の範囲外       | Handler                            | 400 Bad Request           | `{ "message": "given param is not valid" }` |
+| `offset` が整数に変換不可        | Handler                            | 400 Bad Request           | `{ "message": "given param is not valid" }` |
+| `offset` が 0 未満               | Handler                            | 400 Bad Request           | `{ "message": "given param is not valid" }` |
+| DB エラー（COUNT / SELECT 失敗） | Repository                         | 500 Internal Server Error | `{ "message": "internal server error" }`    |
+| ネットワークエラー               | フロントエンド: API クライアント層 | —                         | エラーメッセージ表示                        |
 
 ---
 
@@ -137,22 +137,22 @@
 
 ### エンドポイント: `GET /api/v1/groups`
 
-| # | 観点 | テスト内容 | 入力例 | 期待結果 |
-|---|---|---|---|---|
-| 1 | 正常系 | パラメータなしでデフォルト値が適用される | `（パラメータなし）` | 200 OK / limit=500, offset=0 で取得 |
-| 2 | 正常系 | q なしで全件取得 | `?limit=20&offset=0` | 200 OK / 全グループ + total |
-| 3 | 正常系 | q キーワードで絞り込み | `?q=dev&limit=20` | 200 OK / マッチしたグループ |
-| 4 | 正常系 | offset 指定で次の 500 件を取得 | `?limit=500&offset=500` | 200 OK / 次の 500 件 |
-| 5 | 正常系 | グループが 0 件の場合 | `（グループが存在しない状態）` | 200 OK / groups=[] + total=0 |
-| 6 | 異常系 | limit が整数でない | `?limit=abc` | 400 Bad Request |
-| 7 | 境界値 | limit=500（上限） | `?limit=500` | 200 OK |
-| 8 | 境界値 | limit=501（上限超え） | `?limit=501` | 400 Bad Request |
-| 9 | 境界値 | limit=0 | `?limit=0` | 400 Bad Request |
-| 10 | 境界値 | offset=0（最小値） | `?offset=0` | 200 OK |
-| 11 | 境界値 | offset=-1（最小値未満） | `?offset=-1` | 400 Bad Request |
-| 12 | 例外処理 | DB エラー時に 500 を返す | DB mock がエラーを返す | 500 Internal Server Error |
-| 13 | 外部依存 | Service をモックで切り分け | mockGroupService | Handler 単体でテスト可能 |
-| 14 | 外部依存 | Repository をモックで切り分け | mockGroupRepository | Service 単体でテスト可能 |
+| #   | 観点     | テスト内容                               | 入力例                         | 期待結果                            |
+| --- | -------- | ---------------------------------------- | ------------------------------ | ----------------------------------- |
+| 1   | 正常系   | パラメータなしでデフォルト値が適用される | `（パラメータなし）`           | 200 OK / limit=500, offset=0 で取得 |
+| 2   | 正常系   | q なしで全件取得                         | `?limit=20&offset=0`           | 200 OK / 全グループ + total         |
+| 3   | 正常系   | q キーワードで絞り込み                   | `?q=dev&limit=20`              | 200 OK / マッチしたグループ         |
+| 4   | 正常系   | offset 指定で次の 500 件を取得           | `?limit=500&offset=500`        | 200 OK / 次の 500 件                |
+| 5   | 正常系   | グループが 0 件の場合                    | `（グループが存在しない状態）` | 200 OK / groups=[] + total=0        |
+| 6   | 異常系   | limit が整数でない                       | `?limit=abc`                   | 400 Bad Request                     |
+| 7   | 境界値   | limit=500（上限）                        | `?limit=500`                   | 200 OK                              |
+| 8   | 境界値   | limit=501（上限超え）                    | `?limit=501`                   | 400 Bad Request                     |
+| 9   | 境界値   | limit=0                                  | `?limit=0`                     | 400 Bad Request                     |
+| 10  | 境界値   | offset=0（最小値）                       | `?offset=0`                    | 200 OK                              |
+| 11  | 境界値   | offset=-1（最小値未満）                  | `?offset=-1`                   | 400 Bad Request                     |
+| 12  | 例外処理 | DB エラー時に 500 を返す                 | DB mock がエラーを返す         | 500 Internal Server Error           |
+| 13  | 外部依存 | Service をモックで切り分け               | mockGroupService               | Handler 単体でテスト可能            |
+| 14  | 外部依存 | Repository をモックで切り分け            | mockGroupRepository            | Service 単体でテスト可能            |
 
 ---
 
@@ -160,25 +160,25 @@
 
 ### sample-api
 
-| ファイル | 役割 |
-|---|---|
-| `sample-api/domain/group.go` | Group Entity（id, name, description, member_count）・GroupMember Entity |
-| `sample-api/group/service.go` | GroupRepository interface の ListGroups シグネチャ変更・ビジネスロジック更新 |
-| `sample-api/group/service_test.go` | Service ユニットテスト更新 |
-| `sample-api/group/mocks/group_repository_mock.go` | GroupRepository の手動 mock 更新（ListGroups シグネチャ変更） |
-| `sample-api/internal/rest/group.go` | HTTP Handler（ListGroups）・GroupService interface・Handler ローカルの `groupListResponse` / `groupMemberListResponse` 型定義 |
-| `sample-api/internal/rest/group_test.go` | Handler ユニットテスト更新 |
-| `sample-api/internal/rest/mocks/group_service_mock.go` | GroupService の手動 mock 更新（ListGroups シグネチャ変更） |
-| `sample-api/internal/repository/mysql/group.go` | MySQL 実装更新（page → offset 変換削除、q パラメータ名変更） |
-| `sample-api/db/migrations/001_create_groups_tables.sql` | テーブル定義・マイグレーション |
+| ファイル                                                    | 役割                                                                                                                          |
+| ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `sample-api/domain/group.go`                                | Group Entity（id, name, description, member_count）・GroupMember Entity                                                       |
+| `sample-api/group/service.go`                               | GroupRepository interface の ListGroups シグネチャ変更・ビジネスロジック更新                                                  |
+| `sample-api/group/service_test.go`                          | Service ユニットテスト更新                                                                                                    |
+| `sample-api/group/mocks/group_repository_mock.go`           | GroupRepository の手動 mock 更新（ListGroups シグネチャ変更）                                                                 |
+| `sample-api/internal/rest/group.go`                         | HTTP Handler（ListGroups）・GroupService interface・Handler ローカルの `groupListResponse` / `groupMemberListResponse` 型定義 |
+| `sample-api/internal/rest/group_test.go`                    | Handler ユニットテスト更新                                                                                                    |
+| `sample-api/internal/rest/mocks/group_service_mock.go`      | GroupService の手動 mock 更新（ListGroups シグネチャ変更）                                                                    |
+| `sample-api/internal/repository/mysql/group.go`             | MySQL 実装更新（page → offset 変換削除、q パラメータ名変更）                                                                  |
+| `sample-api/db/migrate/20260403120000_create_tables.up.sql` | テーブル定義・マイグレーション（golang-migrate）                                                                              |
 
 ### sample-front
 
-| ファイル | 役割 |
-|---|---|
-| `sample-front/src/pages/home/api/fetch-groups.ts` | GET /api/v1/groups 呼び出し（search/page → q/offset/limit に変更） |
-| `sample-front/src/pages/home/model/useGroupList.ts` | グループ一覧取得・クライアントサイドページネーションカスタムフック（全面書き換え） |
-| `sample-front/src/pages/home/ui/GroupList.tsx` | グループ一覧コンポーネント（Load More → Previous/Next + 20/50/100 件/ページ切り替え）|
+| ファイル                                            | 役割                                                                                  |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `sample-front/src/pages/home/api/fetch-groups.ts`   | GET /api/v1/groups 呼び出し（search/page → q/offset/limit に変更）                    |
+| `sample-front/src/pages/home/model/useGroupList.ts` | グループ一覧取得・クライアントサイドページネーションカスタムフック（全面書き換え）    |
+| `sample-front/src/pages/home/ui/GroupList.tsx`      | グループ一覧コンポーネント（Load More → Previous/Next + 20/50/100 件/ページ切り替え） |
 
 ---
 

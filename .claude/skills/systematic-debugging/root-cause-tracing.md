@@ -1,92 +1,169 @@
-# 根本原因トレース
+# Root Cause Tracing
 
-## 概要
+## Overview
 
-バグはコールスタックの深い場所で現れることが多い（ハンドラでのエラー、サービス層で返ってくる不正な値など）。エラーが現れた場所を直す衝動に駆られるが、それは症状への対処にすぎない。
+Bugs often manifest deep in the call stack (git init in wrong directory, file created in wrong location, database opened with wrong path). Your instinct is to fix where the error appears, but that's treating a symptom.
 
-**核心原則：コールチェーンを後方にたどって元のトリガーを見つけ、ソースを修正する。**
+**Core principle:** Trace backward through the call chain until you find the original trigger, then fix at the source.
 
-## 使用タイミング
+## When to Use
 
-**以下の場合に使用する：**
+```dot
+digraph when_to_use {
+    "Bug appears deep in stack?" [shape=diamond];
+    "Can trace backwards?" [shape=diamond];
+    "Fix at symptom point" [shape=box];
+    "Trace to original trigger" [shape=box];
+    "BETTER: Also add defense-in-depth" [shape=box];
 
-- エラーがエントリポイントではなく実行の深い場所で発生する
-- スタックトレースが長いコールチェーンを示している
-- 不正な値がどこで生まれたか不明
-- どのコードがその問題をトリガーしているか特定が必要
+    "Bug appears deep in stack?" -> "Can trace backwards?" [label="yes"];
+    "Can trace backwards?" -> "Trace to original trigger" [label="yes"];
+    "Can trace backwards?" -> "Fix at symptom point" [label="no - dead end"];
+    "Trace to original trigger" -> "BETTER: Also add defense-in-depth";
+}
+```
 
-## トレースのプロセス
+**Use when:**
+- Error happens deep in execution (not at entry point)
+- Stack trace shows long call chain
+- Unclear where invalid data originated
+- Need to find which test/code triggers the problem
 
-### 1. 症状を観察する
+## The Tracing Process
 
-エラーメッセージを正確に記録する。「not found」「invalid」などの言葉が実際にどこから来ているかを意識する。
+### 1. Observe the Symptom
+```
+Error: git init failed in /Users/jesse/project/packages/core
+```
 
-### 2. 直接の原因を見つける
+### 2. Find Immediate Cause
+**What code directly causes this?**
+```typescript
+await execFileAsync('git', ['init'], { cwd: projectDir });
+```
 
-このエラーを直接引き起こしているコードはどれか？スタックトレースの最上位を見る。
+### 3. Ask: What Called This?
+```typescript
+WorktreeManager.createSessionWorktree(projectDir, sessionId)
+  → called by Session.initializeWorkspace()
+  → called by Session.create()
+  → called by test at Project.create()
+```
 
-### 3. 何がこれを呼び出したか？を問う
+### 4. Keep Tracing Up
+**What value was passed?**
+- `projectDir = ''` (empty string!)
+- Empty string as `cwd` resolves to `process.cwd()`
+- That's the source code directory!
 
-「どの関数がこれを呼んだか？」を一段ずつ上にたどる。
+### 5. Find Original Trigger
+**Where did empty string come from?**
+```typescript
+const context = setupCoreTest(); // Returns { tempDir: '' }
+Project.create('name', context.tempDir); // Accessed before beforeEach!
+```
 
-**sample-api（Go Clean Architecture）の場合：**
-delivery 層（`internal/rest/`）→ use case 層（`hello/` など）→ domain 層（`domain/`）の順でたどる。
+## Adding Stack Traces
 
-**sample-front（FSD）の場合：**
-`pages/` → `shared/api/` の順でたどる。API 呼び出しは `shared/api/client.ts` の `apiFetch` が起点。
+When you can't trace manually, add instrumentation:
 
-### 4. さらに上へたどる
+```typescript
+// Before the problematic operation
+async function gitInit(directory: string) {
+  const stack = new Error().stack;
+  console.error('DEBUG git init:', {
+    directory,
+    cwd: process.cwd(),
+    nodeEnv: process.env.NODE_ENV,
+    stack,
+  });
 
-渡された値を追う。ゼロ値、空文字列、`nil`/`undefined` が不正な値として伝播していることが多い。「この値はどこから来たか？」を繰り返す。
+  await execFileAsync('git', ['init'], { cwd: directory });
+}
+```
 
-### 5. 元のトリガーを見つける
+**Critical:** Use `console.error()` in tests (not logger - may not show)
 
-不正な値の発生源（入力バリデーション欠如、型変換エラーの無視、初期化の順序問題など）が根本原因。**そこを修正する。**
+**Run and capture:**
+```bash
+npm test 2>&1 | grep 'DEBUG git init'
+```
 
-## スタックトレースを追加する方法
+**Analyze stack traces:**
+- Look for test file names
+- Find the line number triggering the call
+- Identify the pattern (same test? same parameter?)
 
-手動でたどれない場合は、各レイヤーの入口と出口に一時的な診断ログを追加する。
+## Finding Which Test Causes Pollution
 
-**追加する場所：**
-- 問題の処理が始まる直前
-- 各コンポーネント境界を越えるとき
-- 不正な値が疑われる変数を渡す直前
+If something appears during tests but you don't know which test:
 
-**確認する内容：**
-- 入力値と型
-- 環境変数・設定値
-- スタックトレース（呼び出し元の特定に使う）
+Use the bisection script `find-polluter.sh` in this directory:
 
-一度実行してエビデンスを集めてから、どのレイヤーで値が壊れているかを分析する。
+```bash
+./find-polluter.sh '.git' 'src/**/*.test.ts'
+```
 
-## テスト汚染の特定
+Runs tests one-by-one, stops at first polluter. See script for usage.
 
-あるテストが他のテストに影響している場合は `find-polluter.sh` スクリプトを使用する。テストを 1 つずつ実行し、最初の汚染源で停止する。
+## Real Example: Empty projectDir
 
-## 実例：Go ハンドラの不正パラメータ処理
+**Symptom:** `.git` created in `packages/core/` (source code)
 
-**症状：** 存在するはずのリソースが `not found` になる
+**Trace chain:**
+1. `git init` runs in `process.cwd()` ← empty cwd parameter
+2. WorktreeManager called with empty projectDir
+3. Session.create() passed empty string
+4. Test accessed `context.tempDir` before beforeEach
+5. setupCoreTest() returns `{ tempDir: '' }` initially
 
-**トレース手順：**
+**Root cause:** Top-level variable initialization accessing empty value
 
-1. `domain.ErrNotFound` がサービス層で返っている
-2. リポジトリに `id=0`（ゼロ値）が渡っている
-3. ハンドラでパスパラメータを数値変換する際のエラーが無視されている
-4. 数値でないパラメータが来たときにゼロ値になっている
+**Fix:** Made tempDir a getter that throws if accessed before beforeEach
 
-**根本原因：** ハンドラ層でのパラメータバリデーション欠如
+**Also added defense-in-depth:**
+- Layer 1: Project.create() validates directory
+- Layer 2: WorkspaceManager validates not empty
+- Layer 3: NODE_ENV guard refuses git init outside tmpdir
+- Layer 4: Stack trace logging before git init
 
-**修正すべき場所：** ハンドラで変換エラーを捕捉し、400 Bad Request を返す
+## Key Principle
 
-**防御の追加：** `defense-in-depth.md` を参照して複数レイヤーでのチェックも追加する。
+```dot
+digraph principle {
+    "Found immediate cause" [shape=ellipse];
+    "Can trace one level up?" [shape=diamond];
+    "Trace backwards" [shape=box];
+    "Is this the source?" [shape=diamond];
+    "Fix at source" [shape=box];
+    "Add validation at each layer" [shape=box];
+    "Bug impossible" [shape=doublecircle];
+    "NEVER fix just the symptom" [shape=octagon, style=filled, fillcolor=red, fontcolor=white];
 
-## 核心原則
+    "Found immediate cause" -> "Can trace one level up?";
+    "Can trace one level up?" -> "Trace backwards" [label="yes"];
+    "Can trace one level up?" -> "NEVER fix just the symptom" [label="no"];
+    "Trace backwards" -> "Is this the source?";
+    "Is this the source?" -> "Trace backwards" [label="no - keeps going"];
+    "Is this the source?" -> "Fix at source" [label="yes"];
+    "Fix at source" -> "Add validation at each layer";
+    "Add validation at each layer" -> "Bug impossible";
+}
+```
 
-**エラーが現れた場所だけを修正するな。** 後方にたどって元のトリガーを見つけること。
+**NEVER fix just where the error appears.** Trace back to find the original trigger.
 
-## ヒント
+## Stack Trace Tips
 
-**Go の場合：** テスト出力に確実に残るよう `fmt.Fprintf(os.Stderr, ...)` を使う  
-**TypeScript の場合：** `console.error()` は `console.log()` より確実にテスト出力に現れる  
-**処理の前に：** 失敗後ではなく、危険な処理の前にログを置く  
-**コンテキストを含める：** 入力値、環境変数、タイムスタンプ
+**In tests:** Use `console.error()` not logger - logger may be suppressed
+**Before operation:** Log before the dangerous operation, not after it fails
+**Include context:** Directory, cwd, environment variables, timestamps
+**Capture stack:** `new Error().stack` shows complete call chain
+
+## Real-World Impact
+
+From debugging session (2025-10-03):
+- Found root cause through 5-level trace
+- Fixed at source (getter validation)
+- Added 4 layers of defense
+- 1847 tests passed, zero pollution

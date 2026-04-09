@@ -1,13 +1,14 @@
 ---
 name: api-sync
-description: 現コード（sample-api/）を読み取り、plans/{機能名}/{verb-noun}/prd.md を生成・更新する。機能名はエンドポイントのリソース名（複数形）を使用。
+description: 収束後の `/e2e-gen` 内、または `/spec-update → plans-sync` の回復時に、`sample-api/` の現コードから機能固有 PRD を生成・更新する。
 ---
 
 # /api-sync — 現コードから plans/prd.md を生成・更新する
 
 ## 役割
 
-`sample-api/` の現コードを読み取り、`plans/{機能名}/{verb-noun}/prd.md` を生成または更新する。
+`sample-api/` の現コードを読み取り、機能固有の `plans/{ドメイン名}/{verb-noun}/prd.md` を生成または更新する。
+**通常フローでは `/e2e-gen` の内部手順としてのみ実行する。機能固有の `plans/{ドメイン名}/{verb-noun}/prd.md` が実装対象に含まれる場合のみ起動し、shared-only タスクでは起動しない。**
 
 - **新規作成**: ファイルが存在しない場合、テンプレートをもとに生成する
 - **更新**: ファイルが存在する場合、コードと乖離しているセクションのみ更新する
@@ -19,7 +20,7 @@ description: 現コード（sample-api/）を読み取り、plans/{機能名}/{v
 
 | 用語 | 意味 | 例 |
 |---|---|---|
-| `{機能名}` | エンドポイントパスのリソース名（複数形のまま使用） | `groups` |
+| `{ドメイン名}` | `plans/` 配下のドメインディレクトリ名（単数形） | `group` |
 | `{verb-noun}` | API 操作単位の名前 | `list-groups` |
 
 ---
@@ -28,7 +29,7 @@ description: 現コード（sample-api/）を読み取り、plans/{機能名}/{v
 
 ### Step 1: アーキテクチャ構造を把握する
 
-`sample-api-agent` と `sample-front-agent` を**並列**で起動し、以下を報告させる。
+`sample-api-agent` を起動し、以下を報告させる。
 
 - 使用フレームワーク・言語・ライブラリ
 - 各レイヤー（handler / service / repository / domain / migration）のディレクトリパス
@@ -53,11 +54,11 @@ grep -rn "e\.GET\|e\.POST\|e\.PUT\|e\.PATCH\|e\.DELETE" {handler ディレクト
 
 ---
 
-### Step 4: `{機能名}` / `{verb-noun}` を自動決定する
+### Step 4: `{ドメイン名}` / `{verb-noun}` を自動決定する
 
 ユーザー確認不要。以下のルールで自動決定する。
 
-**`{機能名}`**: パスのリソース名をそのまま使う（例: `/api/v1/groups` → `groups`）
+**`{ドメイン名}`**: `plans/` 配下のディレクトリ名として、パスのリソース名を単数形にしたものを使う（例: `/api/v1/groups` → `group`）
 
 **`{verb-noun}`**:
 
@@ -69,7 +70,7 @@ grep -rn "e\.GET\|e\.POST\|e\.PUT\|e\.PATCH\|e\.DELETE" {handler ディレクト
 | `PUT` / `PATCH` | 単体 | `update-{リソース単数形}` |
 | `DELETE` | 単体 | `delete-{リソース単数形}` |
 
-例: `GET /api/v1/groups` → 機能名 `groups` / verb-noun `list-groups` / 出力先 `plans/groups/list-groups/prd.md`
+例: `GET /api/v1/groups` → ドメイン名 `group` / verb-noun `list-groups` / 出力先 `plans/group/list-groups/prd.md`
 
 ---
 
@@ -88,14 +89,15 @@ Step 2 で読んだテンプレートの各セクションを、Step 5 で読ん
 
 ### Step 7: 書き出す
 
-書き出し先は Step 4 のマッピングに従い `plans/{機能名}/{verb-noun}/prd.md` に固定する。
+書き出し先は Step 4 のマッピングに従い `plans/{ドメイン名}/{verb-noun}/prd.md` に固定する。
+`plans/shared/{処理名}.md` はこのスキルの対象外とし、必要な場合は `plan-writer` 側で直接書き出す。
 存在しない場合は `Write` で新規作成、存在する場合は差分のあるセクションのみ `Edit` で更新する。手動追記は保持する。
 
 ---
 
 ### Step 8: specs とのドリフトを検出する
 
-`specs/{機能画面}/{機能名}.md` が存在する場合、`## 確認観点` と `確認ステップ 5-5` を比較する。差異があれば報告する（自動更新しない）。
+`specs/{機能画面}/{verb-noun}.md` が存在する場合、`## 確認観点` と `確認ステップ 5-5` を比較する。差異があれば報告する（自動更新しない）。
 
 ---
 
@@ -106,12 +108,14 @@ Step 2 で読んだテンプレートの各セクションを、Step 5 で読ん
 
 | エンドポイント | 出力先 | 状態 |
 |---|---|---|
-| GET /api/v1/groups | plans/groups/list-groups/prd.md | 新規作成 / 更新 / 変更なし |
+| GET /api/v1/groups | plans/group/list-groups/prd.md | 新規作成 / 更新 / 変更なし |
 
 ### 確認観点ドリフト
 - [あり] {差異の内容}
 - [なし] ドリフトなし
 
 ### 次のステップ
-- 内容を確認して問題なければ `/impl` を実行してください
+- `/e2e-gen` の内部手順として実行された場合: 次のステップの案内は不要（呼び出し元が制御する）
+- `plans-sync` 経由で実行された場合: 呼び出し元の `plans-sync` に制御を戻す
+- 単体実行の場合: このスキル単体では通常フローを進めない。通常フローなら `/e2e-gen`、例外ルートなら `/spec-update → plans-sync` から実行してください
 ```

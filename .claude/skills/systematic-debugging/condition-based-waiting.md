@@ -1,62 +1,115 @@
-# 条件ベースの待機
+# Condition-Based Waiting
 
-## 概要
+## Overview
 
-不安定なテストは、任意の遅延でタイミングを推測することが多い。これにより、高速なマシンではテストが通るが、負荷がかかった CI 環境では失敗するという競合状態が生まれる。
+Flaky tests often guess at timing with arbitrary delays. This creates race conditions where tests pass on fast machines but fail under load or in CI.
 
-**核心原則：処理にどれくらいかかるかを推測するのではなく、実際に待ちたい条件を待つ。**
+**Core principle:** Wait for the actual condition you care about, not a guess about how long it takes.
 
-## 使用タイミング
+## When to Use
 
-**以下の場合に使用する：**
+```dot
+digraph when_to_use {
+    "Test uses setTimeout/sleep?" [shape=diamond];
+    "Testing timing behavior?" [shape=diamond];
+    "Document WHY timeout needed" [shape=box];
+    "Use condition-based waiting" [shape=box];
 
-- テストに任意の遅延がある（`setTimeout`, `sleep`）
-- テストが不安定（時々通り、負荷時に失敗する）
-- 並列実行時にテストがタイムアウトする
-- 非同期操作の完了を待つ必要がある
+    "Test uses setTimeout/sleep?" -> "Testing timing behavior?" [label="yes"];
+    "Testing timing behavior?" -> "Document WHY timeout needed" [label="yes"];
+    "Testing timing behavior?" -> "Use condition-based waiting" [label="no"];
+}
+```
 
-**以下の場合は使用しない：**
+**Use when:**
+- Tests have arbitrary delays (`setTimeout`, `sleep`, `time.sleep()`)
+- Tests are flaky (pass sometimes, fail under load)
+- Tests timeout when run in parallel
+- Waiting for async operations to complete
 
-- 実際のタイミング動作をテストしている（デバウンス、スロットル間隔）
-- 任意のタイムアウトを使う場合は必ずなぜ必要かをコメントに書く
+**Don't use when:**
+- Testing actual timing behavior (debounce, throttle intervals)
+- Always document WHY if using arbitrary timeout
 
-## 基本原則：推測ではなく条件を待つ
+## Core Pattern
 
-任意の `setTimeout` や `sleep` は「この時間があれば十分なはず」という推測にすぎない。代わりに：
+```typescript
+// ❌ BEFORE: Guessing at timing
+await new Promise(r => setTimeout(r, 50));
+const result = getResult();
+expect(result).toBeDefined();
 
-- **発生を待つ**：要素が画面に現れるまで、API が呼ばれるまで
-- **消えるのを待つ**：ローディングインジケーターが消えるまで
-- **状態変化を待つ**：値が期待通りになるまで
+// ✅ AFTER: Waiting for condition
+await waitFor(() => getResult() !== undefined);
+const result = getResult();
+expect(result).toBeDefined();
+```
 
-## sample-front での待機パターン
+## Quick Patterns
 
-`@testing-library/react` が提供する条件ベースの API を使う：
+| Scenario | Pattern |
+|----------|---------|
+| Wait for event | `waitFor(() => events.find(e => e.type === 'DONE'))` |
+| Wait for state | `waitFor(() => machine.state === 'ready')` |
+| Wait for count | `waitFor(() => items.length >= 5)` |
+| Wait for file | `waitFor(() => fs.existsSync(path))` |
+| Complex condition | `waitFor(() => obj.ready && obj.value > 10)` |
 
-| やりたいこと | 使うべき API |
-|---|---|
-| 要素が現れるのを待つ | `findBy*` クエリ（`findByText`, `findByRole` など） |
-| 状態変化・複数条件を待つ | `waitFor(() => { expect(...) })` |
-| ローディングが消えるのを待つ | `waitForElementToBeRemoved(...)` |
-| API 呼び出しを待つ | `waitFor(() => expect(mockFetch).toHaveBeenCalled())` |
+## Implementation
 
-**なぜ `getBy*` ではなく `findBy*` か：** `getBy*` は同期的に要素を探すため、非同期レンダリングが完了する前に実行されて失敗する。`findBy*` は要素が現れるまで待機する。
+Generic polling function:
+```typescript
+async function waitFor<T>(
+  condition: () => T | undefined | null | false,
+  description: string,
+  timeoutMs = 5000
+): Promise<T> {
+  const startTime = Date.now();
 
-## よくある間違い
+  while (true) {
+    const result = condition();
+    if (result) return result;
 
-**`setTimeout` を増やし続ける（悪い）**
+    if (Date.now() - startTime > timeoutMs) {
+      throw new Error(`Timeout waiting for ${description} after ${timeoutMs}ms`);
+    }
 
-1 秒で失敗 → 2 秒に増やす → たまに通る → 5 秒に増やす、という対応は根本原因の修正ではない。これは `condition-based-waiting.md` を適用すべき「赤信号」であり、`systematic-debugging` の Phase 1 に戻るサインでもある。
+    await new Promise(r => setTimeout(r, 10)); // Poll every 10ms
+  }
+}
+```
 
-**任意タイムアウトが正しい場合**
+See `condition-based-waiting-example.ts` in this directory for complete implementation with domain-specific helpers (`waitForEvent`, `waitForEventCount`, `waitForEventMatch`) from actual debugging session.
 
-デバウンスやスロットルのような「タイミングそのものをテストしたい」場合は任意の待機が必要になる。その場合：
+## Common Mistakes
 
-1. まず条件を待つ（トリガーが発火したことを確認）
-2. その後に既知の時間だけ待つ（推測ではなく根拠のある時間）
-3. なぜその待機が必要かをコメントで説明する
+**❌ Polling too fast:** `setTimeout(check, 1)` - wastes CPU
+**✅ Fix:** Poll every 10ms
 
-## ポーリングが必要な場合
+**❌ No timeout:** Loop forever if condition never met
+**✅ Fix:** Always include timeout with clear error
 
-`@testing-library/react` の API が使えない状況（非 React の非同期処理など）では、10ms ごとにポーリングする汎用的な `waitUntil` 関数を自作する。必ずタイムアウトと明確なエラーメッセージを含める。
+**❌ Stale data:** Cache state before loop
+**✅ Fix:** Call getter inside loop for fresh data
 
-汎用ポーリングが必要な場合は、`condition` 関数を 10ms ごとに呼び出し、タイムアウト（例：5000ms）を超えたらエラーをスローする `pollUntil` 関数を自作する。タイムアウトエラーメッセージには何を待っていたかを明記する。
+## When Arbitrary Timeout IS Correct
+
+```typescript
+// Tool ticks every 100ms - need 2 ticks to verify partial output
+await waitForEvent(manager, 'TOOL_STARTED'); // First: wait for condition
+await new Promise(r => setTimeout(r, 200));   // Then: wait for timed behavior
+// 200ms = 2 ticks at 100ms intervals - documented and justified
+```
+
+**Requirements:**
+1. First wait for triggering condition
+2. Based on known timing (not guessing)
+3. Comment explaining WHY
+
+## Real-World Impact
+
+From debugging session (2025-10-03):
+- Fixed 15 flaky tests across 3 files
+- Pass rate: 60% → 100%
+- Execution time: 40% faster
+- No more race conditions

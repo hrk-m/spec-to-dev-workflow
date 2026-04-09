@@ -101,17 +101,17 @@
 
 | 項目 | 内容 |
 |---|---|
-| ツール | {golang-migrate / Flyway / Liquibase / 独自スクリプト など} |
-| ファイル置き場 | `{sample-api/db/migrations/}` |
-| ファイル命名規則 | `{NNN_動詞_対象テーブル.sql}` （例: `001_create_groups_tables.sql`） |
-| 適用コマンド | `{make migrate-up}` など |
-| ロールバックコマンド | `{make migrate-down}` など |
+| ツール | `{golang-migrate}` |
+| ファイル置き場 | `{sample-api/db/migrate/}` |
+| ファイル命名規則 | `{YYYYMMDDHHMMSS_動詞_対象テーブル.up.sql}` （例: `20260403120000_create_groups.up.sql`） |
+| 適用コマンド | `{make db-migrate}` |
+| リセットコマンド | `{make db-reset}`（開発環境限定・`APP_ENV=development` が必要） |
 
 ### マイグレーションファイル一覧
 
 | ファイル | 内容 |
 |---|---|
-| `{NNN_file_name.sql}` | {このマイグレーションで行う変更の概要} |
+| `{YYYYMMDDHHMMSS_name.up.sql}` | {このマイグレーションで行う変更の概要} |
 
 ---
 

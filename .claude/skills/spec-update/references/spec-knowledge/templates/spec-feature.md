@@ -1,4 +1,4 @@
-# {機能名} — {機能の概要一行}
+# {verb-noun} — {機能の概要一行}
 
 ## 概要
 
@@ -50,4 +50,4 @@
 
 ## 対応する API 仕様
 
-→ `plans/{機能名}/{verb-noun}/prd.md`
+→ `plans/{ドメイン名}/{verb-noun}/prd.md`

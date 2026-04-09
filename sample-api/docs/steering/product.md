@@ -14,6 +14,11 @@
 
 グループ管理機能を中心に、Clean Architecture パターンの実証を行います。
 
+### ヘルスチェック
+
+- `GET /health` — DB 接続を含むサーバーの稼働状態を返すエンドポイント
+  - レスポンス: `{"status": "ok"}` (200) / `{"status": "error", "message": "db unavailable"}` (503)
+
 ### グループ一覧取得
 
 - `GET /api/v1/groups` — グループ一覧を返すエンドポイント
@@ -39,7 +44,8 @@
 
 - **Group**: id, name, description, member_count
 - **GroupMember**: id, first_name, last_name
-- **User**: id, first_name, last_name
+
+> **補足**: User は DB テーブル（`users`）として存在するが、`domain/` パッケージには User 型を定義していない。API レスポンスではグループメンバーを `GroupMember` 型で返す。
 
 ## ユーザーとユースケース
 

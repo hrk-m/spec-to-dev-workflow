@@ -2,13 +2,13 @@
 
 ## 概要
 
-| 項目 | 内容 |
-|---|---|
-| 機能名 | `get-group` |
-| 目的 | グループ ID を指定してグループの基本情報を取得する。グループ詳細画面（`/groups/:id`）の主要データソース |
-| API | `GET /api/v1/groups/:id` |
-| 認証 | 不要 |
-| データソース | MySQL (`sample-api/internal/repository/mysql`) |
+| 項目         | 内容                                                                                                    |
+| ------------ | ------------------------------------------------------------------------------------------------------- |
+| 機能名       | `get-group`                                                                                             |
+| 目的         | グループ ID を指定してグループの基本情報を取得する。グループ詳細画面（`/groups/:id`）の主要データソース |
+| API          | `GET /api/v1/groups/:id`                                                                                |
+| 認証         | 不要                                                                                                    |
+| データソース | MySQL (`sample-api/internal/repository/mysql`)                                                          |
 
 ---
 
@@ -18,17 +18,17 @@
 
 #### リクエスト仕様
 
-| フィールド | 型 | 必須 | 説明 |
-|---|---|---|---|
-| `id` | integer (path) | ✓ | グループの ID。正の整数 |
+| フィールド | 型             | 必須 | 説明                    |
+| ---------- | -------------- | ---- | ----------------------- |
+| `id`       | integer (path) | ✓    | グループの ID。正の整数 |
 
 #### バリデーション一覧
 
-| # | 対象フィールド | ルール | エラー時の挙動 |
-|---|---|---|---|
-| 1 | `id` | 整数に変換できること | 400 Bad Request |
-| 2 | `id` | 1 以上（正の整数）であること | 400 Bad Request |
-| 3 | `id` | DB 上に該当グループが存在すること | 404 Not Found |
+| #   | 対象フィールド | ルール                            | エラー時の挙動  |
+| --- | -------------- | --------------------------------- | --------------- |
+| 1   | `id`           | 整数に変換できること              | 400 Bad Request |
+| 2   | `id`           | 1 以上（正の整数）であること      | 400 Bad Request |
+| 3   | `id`           | DB 上に該当グループが存在すること | 404 Not Found   |
 
 ---
 
@@ -72,7 +72,7 @@
 8. DB: groups テーブルから id に一致するレコードを SELECT（deleted_at IS NULL）
 9. グループが存在するか確認
    - No（ErrNotFound）→
-      - 404 Not Found { "message": "not found" } を返す
+      - 404 Not Found { "message": "your requested item is not found" } を返す
       - 終了
    - Yes →
       10. グループ基本情報を返却
@@ -84,7 +84,7 @@
 
 ## 確認ステップ 5-3: DB 操作
 
-→ [plans/schema.md#group--get-group](../../schema.md#group--get-group) を参照。
+→ [plans/schema.md](../../schema.md) を参照。
 
 ---
 
@@ -107,13 +107,13 @@
 
 ### エラーケース一覧
 
-| 条件 | 発生レイヤー | ステータス | レスポンス |
-|---|---|---|---|
-| `id` が整数に変換不可 | Handler | 400 Bad Request | `{ "message": "given param is not valid" }` |
-| `id` が 1 未満 | Handler | 400 Bad Request | `{ "message": "given param is not valid" }` |
-| 該当グループが存在しない | Service / Repository | 404 Not Found | `{ "message": "your requested item is not found" }` |
-| DB エラー | Repository | 500 Internal Server Error | `{ "message": "internal server error" }` |
-| ネットワークエラー | フロントエンド: API クライアント層 | — | エラーメッセージ表示 |
+| 条件                     | 発生レイヤー                       | ステータス                | レスポンス                                          |
+| ------------------------ | ---------------------------------- | ------------------------- | --------------------------------------------------- |
+| `id` が整数に変換不可    | Handler                            | 400 Bad Request           | `{ "message": "given param is not valid" }`         |
+| `id` が 1 未満           | Handler                            | 400 Bad Request           | `{ "message": "given param is not valid" }`         |
+| 該当グループが存在しない | Service / Repository               | 404 Not Found             | `{ "message": "your requested item is not found" }` |
+| DB エラー                | Repository                         | 500 Internal Server Error | `{ "message": "internal server error" }`            |
+| ネットワークエラー       | フロントエンド: API クライアント層 | —                         | エラーメッセージ表示                                |
 
 ---
 
@@ -121,17 +121,17 @@
 
 ### エンドポイント: `GET /api/v1/groups/:id`
 
-| # | 観点 | テスト内容 | 入力例 | 期待結果 |
-|---|---|---|---|---|
-| 1 | 正常系 | 存在するグループ ID で詳細取得 | `id=1` | 200 OK + グループ情報 JSON |
-| 2 | 異常系 | 存在しないグループ ID で取得 | `id=9999` | 404 Not Found |
-| 3 | 異常系 | 文字列を id に指定 | `id="abc"` | 400 Bad Request |
-| 4 | 境界値 | id=0（最小境界外） | `id=0` | 400 Bad Request |
-| 5 | 境界値 | id=1（最小境界内） | `id=1` | 200 OK（存在する場合） |
-| 6 | 異常系 | 負の id | `id=-1` | 400 Bad Request |
-| 7 | 例外処理 | DB 接続エラー発生時 | DB mock がエラーを返す | 500 Internal Server Error |
-| 8 | 外部依存 | Service をモックで切り分け | mockGroupService | Handler 単体でテスト可能 |
-| 9 | 外部依存 | Repository をモックで切り分け | mockGroupRepository | Service 単体でテスト可能 |
+| #   | 観点     | テスト内容                     | 入力例                 | 期待結果                   |
+| --- | -------- | ------------------------------ | ---------------------- | -------------------------- |
+| 1   | 正常系   | 存在するグループ ID で詳細取得 | `id=1`                 | 200 OK + グループ情報 JSON |
+| 2   | 異常系   | 存在しないグループ ID で取得   | `id=9999`              | 404 Not Found              |
+| 3   | 異常系   | 文字列を id に指定             | `id="abc"`             | 400 Bad Request            |
+| 4   | 境界値   | id=0（最小境界外）             | `id=0`                 | 400 Bad Request            |
+| 5   | 境界値   | id=1（最小境界内）             | `id=1`                 | 200 OK（存在する場合）     |
+| 6   | 異常系   | 負の id                        | `id=-1`                | 400 Bad Request            |
+| 7   | 例外処理 | DB 接続エラー発生時            | DB mock がエラーを返す | 500 Internal Server Error  |
+| 8   | 外部依存 | Service をモックで切り分け     | mockGroupService       | Handler 単体でテスト可能   |
+| 9   | 外部依存 | Repository をモックで切り分け  | mockGroupRepository    | Service 単体でテスト可能   |
 
 ---
 
@@ -139,31 +139,31 @@
 
 ### sample-api
 
-| ファイル | 役割 |
-|---|---|
-| `sample-api/domain/group.go` | Group Entity・GroupDetailResponse 追加 |
-| `sample-api/group/service.go` | GroupRepository interface に GetByID 追加・GetByID ビジネスロジック |
-| `sample-api/group/service_test.go` | Service ユニットテスト（GetByID）|
-| `sample-api/group/mocks/group_repository_mock.go` | GroupRepository の手動 mock（GetByID 追加）|
-| `sample-api/internal/rest/group.go` | HTTP Handler（GetByID）・GroupService interface に GetByID 追加・ルート登録（GET /api/v1/groups/:id） |
-| `sample-api/internal/rest/group_test.go` | Handler ユニットテスト（GetByID）|
-| `sample-api/internal/rest/mocks/group_service_mock.go` | GroupService の手動 mock（GetByID 追加）|
-| `sample-api/internal/repository/mysql/group.go` | MySQL 実装（GetByID）|
-| `sample-api/db/migrations/001_create_groups_tables.sql` | テーブル定義・マイグレーション |
+| ファイル                                                    | 役割                                                                                                  |
+| ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `sample-api/domain/group.go`                                | Group Entity（id, name, description, member_count）・GroupMember Entity                               |
+| `sample-api/group/service.go`                               | GroupRepository interface に GetByID 追加・GetByID ビジネスロジック                                   |
+| `sample-api/group/service_test.go`                          | Service ユニットテスト（GetByID）                                                                     |
+| `sample-api/group/mocks/group_repository_mock.go`           | GroupRepository の手動 mock（GetByID 追加）                                                           |
+| `sample-api/internal/rest/group.go`                         | HTTP Handler（GetByID）・GroupService interface に GetByID 追加・ルート登録（GET /api/v1/groups/:id） |
+| `sample-api/internal/rest/group_test.go`                    | Handler ユニットテスト（GetByID）                                                                     |
+| `sample-api/internal/rest/mocks/group_service_mock.go`      | GroupService の手動 mock（GetByID 追加）                                                              |
+| `sample-api/internal/repository/mysql/group.go`             | MySQL 実装（GetByID）                                                                                 |
+| `sample-api/db/migrate/20260403120000_create_tables.up.sql` | テーブル定義・マイグレーション（golang-migrate）                                                      |
 
 ### sample-front
 
-| ファイル | 役割 |
-|---|---|
-| `sample-front/package.json` | react-router v7 依存追加 |
-| `sample-front/src/app/router.tsx` | ルーター設定（/ → HomePage, /groups/:id → GroupDetailPage） |
-| `sample-front/src/app/App.tsx` | RouterProvider への切り替え |
-| `sample-front/src/pages/group-detail/index.ts` | Public API（barrel export） |
-| `sample-front/src/pages/group-detail/ui/GroupDetailPage.tsx` | ページコンポーネント本体 |
-| `sample-front/src/pages/group-detail/api/fetch-group.ts` | GET /api/v1/groups/:id 呼び出し |
-| `sample-front/src/pages/group-detail/model/group-detail.ts` | GroupDetail 型定義 |
-| `sample-front/src/pages/group-detail/model/useGroupDetail.ts` | グループ詳細取得カスタムフック |
-| `sample-front/src/pages/home/ui/GroupList.tsx` | 行クリックで /groups/:id へ遷移する onClick 追加 |
+| ファイル                                                      | 役割                                                        |
+| ------------------------------------------------------------- | ----------------------------------------------------------- |
+| `sample-front/package.json`                                   | react-router v7 依存追加                                    |
+| `sample-front/src/app/router.tsx`                             | ルーター設定（/ → HomePage, /groups/:id → GroupDetailPage） |
+| `sample-front/src/app/App.tsx`                                | RouterProvider への切り替え                                 |
+| `sample-front/src/pages/group-detail/index.ts`                | Public API（barrel export）                                 |
+| `sample-front/src/pages/group-detail/ui/GroupDetailPage.tsx`  | ページコンポーネント本体                                    |
+| `sample-front/src/pages/group-detail/api/fetch-group.ts`      | GET /api/v1/groups/:id 呼び出し                             |
+| `sample-front/src/pages/group-detail/model/group-detail.ts`   | GroupDetail 型定義                                          |
+| `sample-front/src/pages/group-detail/model/useGroupDetail.ts` | グループ詳細取得カスタムフック                              |
+| `sample-front/src/pages/home/ui/GroupList.tsx`                | 行クリックで /groups/:id へ遷移する onClick 追加            |
 
 ---
 

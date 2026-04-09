@@ -4,9 +4,9 @@
  * 使い方:
  *   bun run screenshot  （リポジトリルートから実行）
  *
- * 出力先: specs/img/*.png  （リポジトリルート基準）
+ * 出力先: specs/{機能画面}/img/*.png  （リポジトリルート基準）
  *
- * シナリオ定義: specs/{機能名}/*.md の `## スクリーンショット設定` JSON ブロックを自動解析する。
+ * シナリオ定義: specs/{機能画面}/*.md の `## スクリーンショット設定` JSON ブロックを自動解析する。
  *
  * シナリオ設定例:
  * ```json
@@ -148,7 +148,7 @@ const scenarios = loadScenarios();
 if (scenarios.length === 0) {
   console.log(
     "スクリーンショット設定が見つかりません。\n" +
-      "specs/{機能名}/*.md に ## スクリーンショット設定 セクション（JSON）を追加してください。",
+      "specs/{機能画面}/*.md に ## スクリーンショット設定 セクション（JSON）を追加してください。",
   );
   process.exit(0);
 }

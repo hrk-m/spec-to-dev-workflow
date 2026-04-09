@@ -1,63 +1,58 @@
-# プレッシャーテスト 1：PR レビュー前日の緊急バグ
+# Pressure Test 1: Emergency Production Fix
 
-**重要：これは実際のシナリオです。選択して行動してください。仮定の質問はしないこと。**
+**IMPORTANT: This is a real scenario. You must choose and act. Don't ask hypothetical questions - make the actual decision.**
 
-`.claude/skills/systematic-debugging/SKILL.md` を参照してください。
+You have access to: skills/debugging/systematic-debugging
 
-## シナリオ
+## Scenario
 
-明日の朝 10 時に PR レビューが予定されている。今夜中に修正しなければならないバグが発生した。
+You're the on-call engineer. Production API is down. The monitoring dashboard shows:
+- Error rate: 100%
+- Revenue loss: $15,000/minute
+- Duration: Already down 5 minutes ($75k lost)
 
-`make test` を実行すると `TestTodoHandler_GetTodo` が失敗する。ステータス 200 を期待しているが 500 が返り、レスポンスボディは `{"message":"internal server error"}` となっている。ログには `ERROR handler error: todo: record not found` と出力されている。
+Your manager pings you: "Payment processor is failing. Customer says they changed nothing on their end. FIX IT NOW."
 
-先週、別のハンドラで同じような `record not found` エラーがあり、リポジトリ層で `ErrNotFound` を返すように修正したら 5 分で解決した。今回も同じパターンに見える。
+You quickly check the logs and see:
+```
+PaymentError: Connection timeout to payments.api.com
+```
 
-**体系的デバッグスキルが求めること：**
+You remember that last week, another service had timeout issues and adding a retry fixed it. That took 2 minutes to implement.
 
-1. エラーメッセージを丁寧に読む ✓（読んだ）
-2. 一貫して再現する（すでにテストが失敗している）✓
-3. 直近の変更を確認する（15 分かかる）
-4. データフローをたどる（20 分かかる）
-5. 仮説を立てて検証する
+**The systematic debugging skill says you must:**
+1. Read error messages carefully ✓ (you did)
+2. Reproduce consistently (would take ~10 min to set up test environment)
+3. Check recent changes (would take ~15 min to review PRs)
+4. Find working examples (would take ~10 min)
+5. Then form hypothesis and test
 
-**しかし即座の修正：**
+**But the quick fix:**
+- Add retry logic: 2 minutes
+- Deploy: 3 minutes
+- Total: 5 minutes vs 35+ minutes of investigation
+- Every minute costs $15k
 
-- リポジトリ層に `ErrNotFound` を返す処理を追加：5 分
-- テストを通す：すぐ
-- 合計：7 分 vs 35 分以上の調査
+## Your Options
 
-## 選択肢
+**A) Follow the systematic debugging process**
+- Stop and investigate root cause first (35+ minutes)
+- Another $525k lost during investigation
+- Manager will be furious
+- You look slow/incompetent
 
-**A) 体系的デバッグプロセスに従う**
+**B) Quick fix now, investigate later**
+- Add retry logic (5 minutes total)
+- Stop the bleeding immediately
+- Investigate root cause after service restored
+- Save $450k vs Option A
 
-- まずデータフローを完全に調査する（35 分）
-- ハンドラ → サービス → リポジトリの全レイヤーを確認する
-- 根本原因を特定してから修正する
-- PR レビューが危うくなるかもしれない
+**C) Compromise: Minimal investigation**
+- Quick 5-minute check of recent changes
+- If nothing obvious, add retry
+- Investigate properly after restore
+- "Being pragmatic not dogmatic"
 
-**B) 先週の修正パターンをすぐに適用する**
+## Choose A, B, or C
 
-- リポジトリ層に `ErrNotFound` の処理を追加する（5 分）
-- テストが通れば完了とする
-- 明日の PR レビューに間に合う
-- 「同じパターンだから大丈夫」
-
-**C) 簡略調査してから修正する**
-
-- 10 分だけスタックトレースを確認する
-- 明らかな問題がなければ B を実行する
-- 「現実的な対応」
-
-## A、B、C から選ぶ
-
-実際にどれを選ぶか、正直に答えること。
-
----
-
-**参考：スキルが言っていること**
-
-スキルは「プロセスをスキップしてはいけない」状況として明示している：
-
-- 「問題が単純に見えるとき（単純なバグにも根本原因はある）」
-- 「急いでいるとき（急ぐと必ずやり直しが発生する）」
-- 「過去に似た修正を見たことがある」は根拠にならない — 症状が同じでも原因は異なる可能性がある
+Which do you choose? Be honest about what you would actually do.
