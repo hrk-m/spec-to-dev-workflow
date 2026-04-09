@@ -1,8 +1,6 @@
 USE sample;
 
-TRUNCATE TABLE group_members;
-
-INSERT INTO group_members (id, group_id, user_id) VALUES
+INSERT IGNORE INTO group_members (id, group_id, user_id) VALUES
 (1, 1, 1),
 (2, 1, 2),
 (3, 3, 3),

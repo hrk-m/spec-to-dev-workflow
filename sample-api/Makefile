@@ -1,9 +1,12 @@
 .PHONY: help build run test test-verbose lint fix db-up db-down db-create db-migrate db-seed db-reset db-state clean
 
-MIGRATE_CMD  = go run -tags 'mysql' -mod=mod github.com/golang-migrate/migrate/v4/cmd/migrate@latest
-DB_URL       = mysql://root:password@tcp(localhost:3306)/sample
-DOCKER_MYSQL = docker exec spec-to-dev-workflow-mysql-1 mysql -u root -ppassword
-MYSQL        = mysql -h 127.0.0.1 -P 3306 -u root -ppassword sample
+-include .env
+export
+
+MIGRATE_CMD    = go run -tags 'mysql' -mod=mod github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+DB_URL         = mysql://root:$(MYSQL_PASSWORD)@tcp($(MYSQL_HOST):$(MYSQL_PORT))/$(MYSQL_DATABASE)
+DOCKER_MYSQL   = docker exec spec-to-dev-workflow-mysql-1 mysql -u root -p$(MYSQL_PASSWORD)
+DOCKER_MYSQL_I = docker exec -i spec-to-dev-workflow-mysql-1 mysql -u root -p$(MYSQL_PASSWORD) $(MYSQL_DATABASE)
 
 help:
 	@echo "Usage: make <target>"
@@ -32,7 +35,7 @@ clean:
 	rm -rf bin/
 
 run:
-	APP_ENV=development go run ./app/main.go
+	go run ./app/main.go
 
 test:
 	go test ./...
@@ -54,14 +57,14 @@ docker-down:
 
 db-create:
 	$(DOCKER_MYSQL) \
-		-e "CREATE DATABASE IF NOT EXISTS sample;"
+		-e "CREATE DATABASE IF NOT EXISTS $(MYSQL_DATABASE);"
 
 db-migrate:
 	$(MIGRATE_CMD) -path db/migrate -database "$(DB_URL)" up
 
 db-seed:
 	for f in db/seed/*.sql; do \
-		$(MYSQL) < $$f; \
+		$(DOCKER_MYSQL_I) < $$f; \
 	done
 
 db-reset:
@@ -70,13 +73,13 @@ db-reset:
 		exit 1; \
 	fi
 	$(DOCKER_MYSQL) \
-		-e "DROP DATABASE IF EXISTS sample; CREATE DATABASE sample;"
+		-e "DROP DATABASE IF EXISTS $(MYSQL_DATABASE); CREATE DATABASE $(MYSQL_DATABASE);"
 	$(MAKE) db-migrate
 
 db-state:
 	@echo "Status | Version            | Migration"
 	@echo "-------|--------------------|--------------------------"
-	@applied=$$($(MYSQL) \
+	@applied=$$($(DOCKER_MYSQL_I) \
 		-s --skip-column-names -e "SELECT version FROM schema_migrations;" 2>/dev/null); \
 	for f in db/migrate/*.up.sql; do \
 		version=$$(basename $$f | cut -d_ -f1); \
