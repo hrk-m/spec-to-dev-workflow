@@ -8,8 +8,8 @@ help:
 	@echo "  clean    node_modules を削除"
 	@echo "  check    全 Markdown の lint チェック"
 	@echo "  fix      自動修正可能なエラーを一括修正"
-	@echo "  up       Docker コンテナを起動"
-	@echo "  down     Docker コンテナを停止"
+	@echo "  up       Docker 開発スタックを起動"
+	@echo "  down     Docker 開発スタックを停止"
 	@echo "  e2e      E2Eテストを実行（Docker サーバ + ローカル Playwright）"
 	@echo "  e2e-ui   E2EテストをUIモードで実行（テストの on/off 切り替え可）"
 	@echo "  help     このヘルプを表示"
@@ -27,10 +27,10 @@ fix:
 	bun run lint:md:fix
 
 up:
-	docker compose up -d
+	docker compose up --build -d --wait
 
 down:
-	docker compose down
+	docker compose down --remove-orphans
 
 e2e:
 	docker compose -f docker-compose.e2e.yml up --build -d --wait mysql api front

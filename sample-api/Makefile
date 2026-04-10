@@ -1,28 +1,33 @@
-.PHONY: help build run test test-verbose lint fix db-up db-down db-create db-migrate db-seed db-reset db-state clean
+.PHONY: help build run run-local test test-verbose lint fix docker-up docker-down db-create db-migrate db-seed db-setup db-reset db-state clean
 
--include .env
+ENV_FILE ?= .env.local
+
+-include .env $(ENV_FILE)
 export
 
 MIGRATE_CMD    = go run -tags 'mysql' -mod=mod github.com/golang-migrate/migrate/v4/cmd/migrate@latest
-DB_URL         = mysql://root:$(MYSQL_PASSWORD)@tcp($(MYSQL_HOST):$(MYSQL_PORT))/$(MYSQL_DATABASE)
-DOCKER_MYSQL   = docker exec spec-to-dev-workflow-mysql-1 mysql -u root -p$(MYSQL_PASSWORD)
-DOCKER_MYSQL_I = docker exec -i spec-to-dev-workflow-mysql-1 mysql -u root -p$(MYSQL_PASSWORD) $(MYSQL_DATABASE)
+DB_URL         = mysql://$(MYSQL_USER):$(MYSQL_PASSWORD)@tcp($(MYSQL_HOST):$(MYSQL_PORT))/$(MYSQL_DATABASE)
+DOCKER_COMPOSE = docker compose
+DOCKER_MYSQL_ADMIN = $(DOCKER_COMPOSE) exec -T mysql mysql -u root -p$(MYSQL_ROOT_PASSWORD)
+DOCKER_MYSQL_APP   = $(DOCKER_COMPOSE) exec -T mysql mysql -u $(MYSQL_USER) -p$(MYSQL_PASSWORD) $(MYSQL_DATABASE)
 
 help:
 	@echo "Usage: make <target>"
 	@echo ""
 	@echo "Targets:"
 	@echo "  build        バイナリをビルド"
-	@echo "  run          サーバーを起動 (port 8080)"
+	@echo "  run          ローカル API を起動"
+	@echo "  run-local    ローカル API を起動"
 	@echo "  test         テストを実行"
 	@echo "  test-verbose テストを詳細出力で実行"
 	@echo "  lint         lint を実行"
 	@echo "  fix          lint を実行し自動修正"
-	@echo "  docker-up    MySQL コンテナを起動"
-	@echo "  docker-down  MySQL コンテナを停止"
+	@echo "  docker-up    ローカル開発用 MySQL コンテナを起動"
+	@echo "  docker-down  ローカル開発用 MySQL コンテナを停止"
 	@echo "  db-create    DB を作成"
 	@echo "  db-migrate   マイグレーションを実行"
 	@echo "  db-seed      シードデータを投入"
+	@echo "  db-setup     マイグレーションとシードをまとめて実行"
 	@echo "  db-reset     DB をリセットして再構築"
 	@echo "  db-state     マイグレーションの適用状況を表示"
 	@echo "  clean        ビルド成果物を削除"
@@ -34,7 +39,9 @@ build:
 clean:
 	rm -rf bin/
 
-run:
+run: run-local
+
+run-local:
 	go run ./app/main.go
 
 test:
@@ -50,13 +57,15 @@ fix:
 	golangci-lint run --fix ./...
 
 docker-up:
-	docker-compose up -d
+	$(DOCKER_COMPOSE) up -d --wait
 
 docker-down:
-	docker-compose down
+	$(DOCKER_COMPOSE) down
+
+db-setup: db-migrate db-seed
 
 db-create:
-	$(DOCKER_MYSQL) \
+	$(DOCKER_MYSQL_ADMIN) \
 		-e "CREATE DATABASE IF NOT EXISTS $(MYSQL_DATABASE);"
 
 db-migrate:
@@ -64,7 +73,7 @@ db-migrate:
 
 db-seed:
 	for f in db/seed/*.sql; do \
-		$(DOCKER_MYSQL_I) < $$f; \
+		$(DOCKER_MYSQL_APP) < $$f; \
 	done
 
 db-reset:
@@ -72,14 +81,14 @@ db-reset:
 		echo "Error: db-reset is only allowed in development environment (APP_ENV=development)."; \
 		exit 1; \
 	fi
-	$(DOCKER_MYSQL) \
+	$(DOCKER_MYSQL_ADMIN) \
 		-e "DROP DATABASE IF EXISTS $(MYSQL_DATABASE); CREATE DATABASE $(MYSQL_DATABASE);"
-	$(MAKE) db-migrate
+	$(MAKE) db-migrate db-seed
 
 db-state:
 	@echo "Status | Version            | Migration"
 	@echo "-------|--------------------|--------------------------"
-	@applied=$$($(DOCKER_MYSQL_I) \
+	@applied=$$($(DOCKER_MYSQL_APP) \
 		-s --skip-column-names -e "SELECT version FROM schema_migrations;" 2>/dev/null); \
 	for f in db/migrate/*.up.sql; do \
 		version=$$(basename $$f | cut -d_ -f1); \

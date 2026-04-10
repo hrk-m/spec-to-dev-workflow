@@ -89,6 +89,54 @@ spec-to-dev-workflow/
 Claude Code の Plugin スキルから `ralph-loop@claude-plugins-official` をインストールする。
 `/plan-writer`、`/impl`、`/arch-refactor`、`/e2e-gen` が使用する `ralph-loop` プラグインです。
 
+## 起動モード
+
+このリポジトリは `local` と `docker` を分けて運用する。
+
+- `local`: Front / API はホストで起動、DB だけ Docker
+- `docker`: Front / API / DB を root の Compose でまとめて起動
+
+### local
+
+1. 初回だけ env ファイルを作成
+
+```bash
+cp sample-api/.env.local.example sample-api/.env.local
+cp sample-front/.env.local.example sample-front/.env.local
+```
+
+2. DB を起動して初期化
+
+```bash
+cd sample-api
+make docker-up
+make db-setup
+```
+
+3. API / Front を別ターミナルで起動
+
+```bash
+cd sample-api && make run
+cd sample-front && make run
+```
+
+- Front: `http://localhost:3000`
+- API: `http://localhost:8080`
+- MySQL: `localhost:3306`
+
+### docker
+
+```bash
+make up
+make down
+```
+
+- Front: `http://localhost:3001`
+- API: `http://localhost:8081`
+- MySQL: `localhost:3307`
+
+Docker 側の API コンテナは起動時に migration と seed を自動実行する。
+
 ---
 
 ## スキルの使い方

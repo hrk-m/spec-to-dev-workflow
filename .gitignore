@@ -23,6 +23,9 @@ test-results/
 playwright-report/
 blob-report/
 
+# PRD Checker
+playwright-prd-report/
+
 # OS
 .DS_Store
 Thumbs.db
@@ -32,3 +35,7 @@ Thumbs.db
 .vscode/
 *.swp
 *.swo
+
+# Local env files
+sample-api/.env.local
+sample-front/.env.local
