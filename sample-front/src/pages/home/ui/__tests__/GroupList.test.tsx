@@ -327,4 +327,98 @@ describe("GroupList", () => {
     expect(onGroupClick).toHaveBeenCalledWith(1);
     expect(mockNavigate).not.toHaveBeenCalled();
   });
+
+  it("検索結果が 0 件のとき 'No groups found' を表示する", async () => {
+    vi.mocked(fetchGroups).mockResolvedValueOnce({ groups: [], total: 0 });
+
+    renderWithRouter();
+
+    await waitFor(() => {
+      expect(screen.getByText("No groups found")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("Loading groups...")).not.toBeInTheDocument();
+  });
+
+  it("検索で 0 件のとき API の total が全件数でもページネーションを非表示にする", async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchGroups).mockResolvedValueOnce(mockGroupsResponse).mockResolvedValueOnce({
+      groups: [],
+      total: 31,
+    });
+
+    renderWithRouter();
+
+    await waitFor(() => {
+      expect(screen.getByText("Engineering")).toBeInTheDocument();
+    });
+
+    const searchInput = screen.getByPlaceholderText("Search by name or description");
+    await user.clear(searchInput);
+    await user.type(searchInput, "nonexistent");
+
+    await waitFor(() => {
+      expect(screen.getByText("No groups matched that search.")).toBeInTheDocument();
+    });
+
+    expect(screen.getByText("No groups found")).toBeInTheDocument();
+    expect(screen.queryByText(/Page \d+ of \d+/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Next" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Previous" })).not.toBeInTheDocument();
+  });
+
+  it("検索結果の件数ラベルは cachedGroups の長さを使う（API の total ではない）", async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchGroups)
+      .mockResolvedValueOnce(mockGroupsResponse)
+      .mockResolvedValueOnce({
+        groups: [engineeringGroup],
+        total: 31,
+      });
+
+    renderWithRouter();
+
+    await waitFor(() => {
+      expect(screen.getByText("Engineering")).toBeInTheDocument();
+    });
+
+    const searchInput = screen.getByPlaceholderText("Search by name or description");
+    await user.clear(searchInput);
+    await user.type(searchInput, "Eng");
+
+    await waitFor(() => {
+      expect(screen.getByText("1 groups")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("31 groups")).not.toBeInTheDocument();
+  });
+
+  it("検索入力がデバウンスされ、最後の入力から 300ms 後にフェッチが発火する", async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchGroups)
+      .mockResolvedValueOnce(mockGroupsResponse)
+      .mockResolvedValueOnce({
+        groups: [engineeringGroup],
+        total: 1,
+      });
+
+    renderWithRouter();
+
+    await waitFor(() => {
+      expect(screen.getByText("Engineering")).toBeInTheDocument();
+    });
+
+    const initialCallCount = vi.mocked(fetchGroups).mock.calls.length;
+
+    const searchInput = screen.getByPlaceholderText("Search by name or description");
+    await user.type(searchInput, "Eng");
+
+    // デバウンス後にフェッチが発火する（300ms 後）
+    await waitFor(() => {
+      expect(vi.mocked(fetchGroups).mock.calls.length).toBeGreaterThan(initialCallCount);
+    });
+
+    // 文字ごとに個別フェッチされるのではなく、デバウンス後にまとめて 1 回だけ発火する
+    const searchCalls = vi.mocked(fetchGroups).mock.calls.slice(initialCallCount);
+    expect(searchCalls).toHaveLength(1);
+    expect(vi.mocked(fetchGroups)).toHaveBeenLastCalledWith(expect.objectContaining({ q: "Eng" }));
+  });
 });

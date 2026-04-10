@@ -259,4 +259,63 @@ describe("MemberList", () => {
       expect(screen.getByText("Page 1 of 3")).toBeInTheDocument();
     });
   });
+
+  it("検索で 0 件のとき API の total が全件数でもページネーションを非表示にする", async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchGroupMembers).mockResolvedValueOnce(mockMembersResponse).mockResolvedValueOnce({
+      members: [],
+      total: 31,
+    });
+
+    render(<MemberList groupId={1} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Yamada Taro")).toBeInTheDocument();
+    });
+
+    const searchInput = screen.getByPlaceholderText("Search members");
+    await user.clear(searchInput);
+    await user.type(searchInput, "nonexistent");
+
+    await waitFor(() => {
+      expect(screen.getByText("No members found.")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText(/Page \d+ of \d+/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Next" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Previous" })).not.toBeInTheDocument();
+  });
+
+  it("検索入力がデバウンスされ、最後の入力から 300ms 後にフェッチが発火する", async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchGroupMembers)
+      .mockResolvedValueOnce(mockMembersResponse)
+      .mockResolvedValueOnce({
+        members: [{ id: 1, first_name: "Taro", last_name: "Yamada" }],
+        total: 1,
+      });
+
+    render(<MemberList groupId={1} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Yamada Taro")).toBeInTheDocument();
+    });
+
+    const initialCallCount = vi.mocked(fetchGroupMembers).mock.calls.length;
+
+    const searchInput = screen.getByPlaceholderText("Search members");
+    await user.type(searchInput, "Yamada");
+
+    // デバウンス後にフェッチが発火する（300ms 後）
+    await waitFor(() => {
+      expect(vi.mocked(fetchGroupMembers).mock.calls.length).toBeGreaterThan(initialCallCount);
+    });
+
+    // 文字ごとに個別フェッチされるのではなく、デバウンス後にまとめて 1 回だけ発火する
+    const searchCalls = vi.mocked(fetchGroupMembers).mock.calls.slice(initialCallCount);
+    expect(searchCalls).toHaveLength(1);
+    expect(vi.mocked(fetchGroupMembers)).toHaveBeenLastCalledWith(
+      expect.objectContaining({ q: "Yamada" }),
+    );
+  });
 });

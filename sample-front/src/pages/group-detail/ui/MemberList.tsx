@@ -29,6 +29,7 @@ function MemberRow({
 }) {
   return (
     <Flex
+      data-testid="member-row"
       style={{
         ...styles.memberRow,
         ...(isLast ? {} : styles.memberRowBorder),
@@ -73,7 +74,6 @@ type MemberListProps = {
 export function MemberList({ groupId, onMemberClick }: MemberListProps) {
   const {
     members,
-    total,
     currentPage,
     totalPages,
     perPage,
@@ -157,7 +157,7 @@ export function MemberList({ groupId, onMemberClick }: MemberListProps) {
         </Box>
       )}
 
-      {!isInitialLoading && total > 0 && (
+      {!isInitialLoading && members.length > 0 && (
         <Flex style={styles.paginationSection}>
           <Text as="p" style={styles.paginationMeta}>
             Page {currentPage} of {totalPages}

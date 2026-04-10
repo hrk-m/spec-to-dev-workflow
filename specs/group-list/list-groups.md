@@ -37,6 +37,13 @@ Previous / Next ボタンを押す / 表示件数ボタン（20 / 50 / 100）を
 検索ワード入力中に連続リクエストが発生する
   │
   └─ 最新のリクエスト結果のみ反映される（古いレスポンスは無視される）
+
+検索結果が 0 件の場合
+  │
+  ├─ effectiveTotal（cachedGroups.length）が 0 になる
+  ├─ ヘッダーサブタイトルに「No groups found」が表示される
+  ├─ 「No groups matched that search.」の空メッセージが表示される
+  └─ ページネーション（Previous / Next ボタン）が非表示になる
 ```
 
 ---
@@ -52,8 +59,11 @@ Previous / Next ボタンを押す / 表示件数ボタン（20 / 50 / 100）を
 | `currentPage` | state | 現在のページ番号を保持する |
 | `perPage` | state | 1 ページあたりの表示件数（20 / 50 / 100）を保持する |
 | `searchQuery` | state | 検索キーワードを保持する |
+| `debouncedQuery` | state | 300ms デバウンス済みの検索キーワード（API リクエストに使用） |
+| `lastBatchSize` | state | 直前のフェッチで取得した件数（500 件未満なら追加フェッチ不要と判定） |
 | `fetchedOffset` | state | サーバーから取得済みのオフセット位置を保持する |
-| `totalPages` | derived | 総ページ数を算出する |
+| `effectiveTotal` | derived | 検索中は cachedGroups.length、非検索時は API の total を使用する |
+| `totalPages` | derived | effectiveTotal と perPage から算出する |
 | `visibleGroups` | derived | cachedGroups を currentPage・perPage でスライスした表示用配列 |
 | `isWideLayout` | state | ウィンドウ幅が 1024px 以上かどうかのレイアウトフラグ |
 
@@ -76,7 +86,9 @@ Previous / Next ボタンを押す / 表示件数ボタン（20 / 50 / 100）を
 - [ ] キャッシュ不足時に追加フェッチが自動実行される
 - [ ] バックエンドへの通信が失敗するとエラーメッセージが表示される
 - [ ] 検索キーワードの連続入力で不整合なデータが表示されない
-- [ ] 検索結果が 0 件のとき空メッセージが表示される
+- [ ] 検索結果が 0 件のとき「No groups found」がヘッダーサブタイトルに表示される
+- [ ] 検索結果が 0 件のとき「No groups matched that search.」の空メッセージが表示される
+- [ ] 検索結果が 0 件のときページネーション（Previous / Next ボタン）が非表示になる
 ```
 
 ---

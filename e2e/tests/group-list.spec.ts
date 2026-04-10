@@ -207,6 +207,25 @@ test.describe("グループ一覧ページ", () => {
     await expect(page.getByText("Page 1 of")).toBeVisible();
   });
 
+  test("検索 0 件時にヘッダーラベルが「No groups found」に変わる", async ({ page }) => {
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+    const searchBox = page.getByPlaceholder("Search by name or description");
+    await searchBox.fill("ZZZZNONEXISTENT");
+    await page.waitForTimeout(500);
+    await expect(page.getByText("No groups found")).toBeVisible();
+  });
+
+  test("検索 0 件時にページネーションが非表示になる", async ({ page }) => {
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+    const searchBox = page.getByPlaceholder("Search by name or description");
+    await searchBox.fill("ZZZZNONEXISTENT");
+    await page.waitForTimeout(500);
+    expect(await page.getByRole("button", { name: /Previous/ }).count()).toBe(0);
+    expect(await page.getByRole("button", { name: /Next/ }).count()).toBe(0);
+  });
+
   test("API が 500 エラーを返した場合にエラー UI が表示される", async ({
     page,
   }) => {

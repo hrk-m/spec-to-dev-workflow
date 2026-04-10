@@ -34,9 +34,11 @@ src/
   `RemoveScrollBar`（`react-remove-scroll-bar`）でスクロールバーを非表示化
 - `router.tsx` — `createBrowserRouter` によるルート定義。最上位で `SheetStackProvider`
   をラップし、`GroupNavigationLayout` が `/`・`/groups`・`/groups/:id`
-  のルーティングを制御する。各ルートの `element` は空フラグメント（実際の描画は Layout コンポーネントが担う）
-- `routes/GroupNavigationLayout.tsx` — シートナビゲーションのルーティングロジック。`location.state.presentation
-  === "sheet"` の場合は `HomePage` を `inert` 属性で背面に残しつつ `GroupDetailSheet`
+  のルーティングを制御する。各ルートの `element`
+  は空フラグメント（実際の描画は Layout コンポーネントが担う）
+- `routes/GroupNavigationLayout.tsx`
+  — シートナビゲーションのルーティングロジック。`location.state.presentation === "sheet"` の場合は
+  `HomePage` を `inert` 属性で背面に残しつつ `GroupDetailSheet`
   をシートで表示。それ以外は通常のフルページ遷移（`GroupDetailPage`）。子シート（メンバー詳細）が開いている場合はグループ詳細シートを
   `fullWidth` に拡大して同時クローズアニメーションに対応する
 - `styles/index.css` — グローバルスタイル。CSS 変数 `--header-height: 52px` の定義、Radix
@@ -53,18 +55,17 @@ src/
 
 **現在のページスライス:**
 
-| スライス       | 状態                                                                                                                                                                                                                                                        |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `home`         | 実装済み（`HomePage` + `GroupList` + `CreateGroupDialog` コンポーネント、`api/fetch-groups.ts`、`api/create-group.ts`、`model/group.ts`、`model/useGroupList.ts`、`model/useCreateGroup.ts`、`GroupList.styles.ts`、`CreateGroupDialog.styles.ts`、テスト） |
+| スライス       | 状態                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `home`         | 実装済み（`HomePage` + `GroupList` + `CreateGroupDialog` コンポーネント、`api/fetch-groups.ts`、`api/create-group.ts`、`model/group.ts`、`model/useGroupList.ts`、`model/useCreateGroup.ts`、`GroupList.styles.ts`、`CreateGroupDialog.styles.ts`、テスト）                                                                                                                                                                          |
 | `group-detail` | 実装済み（`GroupDetailPage` + `GroupDetailSheet` + `GroupDetailView` + `MemberDetailSheet` + `MemberList` コンポーネント、`api/fetch-group.ts`、`api/fetch-group-members.ts`、`model/group-detail.ts`、`model/useGroupDetail.ts`、`model/useMemberList.ts`、スタイル、テスト）。`GroupDetailView` がフルページとシート表示の共通描画ロジックを担い、`GroupDetailSheet`・`GroupDetailPage` はそれぞれの表示コンテキスト固有のラッパー |
 
 ### `widgets/`
 
 FSD の widgets レイヤー。ページ横断で使われる独立した UI ブロックを配置する。
 
-- `header/`
-  — アプリヘッダー（ハンバーガーメニューボタン付き、`z-index: 150` で Sheet
-  オーバーレイより上に固定）。`ui/Header.tsx`、`ui/Header.styles.ts`、テスト
+- `header/` — アプリヘッダー（ハンバーガーメニューボタン付き、`z-index: 150`
+  で Sheet オーバーレイより上に固定）。`ui/Header.tsx`、`ui/Header.styles.ts`、テスト
 - `sidebar/`
   — サイドバーナビゲーション（オーバーレイ付きドロワー）。`ui/Sidebar.tsx`、`ui/Sidebar.styles.ts`、テスト
 
@@ -75,16 +76,17 @@ FSD の widgets レイヤー。ページ横断で使われる独立した UI ブ
 - `api/client.ts` — 汎用 fetch ラッパー（`apiFetch<T>`）。レスポンスエラー検知・JSON 変換を担う
 - `config/env.ts` — 環境変数の集約・エクスポート（`API_BASE_URL`
   は空文字列。サーバーサイドプロキシ経由のため同一オリジン）
-- `lib/sheet-stack/` — シートスタック管理。`SheetStackProvider`（コンテキスト提供 +
-  シートレンダリング）、`SheetStackContext`（型定義 + `useSheetStack`
-  フック）、`index.ts`（barrel export）で構成
-- `ui/index.ts` — 共通 UI コンポーネントの barrel export（`PageContainer`、`Sheet`、`sheetConstants`、`appColors`）
+- `lib/sheet-stack/`
+  — シートスタック管理。`SheetStackProvider`（コンテキスト提供 + シートレンダリング）、`SheetStackContext`（型定義 +
+  `useSheetStack` フック）、`index.ts`（barrel export）で構成
+- `ui/index.ts` — 共通 UI コンポーネントの barrel
+  export（`PageContainer`、`Sheet`、`sheetConstants`、`appColors`）
 - `ui/PageContainer.tsx` — 全ページ共通のコンテンツラッパー（パディング制御）
 - `ui/Sheet.tsx` — 右からスライドインするモーダルパネル。`createPortal`
-  で描画、スクロールロック・ESC キー・オーバーレイクリックによるクローズ、トランジション完了後の DOM
-  除去を内包する
-- `ui/Sheet.styles.ts` — Sheet のスタイル定数とスタイルオブジェクト（アニメーション設定・z-index
-  ベース値・サイズ定数を `sheetConstants` として export）
+  で描画、スクロールロック・ESC キー・オーバーレイクリックによるクローズ、トランジション完了後の DOM 除去を内包する
+- `ui/Sheet.styles.ts` —
+  Sheet のスタイル定数とスタイルオブジェクト（アニメーション設定・z-index ベース値・サイズ定数を
+  `sheetConstants` として export）
 - `ui/theme.ts` — アプリ共通のカラーパレット（`appColors`）
 - `api/__tests__/` / `config/__tests__/` — shared のテスト
 
@@ -121,21 +123,29 @@ FSD の widgets レイヤー。ページ横断で使われる独立した UI ブ
 1. **一括取得**: API から `FETCH_LIMIT`（500 件）単位でデータを取得し、ローカルにキャッシュ
 2. **クライアント側ページ分割**: キャッシュ済みデータを
    `perPage`（20/50/100 件切り替え可能）で slice して表示
-3. **遅延追加取得**: ユーザーがページ送りでキャッシュ範囲を超えた場合のみ、次の 500 件を追加取得
-4. **検索時リセット**: 検索クエリ変更時にキャッシュをクリアし、offset 0 から再取得
+3. **遅延追加取得**: `lastBatchSize === FETCH_LIMIT`（前回取得が上限件数）かつ表示範囲がキャッシュを超える場合のみ、次の
+   500 件を追加取得。`lastBatchSize` が `FETCH_LIMIT` 未満であればデータ末尾と判断し追加取得しない
+4. **検索**: 入力値を 300ms デバウンス（`debouncedQuery`）してからキャッシュをクリアし、offset 0
+   から再取得。検索中の `effectiveTotal` はキャッシュ済み件数（`cachedItems.length`）を使い、非検索時は
+   API レスポンスの `total` を使う
+5. **ページネーション表示条件**: 表示アイテムが 1 件以上（`items.length > 0`）の場合にページネーション UI
+   を表示する
+6. **件数ラベル**: ローディング中は "Loading..." 系メッセージ、`effectiveTotal > 0`
+   で件数表示、`effectiveTotal === 0` で "No ... found" を表示する（`useGroupList` の
+   `groupCountLabel` パターン）
 
 このパターンは `useGroupList` と `useMemberList`
 の両カスタムフックで実装されている。新しい一覧画面を追加する場合は同パターンに従うこと。
 
 ## 新規ファイルの配置基準
 
-| 何を作るか                       | 配置先                                                   |
-| -------------------------------- | -------------------------------------------------------- |
-| ページコンポーネント             | `src/pages/<name>/ui/` + `src/pages/<name>/index.ts`     |
-| ページ横断の独立 UI ブロック     | `src/widgets/<name>/ui/` + `src/widgets/<name>/index.ts` |
-| API 通信ロジック（共通）         | `src/shared/api/`                                        |
-| 環境設定・定数                   | `src/shared/config/`                                     |
-| 汎用ロジック・コンテキスト       | `src/shared/lib/<name>/` + `index.ts`（barrel export）   |
-| 再利用 UI パーツ・テーマ         | `src/shared/ui/`                                         |
-| ルート固有のレイアウトコンポーネント | `src/app/routes/`                                    |
-| アプリ全体の初期化・ルーティング | `src/app/`                                               |
+| 何を作るか                           | 配置先                                                   |
+| ------------------------------------ | -------------------------------------------------------- |
+| ページコンポーネント                 | `src/pages/<name>/ui/` + `src/pages/<name>/index.ts`     |
+| ページ横断の独立 UI ブロック         | `src/widgets/<name>/ui/` + `src/widgets/<name>/index.ts` |
+| API 通信ロジック（共通）             | `src/shared/api/`                                        |
+| 環境設定・定数                       | `src/shared/config/`                                     |
+| 汎用ロジック・コンテキスト           | `src/shared/lib/<name>/` + `index.ts`（barrel export）   |
+| 再利用 UI パーツ・テーマ             | `src/shared/ui/`                                         |
+| ルート固有のレイアウトコンポーネント | `src/app/routes/`                                        |
+| アプリ全体の初期化・ルーティング     | `src/app/`                                               |
