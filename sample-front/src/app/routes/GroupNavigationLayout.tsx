@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useLocation, useMatch, useNavigate } from "react-router";
 
 import {
@@ -63,6 +63,23 @@ export function GroupNavigationLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const groupDetailMatch = useMatch("/groups/:id");
+  const { closeAll } = useSheetStack();
+  const previousRouteKeyRef = useRef<string | null>(null);
+
+  const isSheetPresentation = hasSheetPresentation(location.state);
+  const routeKey = groupDetailMatch
+    ? `${groupDetailMatch.params.id}:${isSheetPresentation ? "sheet" : "page"}`
+    : "home";
+
+  useLayoutEffect(() => {
+    const previousRouteKey = previousRouteKeyRef.current;
+
+    if (previousRouteKey !== null && previousRouteKey !== routeKey && previousRouteKey !== "home") {
+      closeAll();
+    }
+
+    previousRouteKeyRef.current = routeKey;
+  }, [closeAll, routeKey]);
 
   const handleGroupClick = (groupId: number) => {
     navigate(`/groups/${String(groupId)}`, { state: { presentation: "sheet" } });
@@ -74,7 +91,7 @@ export function GroupNavigationLayout() {
 
   const groupId = Number(groupDetailMatch.params.id);
 
-  if (!hasSheetPresentation(location.state)) {
+  if (!isSheetPresentation) {
     return <GroupDetailPage />;
   }
 

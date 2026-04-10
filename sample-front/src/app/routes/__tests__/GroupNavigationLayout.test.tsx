@@ -1,8 +1,11 @@
 import { render, screen } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router";
+import userEvent from "@testing-library/user-event";
+import { MemoryRouter, Route, Routes, useNavigate } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GroupNavigationLayout } from "@/app/routes/GroupNavigationLayout";
+
+const closeAll = vi.fn();
 
 vi.mock("@/pages/group-detail", () => ({
   GroupDetailPage: () => <div data-testid="group-detail-page">GroupDetailPage</div>,
@@ -15,7 +18,7 @@ vi.mock("@/pages/home", () => ({
 }));
 
 vi.mock("@/shared/lib/sheet-stack", () => ({
-  useSheetStack: () => ({ openSheet: vi.fn(), sheets: [] }),
+  useSheetStack: () => ({ openSheet: vi.fn(), sheets: [], closeAll }),
 }));
 
 vi.mock("@/shared/ui", () => ({
@@ -26,6 +29,7 @@ vi.mock("@/shared/ui", () => ({
 function renderWithRouter(initialPath: string, state?: Record<string, unknown>) {
   return render(
     <MemoryRouter initialEntries={[{ pathname: initialPath, state }]}>
+      <NavigateHomeButton />
       <Routes>
         <Route path="/*" element={<GroupNavigationLayout />} />
       </Routes>
@@ -33,9 +37,20 @@ function renderWithRouter(initialPath: string, state?: Record<string, unknown>) 
   );
 }
 
+function NavigateHomeButton() {
+  const navigate = useNavigate();
+
+  return (
+    <button type="button" onClick={() => navigate("/")}>
+      Go Home
+    </button>
+  );
+}
+
 describe("GroupNavigationLayout", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    closeAll.mockClear();
   });
 
   it("ホーム画面では HomePage に inert 属性がない", () => {
@@ -59,5 +74,15 @@ describe("GroupNavigationLayout", () => {
 
     expect(screen.getByTestId("group-detail-page")).toBeInTheDocument();
     expect(screen.queryByTestId("home-page")).not.toBeInTheDocument();
+  });
+
+  it("group-detail から離れると stacked sheets を閉じる", async () => {
+    const user = userEvent.setup();
+
+    renderWithRouter("/groups/1", { presentation: "sheet" });
+
+    await user.click(screen.getByRole("button", { name: "Go Home" }));
+
+    expect(closeAll).toHaveBeenCalledTimes(1);
   });
 });

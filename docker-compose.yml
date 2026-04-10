@@ -3,7 +3,7 @@ services:
     image: mysql:8
     command: --mysql-native-password=ON --authentication-policy=mysql_native_password
     env_file:
-      - ./sample-api/.env.docker
+      - ./sample-api/.env.docker.example
     ports:
       - "3307:3306"
     healthcheck:
@@ -15,7 +15,7 @@ services:
   api:
     build: ./sample-api
     env_file:
-      - ./sample-api/.env.docker
+      - ./sample-api/.env.docker.example
     ports:
       - "8081:8080"
     depends_on:
@@ -31,7 +31,7 @@ services:
   front:
     build: ./sample-front
     env_file:
-      - ./sample-front/.env.docker
+      - ./sample-front/.env.docker.example
     ports:
       - "3001:3000"
     depends_on:
