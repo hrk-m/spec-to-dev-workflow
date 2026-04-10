@@ -7,10 +7,20 @@ import { fetchGroups } from "@/pages/home/api/fetch-groups";
 import type { Group, GroupsResponse } from "@/pages/home/model/group";
 import { GroupList } from "@/pages/home/ui/GroupList";
 
-function renderWithRouter() {
+const mockNavigate = vi.fn();
+
+vi.mock("react-router", async () => {
+  const actual = await vi.importActual("react-router");
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
+
+function renderWithRouter(props?: { onGroupClick?: (groupId: number) => void }) {
   return render(
     <MemoryRouter>
-      <GroupList />
+      <GroupList {...props} />
     </MemoryRouter>,
   );
 }
@@ -294,5 +304,27 @@ describe("GroupList", () => {
 
     const prevButton = screen.getByRole("button", { name: "Previous" });
     expect(prevButton).toBeDisabled();
+  });
+
+  it("行クリックで onGroupClick が呼ばれる（navigate は呼ばれない）", async () => {
+    const user = userEvent.setup();
+    const onGroupClick = vi.fn();
+    vi.mocked(fetchGroups).mockResolvedValueOnce(mockGroupsResponse);
+
+    renderWithRouter({ onGroupClick });
+
+    await waitFor(() => {
+      expect(screen.getByText("Engineering")).toBeInTheDocument();
+    });
+
+    const engineeringRow = screen.getByText("Engineering").closest("[role='button']");
+    expect(engineeringRow).not.toBeNull();
+    if (engineeringRow) {
+      await user.click(engineeringRow);
+    }
+
+    expect(onGroupClick).toHaveBeenCalledTimes(1);
+    expect(onGroupClick).toHaveBeenCalledWith(1);
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 });

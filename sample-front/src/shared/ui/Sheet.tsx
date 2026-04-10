@@ -1,0 +1,94 @@
+import { useCallback, useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+
+import { sheetConstants, styles } from "./Sheet.styles";
+
+type SheetProps = {
+  children: ReactNode;
+  onClose: () => void;
+  onRemove: () => void;
+  closing?: boolean;
+  zIndex?: number;
+  width?: CSSProperties["width"];
+};
+
+export function Sheet({
+  children,
+  onClose,
+  onRemove,
+  closing = false,
+  zIndex = sheetConstants.baseZIndex,
+  width = sheetConstants.defaultWidth,
+}: SheetProps) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    const frameId = requestAnimationFrame(() => {
+      setMounted(true);
+    });
+    return () => {
+      cancelAnimationFrame(frameId);
+    };
+  }, []);
+
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [onClose]);
+
+  const handleTransitionEnd = useCallback(() => {
+    if (closing) {
+      onRemove();
+    }
+  }, [closing, onRemove]);
+
+  const transform = closing ? "translateX(100%)" : mounted ? "translateX(0)" : "translateX(100%)";
+  const overlayOpacity = closing ? 0 : mounted ? 1 : 0;
+  const portalContainer = document.querySelector<HTMLElement>(".radix-themes") ?? document.body;
+
+  return createPortal(
+    <>
+      <div
+        style={{ ...styles.overlay, zIndex, opacity: overlayOpacity }}
+        onClick={onClose}
+        role="presentation"
+        data-testid="sheet-overlay"
+      />
+      <div
+        style={{
+          ...styles.container,
+          zIndex: zIndex + 1,
+          width,
+          transform,
+        }}
+        role="dialog"
+        aria-modal="true"
+        onTransitionEnd={handleTransitionEnd}
+      >
+        <div style={styles.header}>
+          <button type="button" style={styles.closeButton} onClick={onClose} aria-label="Close">
+            &times;
+          </button>
+        </div>
+        <div style={styles.content}>{children}</div>
+      </div>
+    </>,
+    portalContainer,
+  );
+}

@@ -56,18 +56,11 @@ When invoked from `/impl`, you are the Step 3 requirements gate: validate the im
 | データ仕様 | エンティティのフィールド名・型が PRD と一致しているか |
 | 実装方針ファイル | PRD に記載されたファイルが実際に存在しているか |
 | テストカバレッジ | 正常系・異常系のテストが存在するか |
-| UI 挙動（Playwright） | アニメーション・DOM 操作・インタラクション後の状態が PRD と一致しているか（Step 3.5 で確認した場合のみ） |
 
 **判定基準：**
 - `pass`: PRD の要件を完全に満たしている
 - `partial`: 部分的に実装されているが、一部不一致または未実装がある
 - `fail`: 未実装、または PRD と明確に異なる実装になっている
-
-### Step 3.5: UI 挙動要件を Playwright で確認する（フロントエンド変更がある場合のみ）
-
-PRD にアニメーション・DOM 操作タイミング・z-index・インタラクション後の状態変化など「コード読みでは確認困難な UI 挙動要件」が含まれる場合のみ実行する。API のみ・バリデーションのみの場合はスキップする。
-
-開発サーバーは起動済みであることを前提とする。Playwright で PRD の UI 挙動要件を実際に操作して確認し、各項目を `pass` / `fail` / `partial` で判定して Step 4 の「UI 挙動（Playwright）」カテゴリに含める。実行時は `e2e/playwright-prd.config.ts` を使用する（レポートとスクリーンショットは `playwright-prd-report/` に出力される）。
 
 ### Step 4: 結果を報告する
 

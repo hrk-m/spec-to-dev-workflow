@@ -7,6 +7,7 @@ import { fetchGroup } from "@/pages/group-detail/api/fetch-group";
 import { fetchGroupMembers } from "@/pages/group-detail/api/fetch-group-members";
 import type { GroupDetail, MembersResponse } from "@/pages/group-detail/model/group-detail";
 import { GroupDetailPage } from "@/pages/group-detail/ui/GroupDetailPage";
+import { SheetStackProvider } from "@/shared/lib/sheet-stack";
 
 vi.mock("@/pages/group-detail/api/fetch-group", () => ({
   fetchGroup: vi.fn(),
@@ -33,12 +34,14 @@ const mockMembersResponse: MembersResponse = {
 
 function renderWithRouter(groupId = "1") {
   return render(
-    <MemoryRouter initialEntries={[`/groups/${groupId}`]}>
-      <Routes>
-        <Route path="/groups/:id" element={<GroupDetailPage />} />
-        <Route path="/" element={<div>Home Page</div>} />
-      </Routes>
-    </MemoryRouter>,
+    <SheetStackProvider>
+      <MemoryRouter initialEntries={[`/groups/${groupId}`]}>
+        <Routes>
+          <Route path="/groups/:id" element={<GroupDetailPage />} />
+          <Route path="/" element={<div>Home Page</div>} />
+        </Routes>
+      </MemoryRouter>
+    </SheetStackProvider>,
   );
 }
 
@@ -120,5 +123,24 @@ describe("GroupDetailPage", () => {
       expect(screen.getByText("Members")).toBeInTheDocument();
     });
     expect(screen.getByText("5 total")).toBeInTheDocument();
+  });
+
+  it("メンバークリックで右シートにメンバー詳細を表示する", async () => {
+    const user = userEvent.setup();
+
+    vi.mocked(fetchGroup).mockResolvedValueOnce(mockGroup);
+    vi.mocked(fetchGroupMembers).mockResolvedValueOnce(mockMembersResponse);
+
+    renderWithRouter();
+
+    await waitFor(() => {
+      expect(screen.getByText("Yamada Taro")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByText("Yamada Taro"));
+
+    await waitFor(() => {
+      expect(screen.getByText("詳細は今後追加予定")).toBeInTheDocument();
+    });
   });
 });

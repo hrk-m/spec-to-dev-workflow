@@ -18,9 +18,36 @@ function MemberAvatar({ member }: { member: Member }) {
   );
 }
 
-function MemberRow({ member, isLast }: { member: Member; isLast: boolean }) {
+function MemberRow({
+  member,
+  isLast,
+  onClick,
+}: {
+  member: Member;
+  isLast: boolean;
+  onClick?: () => void;
+}) {
   return (
-    <Flex style={{ ...styles.memberRow, ...(isLast ? {} : styles.memberRowBorder) }}>
+    <Flex
+      style={{
+        ...styles.memberRow,
+        ...(isLast ? {} : styles.memberRowBorder),
+        ...(onClick ? { cursor: "pointer" } : {}),
+      }}
+      onClick={onClick}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
+    >
       <MemberAvatar member={member} />
       <Text as="p" style={styles.memberName}>
         {member.last_name} {member.first_name}
@@ -40,9 +67,10 @@ function SkeletonMemberRow({ isLast }: { isLast: boolean }) {
 
 type MemberListProps = {
   groupId: number;
+  onMemberClick?: (member: Member) => void;
 };
 
-export function MemberList({ groupId }: MemberListProps) {
+export function MemberList({ groupId, onMemberClick }: MemberListProps) {
   const {
     members,
     total,
@@ -119,7 +147,12 @@ export function MemberList({ groupId }: MemberListProps) {
       {!isInitialLoading && members.length > 0 && (
         <Box style={styles.listCard}>
           {members.map((member, index) => (
-            <MemberRow key={member.id} member={member} isLast={index === members.length - 1} />
+            <MemberRow
+              key={member.id}
+              member={member}
+              isLast={index === members.length - 1}
+              onClick={onMemberClick ? () => onMemberClick(member) : undefined}
+            />
           ))}
         </Box>
       )}

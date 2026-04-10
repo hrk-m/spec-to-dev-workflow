@@ -90,7 +90,11 @@ function GroupRow({
   );
 }
 
-export function GroupList() {
+type GroupListProps = {
+  onGroupClick?: (groupId: number) => void;
+};
+
+export function GroupList({ onGroupClick }: GroupListProps) {
   const navigate = useNavigate();
   const {
     groups,
@@ -199,7 +203,13 @@ export function GroupList() {
                   group={group}
                   isLast={index === groups.length - 1}
                   isWideLayout={isWideLayout}
-                  onClick={() => navigate(`/groups/${String(group.id)}`)}
+                  onClick={() => {
+                    if (onGroupClick) {
+                      onGroupClick(group.id);
+                    } else {
+                      navigate(`/groups/${String(group.id)}`);
+                    }
+                  }}
                 />
               ))}
             </Box>

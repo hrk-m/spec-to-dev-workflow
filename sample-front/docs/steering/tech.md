@@ -44,15 +44,18 @@ import { apiFetch } from "../../shared/api/client";
 
 ### サーバーサイド API プロキシ
 
-`src/index.ts` の Bun サーバーが `/api/*` パスへのリクエストをバックエンド（`BUN_PUBLIC_API_URL`
+`src/index.ts` の Bun サーバーが `/api/*` パスへのリクエストをバックエンド（`API_UPSTREAM_URL`
 環境変数、デフォルト
-`http://localhost:8080`）へ中継する。ブラウザからは同一オリジンへのリクエストとなるため、`API_BASE_URL`
-は空文字列。CORS を気にせずフロントエンドから API を呼び出せる。
+`http://localhost:8080`）へ中継する。ブラウザからは同一オリジンへのリクエストとなるため、
+`API_BASE_URL` は空文字列。CORS を気にせずフロントエンドから API を呼び出せる。
 
 ### 環境変数
 
-`BUN_PUBLIC_*` プレフィックスを使用。`BUN_PUBLIC_API_URL`
-でバックエンド API のアップストリーム先を上書き可能（デフォルト: `http://localhost:8080`）。
+- `PORT`: Bun サーバーの待受ポート
+- `API_UPSTREAM_URL`: `/api/*` のプロキシ先
+
+ローカル起動では `sample-front/.env.local`、Docker 起動では `sample-front/.env.docker`
+を使う。ホスト公開ポートはローカルが `3000`、Docker が `3001`。
 
 ### リント構成
 
@@ -111,7 +114,7 @@ Prettier +
 ### bun scripts
 
 ```bash
-bun dev             # 開発サーバー起動 (HMR)
+bun dev             # .env.local を読み込んで開発サーバー起動 (HMR)
 bun run build       # 本番ビルド → dist/
 bun test            # テスト実行
 bun run test:watch  # ウォッチモード
@@ -130,6 +133,6 @@ make test           # テスト実行
 make lint           # oxlint でリント
 make fix            # oxlint 自動修正
 make build          # 本番ビルド
-make run            # 開発サーバー起動
+make run            # .env.local を使って開発サーバー起動
 make check          # typecheck + lint + format + test をまとめて実行
 ```

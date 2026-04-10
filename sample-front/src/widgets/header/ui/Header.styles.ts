@@ -17,7 +17,7 @@ export const styles = {
     top: 0,
     left: 0,
     right: 0,
-    zIndex: 100,
+    zIndex: 150,
     paddingTop: "env(safe-area-inset-top)",
     backdropFilter: "blur(28px) saturate(140%)",
     WebkitBackdropFilter: "blur(28px) saturate(140%)",

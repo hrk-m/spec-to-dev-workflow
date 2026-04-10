@@ -167,6 +167,27 @@ describe("MemberList", () => {
     });
   });
 
+  it("onMemberClick が渡されたときメンバー行クリックで呼ばれる", async () => {
+    const user = userEvent.setup();
+    const onMemberClick = vi.fn();
+    vi.mocked(fetchGroupMembers).mockResolvedValueOnce(mockMembersResponse);
+
+    render(<MemberList groupId={1} onMemberClick={onMemberClick} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Yamada Taro")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByText("Yamada Taro"));
+
+    expect(onMemberClick).toHaveBeenCalledTimes(1);
+    expect(onMemberClick).toHaveBeenCalledWith({
+      id: 1,
+      first_name: "Taro",
+      last_name: "Yamada",
+    });
+  });
+
   it("500 件キャッシュを超えるページに遷移すると offset=500 で追加フェッチする", async () => {
     const user = userEvent.setup();
 
