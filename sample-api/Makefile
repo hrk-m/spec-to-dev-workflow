@@ -6,10 +6,11 @@ ENV_FILE ?= .env.local
 export
 
 MIGRATE_CMD    = go run -tags 'mysql' -mod=mod github.com/golang-migrate/migrate/v4/cmd/migrate@latest
-DB_URL         = mysql://$(MYSQL_USER):$(MYSQL_PASSWORD)@tcp($(MYSQL_HOST):$(MYSQL_PORT))/$(MYSQL_DATABASE)
+ADMIN_DB_URL   = mysql://root:$(MYSQL_ROOT_PASSWORD)@tcp($(MYSQL_HOST):$(MYSQL_PORT))/$(MYSQL_DATABASE)
 DOCKER_COMPOSE = docker compose
 DOCKER_MYSQL_ADMIN = $(DOCKER_COMPOSE) exec -T mysql mysql -u root -p$(MYSQL_ROOT_PASSWORD)
 DOCKER_MYSQL_APP   = $(DOCKER_COMPOSE) exec -T mysql mysql -u $(MYSQL_USER) -p$(MYSQL_PASSWORD) $(MYSQL_DATABASE)
+APP_USER_HOST  ?= %
 
 help:
 	@echo "Usage: make <target>"
@@ -62,18 +63,22 @@ docker-up:
 docker-down:
 	$(DOCKER_COMPOSE) down
 
-db-setup: db-migrate db-seed
+db-setup: db-create-user db-migrate db-seed
 
 db-create:
 	$(DOCKER_MYSQL_ADMIN) \
 		-e "CREATE DATABASE IF NOT EXISTS $(MYSQL_DATABASE);"
 
+db-create-user:
+	$(DOCKER_MYSQL_ADMIN) \
+		-e "CREATE USER IF NOT EXISTS '$(MYSQL_USER)'@'$(APP_USER_HOST)' IDENTIFIED BY '$(MYSQL_PASSWORD)'; GRANT ALL PRIVILEGES ON $(MYSQL_DATABASE).* TO '$(MYSQL_USER)'@'$(APP_USER_HOST)'; FLUSH PRIVILEGES;"
+
 db-migrate:
-	$(MIGRATE_CMD) -path db/migrate -database "$(DB_URL)" up
+	$(MIGRATE_CMD) -path db/migrate -database "$(ADMIN_DB_URL)" up
 
 db-seed:
 	for f in db/seed/*.sql; do \
-		$(DOCKER_MYSQL_APP) < $$f; \
+		$(DOCKER_MYSQL_ADMIN) < $$f; \
 	done
 
 db-reset:

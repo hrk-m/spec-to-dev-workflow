@@ -13,6 +13,9 @@ type GroupDetailContentProps = {
 function GroupInfoSkeleton() {
   return (
     <Box style={styles.sectionCard}>
+      <Text as="p" className="visually-hidden">
+        loading group...
+      </Text>
       <Box style={{ ...styles.skeletonBlock, ...styles.infoRowBorder }}>
         <Skeleton style={{ ...styles.skeletonLine, width: 60, height: 12 }} />
         <Skeleton style={{ ...styles.skeletonLine, width: 120, height: 16, marginTop: 4 }} />
@@ -27,19 +30,26 @@ function GroupInfoSkeleton() {
 
 export function GroupDetailContent({ groupId, onMemberClick }: GroupDetailContentProps) {
   const { group, error, isLoading } = useGroupDetail(groupId);
+  const shouldShowSkeleton = isLoading && !group;
 
   return (
     <>
-      {isLoading && <GroupInfoSkeleton />}
+      {shouldShowSkeleton && <GroupInfoSkeleton />}
 
-      {error && (
+      {error && !group && (
         <Text as="p" style={styles.errorText}>
           {error}
         </Text>
       )}
 
-      {!isLoading && !error && group && (
+      {group && (
         <>
+          {error && (
+            <Text as="p" style={styles.errorText}>
+              {error}
+            </Text>
+          )}
+
           <Box style={styles.sectionCard}>
             <Box style={{ ...styles.infoRow, ...styles.infoRowBorder }}>
               <Text as="p" style={styles.infoLabel}>

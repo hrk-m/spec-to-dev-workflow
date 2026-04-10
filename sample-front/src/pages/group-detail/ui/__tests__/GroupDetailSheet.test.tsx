@@ -5,6 +5,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fetchGroup } from "@/pages/group-detail/api/fetch-group";
 import { fetchGroupMembers } from "@/pages/group-detail/api/fetch-group-members";
 import type { GroupDetail, MembersResponse } from "@/pages/group-detail/model/group-detail";
+import { clearGroupDetailCache } from "@/pages/group-detail/model/useGroupDetail";
+import { clearMemberListCache } from "@/pages/group-detail/model/useMemberList";
 import { GroupDetailSheet } from "@/pages/group-detail/ui/GroupDetailSheet";
 
 vi.mock("@/pages/group-detail/api/fetch-group", () => ({
@@ -33,6 +35,8 @@ const mockMembersResponse: MembersResponse = {
 describe("GroupDetailSheet", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    clearGroupDetailCache();
+    clearMemberListCache();
   });
 
   it("グループ名と説明を表示する", async () => {
@@ -83,5 +87,27 @@ describe("GroupDetailSheet", () => {
       first_name: "Taro",
       last_name: "Yamada",
     });
+  });
+
+  it("再表示時はキャッシュを使ってスケルトンを出さない", async () => {
+    vi.mocked(fetchGroup).mockResolvedValueOnce(mockGroup).mockReturnValueOnce(new Promise(() => {}));
+    vi.mocked(fetchGroupMembers)
+      .mockResolvedValueOnce(mockMembersResponse)
+      .mockReturnValueOnce(new Promise(() => {}));
+
+    const { unmount } = render(<GroupDetailSheet groupId={1} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Yamada Taro")).toBeInTheDocument();
+    });
+
+    unmount();
+
+    render(<GroupDetailSheet groupId={1} />);
+
+    expect(screen.getByText("dev-team")).toBeInTheDocument();
+    expect(screen.getByText("Yamada Taro")).toBeInTheDocument();
+    expect(screen.queryByText("loading group...")).not.toBeInTheDocument();
+    expect(screen.queryByText("loading members...")).not.toBeInTheDocument();
   });
 });

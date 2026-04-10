@@ -17,7 +17,7 @@ export function GroupDetailView({ groupId, onMemberClick, header }: GroupDetailV
     <PageContainer>
       <Box style={styles.content}>
         {header}
-        <GroupDetailContent groupId={groupId} onMemberClick={onMemberClick} />
+        <GroupDetailContent key={groupId} groupId={groupId} onMemberClick={onMemberClick} />
       </Box>
     </PageContainer>
   );

@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fetchGroups } from "@/pages/home/api/fetch-groups";
 import type { Group, GroupsResponse } from "@/pages/home/model/group";
+import { clearGroupListCache } from "@/pages/home/model/useGroupList";
 import { GroupList } from "@/pages/home/ui/GroupList";
 
 const mockNavigate = vi.fn();
@@ -61,6 +62,7 @@ function createManyGroups(count: number): GroupsResponse {
 describe("GroupList", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    clearGroupListCache();
   });
 
   it("初期表示で loading を表示する", () => {
@@ -150,6 +152,52 @@ describe("GroupList", () => {
     renderWithRouter();
 
     expect(screen.getByRole("heading", { name: "Groups" })).toBeInTheDocument();
+  });
+
+  it("再表示時はキャッシュを使って loading を出さない", async () => {
+    vi.mocked(fetchGroups).mockResolvedValueOnce(mockGroupsResponse).mockReturnValueOnce(
+      new Promise(() => {}),
+    );
+
+    const { unmount } = renderWithRouter();
+
+    await waitFor(() => {
+      expect(screen.getByText("Engineering")).toBeInTheDocument();
+    });
+
+    unmount();
+
+    renderWithRouter();
+
+    expect(screen.getByText("Engineering")).toBeInTheDocument();
+    expect(screen.getByText("Design")).toBeInTheDocument();
+    expect(screen.queryByText("loading...")).not.toBeInTheDocument();
+  });
+
+  it("2ページ目でも再表示時はキャッシュを使って loading を出さない", async () => {
+    const user = userEvent.setup();
+    const manyGroups = createManyGroups(50);
+    vi.mocked(fetchGroups).mockResolvedValueOnce(manyGroups).mockReturnValueOnce(new Promise(() => {}));
+
+    const { unmount } = renderWithRouter();
+
+    await waitFor(() => {
+      expect(screen.getByText("Group1")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("button", { name: "Next" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Group21")).toBeInTheDocument();
+    });
+
+    unmount();
+
+    renderWithRouter();
+
+    expect(screen.getByText("Group21")).toBeInTheDocument();
+    expect(screen.getByText("Group40")).toBeInTheDocument();
+    expect(screen.queryByText("loading...")).not.toBeInTheDocument();
   });
 
   it("セクションヘッダーを表示する", async () => {

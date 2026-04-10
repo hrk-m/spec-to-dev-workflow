@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fetchGroupMembers } from "@/pages/group-detail/api/fetch-group-members";
 import type { MembersResponse } from "@/pages/group-detail/model/group-detail";
+import { clearMemberListCache } from "@/pages/group-detail/model/useMemberList";
 import { MemberList } from "@/pages/group-detail/ui/MemberList";
 
 vi.mock("@/pages/group-detail/api/fetch-group-members", () => ({
@@ -30,6 +31,7 @@ function createManyMembers(count: number): MembersResponse {
 describe("MemberList", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    clearMemberListCache();
   });
 
   it("ローディング中にスケルトンを表示する", () => {
@@ -186,6 +188,54 @@ describe("MemberList", () => {
       first_name: "Taro",
       last_name: "Yamada",
     });
+  });
+
+  it("再表示時はキャッシュを使ってスケルトンを出さない", async () => {
+    vi.mocked(fetchGroupMembers).mockResolvedValueOnce(mockMembersResponse).mockReturnValueOnce(
+      new Promise(() => {}),
+    );
+
+    const { unmount } = render(<MemberList groupId={1} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Yamada Taro")).toBeInTheDocument();
+    });
+
+    unmount();
+
+    render(<MemberList groupId={1} />);
+
+    expect(screen.getByText("Yamada Taro")).toBeInTheDocument();
+    expect(screen.queryByText("loading members...")).not.toBeInTheDocument();
+  });
+
+  it("2ページ目でも再表示時はキャッシュを使ってスケルトンを出さない", async () => {
+    const user = userEvent.setup();
+    const manyMembers = createManyMembers(50);
+    vi.mocked(fetchGroupMembers).mockResolvedValueOnce(manyMembers).mockReturnValueOnce(
+      new Promise(() => {}),
+    );
+
+    const { unmount } = render(<MemberList groupId={1} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Last1 First1")).toBeInTheDocument();
+    });
+
+    const nextButton = screen.getByRole("button", { name: "Next" });
+    await user.click(nextButton);
+
+    await waitFor(() => {
+      expect(screen.getByText("Last21 First21")).toBeInTheDocument();
+    });
+
+    unmount();
+
+    render(<MemberList groupId={1} />);
+
+    expect(screen.getByText("Last21 First21")).toBeInTheDocument();
+    expect(screen.getByText("Last40 First40")).toBeInTheDocument();
+    expect(screen.queryByText("loading members...")).not.toBeInTheDocument();
   });
 
   it("500 件キャッシュを超えるページに遷移すると offset=500 で追加フェッチする", async () => {

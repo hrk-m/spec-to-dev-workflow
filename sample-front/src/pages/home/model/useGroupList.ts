@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { fetchGroups } from "@/pages/home/api/fetch-groups";
 import type { Group } from "@/pages/home/model/group";
@@ -11,20 +11,65 @@ type PerPage = 20 | 50 | 100;
 
 export const PER_PAGE_OPTIONS = [20, 50, 100] as const;
 
+type GroupListCacheEntry = {
+  groups: Group[];
+  total: number;
+  currentPage: number;
+  perPage: PerPage;
+  fetchedOffset: number;
+  lastBatchSize: number;
+};
+
+const groupListCache = new Map<string, GroupListCacheEntry>();
+const GROUP_LIST_CACHE_KEY = "default";
+
+export function clearGroupListCache() {
+  groupListCache.clear();
+}
+
+export function prependGroupToGroupListCache(group: Group) {
+  const cacheEntry = groupListCache.get(GROUP_LIST_CACHE_KEY);
+
+  if (!cacheEntry) {
+    groupListCache.set(GROUP_LIST_CACHE_KEY, {
+      groups: [group],
+      total: 1,
+      currentPage: 1,
+      perPage: DEFAULT_PER_PAGE,
+      fetchedOffset: FETCH_LIMIT,
+      lastBatchSize: 1,
+    });
+    return;
+  }
+
+  const filteredGroups = cacheEntry.groups.filter((cachedGroup) => cachedGroup.id !== group.id);
+  groupListCache.set(GROUP_LIST_CACHE_KEY, {
+    ...cacheEntry,
+    groups: [group, ...filteredGroups],
+    total: cacheEntry.total + 1,
+  });
+}
+
 export function useGroupList() {
-  const [cachedGroups, setCachedGroups] = useState<Group[]>([]);
-  const [total, setTotal] = useState(0);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [perPage, setPerPage] = useState<PerPage>(DEFAULT_PER_PAGE);
+  const cachedEntry = groupListCache.get(GROUP_LIST_CACHE_KEY) ?? null;
+  const [cachedGroups, setCachedGroups] = useState<Group[]>(() => cachedEntry?.groups ?? []);
+  const cachedGroupsRef = useRef(cachedGroups);
+  const [total, setTotal] = useState(() => cachedEntry?.total ?? 0);
+  const [currentPage, setCurrentPage] = useState(() => cachedEntry?.currentPage ?? 1);
+  const [perPage, setPerPage] = useState<PerPage>(() => cachedEntry?.perPage ?? DEFAULT_PER_PAGE);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [fetchedOffset, setFetchedOffset] = useState(0);
-  const [lastBatchSize, setLastBatchSize] = useState(FETCH_LIMIT);
+  const [isLoading, setIsLoading] = useState(() => !cachedEntry);
+  const [fetchedOffset, setFetchedOffset] = useState(() => cachedEntry?.fetchedOffset ?? 0);
+  const [lastBatchSize, setLastBatchSize] = useState(() => cachedEntry?.lastBatchSize ?? FETCH_LIMIT);
   const [isWideLayout, setIsWideLayout] = useState(
     () => typeof window !== "undefined" && window.innerWidth >= WIDE_LAYOUT_BREAKPOINT,
   );
+
+  useEffect(() => {
+    cachedGroupsRef.current = cachedGroups;
+  }, [cachedGroups]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -49,14 +94,30 @@ export function useGroupList() {
 
     fetchGroups({ limit: FETCH_LIMIT, offset, q: query || undefined })
       .then((data) => {
-        setCachedGroups((prev) => {
-          if (append) {
-            const existingIds = new Set(prev.map((g) => g.id));
-            const newGroups = data.groups.filter((g) => !existingIds.has(g.id));
-            return [...prev, ...newGroups];
-          }
-          return data.groups;
-        });
+        const nextGroups = append
+          ? [
+              ...cachedGroupsRef.current,
+              ...data.groups.filter(
+                (group) => !cachedGroupsRef.current.some((cachedGroup) => cachedGroup.id === group.id),
+              ),
+            ]
+          : !query && cachedGroupsRef.current.length > 0
+              ? (() => {
+                const next = [...cachedGroupsRef.current];
+                const limit = Math.min(next.length, data.groups.length);
+
+                for (let index = 0; index < limit; index += 1) {
+                  const nextGroup = data.groups[index];
+                  if (nextGroup) {
+                    next[index] = nextGroup;
+                  }
+                }
+
+                return next;
+              })()
+          : data.groups;
+
+        setCachedGroups(nextGroups);
         setTotal(data.total);
         setFetchedOffset(offset + FETCH_LIMIT);
         setLastBatchSize(data.groups.length);
@@ -78,10 +139,31 @@ export function useGroupList() {
   }, [searchQuery]);
 
   useEffect(() => {
-    setCachedGroups([]);
-    setCurrentPage(1);
-    setFetchedOffset(0);
-    setLastBatchSize(FETCH_LIMIT);
+    if (!debouncedQuery) {
+      const cacheEntry = groupListCache.get(GROUP_LIST_CACHE_KEY) ?? null;
+
+      if (cacheEntry) {
+        setCachedGroups(cacheEntry.groups);
+        setTotal(cacheEntry.total);
+        setCurrentPage(cacheEntry.currentPage);
+        setPerPage(cacheEntry.perPage);
+        setFetchedOffset(cacheEntry.fetchedOffset);
+        setLastBatchSize(cacheEntry.lastBatchSize);
+      } else {
+        setCachedGroups([]);
+        setTotal(0);
+        setCurrentPage(1);
+        setPerPage(DEFAULT_PER_PAGE);
+        setFetchedOffset(0);
+        setLastBatchSize(FETCH_LIMIT);
+      }
+    } else {
+      setCachedGroups([]);
+      setTotal(0);
+      setCurrentPage(1);
+      setFetchedOffset(0);
+      setLastBatchSize(FETCH_LIMIT);
+    }
     doFetch(0, debouncedQuery, false);
   }, [debouncedQuery, doFetch]);
 
@@ -111,17 +193,27 @@ export function useGroupList() {
     setCurrentPage(1);
   }, []);
 
-  const groupCountLabel = isLoading
-    ? "Loading groups..."
-    : effectiveTotal > 0
-      ? `${String(effectiveTotal)} groups`
-      : "No groups found";
+  const hasCachedGroups = cachedGroups.length > 0;
+  const shouldShowLoading = isLoading && !hasCachedGroups;
 
-  const visibleGroupCountLabel = isLoading
-    ? "Preparing your list..."
+  const visibleGroupCountLabel = shouldShowLoading
+    ? "Loading groups..."
     : effectiveTotal > 0
       ? `Showing ${String(visibleGroups.length)} of ${String(effectiveTotal)} groups`
       : "";
+
+  useEffect(() => {
+    if (!debouncedQuery) {
+      groupListCache.set(GROUP_LIST_CACHE_KEY, {
+        groups: cachedGroups,
+        total: effectiveTotal,
+        currentPage,
+        perPage,
+        fetchedOffset,
+        lastBatchSize,
+      });
+    }
+  }, [cachedGroups, effectiveTotal, currentPage, perPage, fetchedOffset, lastBatchSize, debouncedQuery]);
 
   return {
     groups: visibleGroups,
@@ -131,12 +223,16 @@ export function useGroupList() {
     perPage,
     searchQuery,
     error,
-    isLoading,
+    isLoading: shouldShowLoading,
     isWideLayout,
     setCurrentPage,
     setPerPage: handlePerPageChange,
     setSearchQuery: handleSearch,
-    groupCountLabel,
+    groupCountLabel: shouldShowLoading
+      ? "Loading groups..."
+      : effectiveTotal > 0
+        ? `${String(effectiveTotal)} groups`
+        : "No groups found",
     visibleGroupCountLabel,
   };
 }

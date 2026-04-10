@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 
 import { createGroup } from "@/pages/home/api/create-group";
 import type { CreateGroupRequest } from "@/pages/home/model/group";
+import { prependGroupToGroupListCache } from "@/pages/home/model/useGroupList";
 
 const NAME_MAX_LENGTH = 100;
 
@@ -39,6 +40,7 @@ export function useCreateGroup() {
 
       try {
         const group = await createGroup(params);
+        prependGroupToGroupListCache(group);
         navigate(`/groups/${String(group.id)}`);
       } catch (err: unknown) {
         setError(String(err));

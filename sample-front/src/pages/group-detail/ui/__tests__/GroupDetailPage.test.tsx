@@ -6,6 +6,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fetchGroup } from "@/pages/group-detail/api/fetch-group";
 import { fetchGroupMembers } from "@/pages/group-detail/api/fetch-group-members";
 import type { GroupDetail, MembersResponse } from "@/pages/group-detail/model/group-detail";
+import { clearGroupDetailCache } from "@/pages/group-detail/model/useGroupDetail";
+import { clearMemberListCache } from "@/pages/group-detail/model/useMemberList";
 import { GroupDetailPage } from "@/pages/group-detail/ui/GroupDetailPage";
 import { SheetStackProvider } from "@/shared/lib/sheet-stack";
 
@@ -48,6 +50,8 @@ function renderWithRouter(groupId = "1") {
 describe("GroupDetailPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    clearGroupDetailCache();
+    clearMemberListCache();
   });
 
   it("ローディング中にスケルトンを表示する", () => {
