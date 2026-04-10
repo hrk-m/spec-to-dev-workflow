@@ -56,9 +56,9 @@ src/
 
 **現在のページスライス:**
 
-| スライス       | 状態                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `home`         | 実装済み（`HomePage` + `GroupList` + `CreateGroupDialog` コンポーネント、`api/fetch-groups.ts`、`api/create-group.ts`、`model/group.ts`（型定義）、`model/group-list.ts`（`useGroupList` フック）、`model/group-create.ts`（`useCreateGroup` フック）、`GroupList.styles.ts`、`CreateGroupDialog.styles.ts`、テスト）                                                                                                                                                          |
+| スライス       | 状態                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `home`         | 実装済み（`HomePage` + `GroupList` + `CreateGroupDialog` コンポーネント、`api/fetch-groups.ts`、`api/create-group.ts`、`model/group.ts`（型定義）、`model/group-list.ts`（`useGroupList` フック）、`model/group-create.ts`（`useCreateGroup` フック）、`GroupList.styles.ts`、`CreateGroupDialog.styles.ts`、テスト）                                                                                                                                                                                                        |
 | `group-detail` | 実装済み（`GroupDetailPage` + `GroupDetailSheet` + `GroupDetailView` + `GroupDetailContent` + `MemberDetailSheet` + `MemberList` コンポーネント、`api/fetch-group.ts`、`api/fetch-group-members.ts`、`model/group-detail.ts`（型定義）、`model/group-detail-state.ts`（`useGroupDetail` フック）、`model/member-list.ts`（`useMemberList` フック）、スタイル、テスト）。`GroupDetailView` がフルページとシート表示の共通描画ロジックを担い、`GroupDetailSheet`・`GroupDetailPage` はそれぞれの表示コンテキスト固有のラッパー |
 
 ### `widgets/`
@@ -67,8 +67,9 @@ FSD の widgets レイヤー。ページ横断で使われる独立した UI ブ
 
 - `header/` — アプリヘッダー（ハンバーガーメニューボタン付き、`z-index: 150`
   で Sheet オーバーレイより上に固定）。`ui/Header.tsx`、`ui/Header.styles.ts`、テスト
-- `sidebar/`
-  — サイドバーナビゲーション（オーバーレイ付きドロワー）。`ui/Sidebar.tsx`、`ui/Sidebar.styles.ts`、テスト
+- `sidebar/` — サイドバーナビゲーション（オーバーレイ付きドロワー）。`ui/Sidebar.tsx`、`ui/Sidebar.styles.ts`、テスト。Props:
+  `isOpen`・`onClose`（必須）、`onNavigate`（任意）。"Groups" ボタンをクリックすると `onClose()` と
+  `onNavigate?.()` の両方を呼び出す。`App.tsx` では `onNavigate={() => router.navigate("/")}` を渡してトップページへ遷移させる
 
 各 widget は `index.ts`（barrel export）を Public API として公開する。
 

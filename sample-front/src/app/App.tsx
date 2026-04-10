@@ -15,7 +15,11 @@ export function App() {
     <div className="app-shell">
       {isSidebarOpen && <RemoveScrollBar />}
       <Header onMenuClick={() => setIsSidebarOpen(true)} />
-      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+      <Sidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        onNavigate={() => router.navigate("/")}
+      />
       <main className="app-shell__content">
         <RouterProvider router={router} />
       </main>

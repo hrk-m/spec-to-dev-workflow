@@ -19,7 +19,8 @@ inclusion: always
 - グループ詳細表示（グループ情報 + メンバー一覧、`/api/v1/groups/:id` + `/api/v1/groups/:id/members`
   エンドポイント）。メンバー一覧も同様のクライアントキャッシュ・ページネーション・検索（300msデバウンス）・ページサイズ切り替えを備える
 - App Shell パターン（Header + Sidebar によるナビゲーション）。サイドバー開閉時は
-  `react-remove-scroll-bar` でスクロールバーを非表示にし、ヘッダーの padding-right で幅のズレを補正
+  `react-remove-scroll-bar` でスクロールバーを非表示にし、ヘッダーの padding-right で幅のズレを補正。Sidebar の
+  "Groups" ボタンはクローズと同時に `router.navigate("/")` でトップページへ遷移する（`onNavigate` prop 経由）
 - react-router v7 によるクライアントサイドルーティング（`/`, `/groups`, `/groups/:id`）
 - サーバーサイド API プロキシ（Bun サーバーが `/api/*` リクエストをバックエンドに中継）
 - Feature-Sliced Design に沿ったスケーラブルなフロントエンド構造のデモ

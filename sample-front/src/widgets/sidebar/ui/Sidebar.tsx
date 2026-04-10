@@ -7,9 +7,10 @@ import { styles, TRANSITION_DURATION_MS } from "./Sidebar.styles";
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
+  onNavigate?: () => void;
 }
 
-export function Sidebar({ isOpen, onClose }: SidebarProps) {
+export function Sidebar({ isOpen, onClose, onNavigate }: SidebarProps) {
   const [isMounted, setIsMounted] = useState(isOpen);
   const [isVisible, setIsVisible] = useState(isOpen);
 
@@ -95,7 +96,10 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   ...styles.homeItem,
                   textAlign: "left" as const,
                 }}
-                onClick={onClose}
+                onClick={() => {
+                  onClose();
+                  onNavigate?.();
+                }}
               >
                 <Flex as="span" style={styles.homeItemLabel}>
                   <FaHouse aria-hidden="true" style={styles.navIcon} />
