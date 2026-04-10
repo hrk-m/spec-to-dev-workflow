@@ -1,4 +1,4 @@
-.PHONY: help build run run-local test test-verbose lint fix docker-up docker-down db-create db-migrate db-seed db-setup db-reset db-state clean
+.PHONY: help build run run-local kill test test-verbose lint fix docker-up docker-down db-create db-migrate db-seed db-setup db-reset db-state clean
 
 ENV_FILE ?= .env.local
 
@@ -31,6 +31,7 @@ help:
 	@echo "  db-setup     マイグレーションとシードをまとめて実行"
 	@echo "  db-reset     DB をリセットして再構築"
 	@echo "  db-state     マイグレーションの適用状況を表示"
+	@echo "  kill         API サーバーを停止"
 	@echo "  clean        ビルド成果物を削除"
 	@echo "  help         このヘルプを表示"
 
@@ -44,6 +45,23 @@ run: run-local
 
 run-local:
 	go run ./app/main.go
+
+kill:
+	@set -a; \
+	if [ -f "$(ENV_FILE)" ]; then . "$(ENV_FILE)"; fi; \
+	set +a; \
+	port=$${PORT:-8080}; \
+	pids=$$(lsof -tiTCP:$$port -sTCP:LISTEN); \
+	if [ -n "$$pids" ]; then \
+		for pid in $$pids; do \
+			pgid=$$(ps -o pgid= -p $$pid | tr -d ' '); \
+			if [ -n "$$pgid" ]; then kill -TERM -$$pgid 2>/dev/null || true; fi; \
+			kill -TERM $$pid 2>/dev/null || true; \
+		done; \
+		sleep 1; \
+		stubborn=$$(lsof -tiTCP:$$port -sTCP:LISTEN); \
+		if [ -n "$$stubborn" ]; then kill -KILL $$stubborn 2>/dev/null || true; fi; \
+	fi
 
 test:
 	go test ./...
