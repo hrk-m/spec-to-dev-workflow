@@ -191,9 +191,9 @@ describe("MemberList", () => {
   });
 
   it("再表示時はキャッシュを使ってスケルトンを出さない", async () => {
-    vi.mocked(fetchGroupMembers).mockResolvedValueOnce(mockMembersResponse).mockReturnValueOnce(
-      new Promise(() => {}),
-    );
+    vi.mocked(fetchGroupMembers)
+      .mockResolvedValueOnce(mockMembersResponse)
+      .mockReturnValueOnce(new Promise(() => {}));
 
     const { unmount } = render(<MemberList groupId={1} />);
 
@@ -212,9 +212,9 @@ describe("MemberList", () => {
   it("2ページ目でも再表示時はキャッシュを使ってスケルトンを出さない", async () => {
     const user = userEvent.setup();
     const manyMembers = createManyMembers(50);
-    vi.mocked(fetchGroupMembers).mockResolvedValueOnce(manyMembers).mockReturnValueOnce(
-      new Promise(() => {}),
-    );
+    vi.mocked(fetchGroupMembers)
+      .mockResolvedValueOnce(manyMembers)
+      .mockReturnValueOnce(new Promise(() => {}));
 
     const { unmount } = render(<MemberList groupId={1} />);
 

@@ -77,6 +77,10 @@
 - [ ] MemberDetailSheet にメンバー名（姓・名）が表示される
 - [ ] /groups/:id に直接アクセスするとシートでなくフルページの GroupDetailPage が表示される
 - [ ] API エラー時にシートが開いたままエラーメッセージが表示される
+- [ ] GroupDetailSheet 内でメンバー検索キーワードを入力するとメンバーが絞り込まれる
+- [ ] GroupDetailSheet 内でメンバー検索 0 件時に「No members found.」が表示され、ページネーションが非表示になる
+- [ ] GroupDetailSheet 内で検索キーワードをクリアすると全メンバーが再表示される
+- [ ] シートを閉じた後にグループ一覧の検索が引き続き機能する
 ```
 
 ---

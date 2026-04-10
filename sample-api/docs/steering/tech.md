@@ -51,7 +51,7 @@ db/seed/                    →  Seed data (DML only)
 
 - **use case 層**: repository interface を小さな mock で差し替えてテストする
 - **delivery 層**: `testify/mock` で use case をモック化し、httptest でエンドポイントを検証する
-- **repository 層**: `go-sqlmock` を使い、SQL クエリの発行と結果のマッピングを検証する
+- **repository 層**: `//go:build integration` タグ付きの統合テストとして実 DB に接続して検証する（`go test -tags integration ./...` で実行）。`health` ハンドラのテストのみ `go-sqlmock` を使用
 - mock は `mocks/` ディレクトリに分離配置する（`{feature}/mocks/` に `MockXxxRepository`、`internal/rest/mocks/` に `MockXxxService`）
 - mock は手動保守し、interface 変更時は同じ変更セットで追随させる
 - エラー系（センチネルエラー、予期しないエラー）のケースを必ず網羅する

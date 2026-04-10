@@ -62,7 +62,9 @@ export function useGroupList() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(() => !cachedEntry);
   const [fetchedOffset, setFetchedOffset] = useState(() => cachedEntry?.fetchedOffset ?? 0);
-  const [lastBatchSize, setLastBatchSize] = useState(() => cachedEntry?.lastBatchSize ?? FETCH_LIMIT);
+  const [lastBatchSize, setLastBatchSize] = useState(
+    () => cachedEntry?.lastBatchSize ?? FETCH_LIMIT,
+  );
   const [isWideLayout, setIsWideLayout] = useState(
     () => typeof window !== "undefined" && window.innerWidth >= WIDE_LAYOUT_BREAKPOINT,
   );
@@ -98,11 +100,12 @@ export function useGroupList() {
           ? [
               ...cachedGroupsRef.current,
               ...data.groups.filter(
-                (group) => !cachedGroupsRef.current.some((cachedGroup) => cachedGroup.id === group.id),
+                (group) =>
+                  !cachedGroupsRef.current.some((cachedGroup) => cachedGroup.id === group.id),
               ),
             ]
           : !query && cachedGroupsRef.current.length > 0
-              ? (() => {
+            ? (() => {
                 const next = [...cachedGroupsRef.current];
                 const limit = Math.min(next.length, data.groups.length);
 
@@ -115,7 +118,7 @@ export function useGroupList() {
 
                 return next;
               })()
-          : data.groups;
+            : data.groups;
 
         setCachedGroups(nextGroups);
         setTotal(data.total);
@@ -213,7 +216,15 @@ export function useGroupList() {
         lastBatchSize,
       });
     }
-  }, [cachedGroups, effectiveTotal, currentPage, perPage, fetchedOffset, lastBatchSize, debouncedQuery]);
+  }, [
+    cachedGroups,
+    effectiveTotal,
+    currentPage,
+    perPage,
+    fetchedOffset,
+    lastBatchSize,
+    debouncedQuery,
+  ]);
 
   return {
     groups: visibleGroups,

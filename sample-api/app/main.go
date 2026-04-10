@@ -57,6 +57,7 @@ func waitForMySQL(ctx context.Context, db dbPinger, retryInterval time.Duration,
 			return fmt.Errorf("timed out waiting for MySQL: %w", lastErr)
 		case <-timer.C:
 			logger.Printf("waiting for MySQL to become ready: %v", lastErr)
+			timer.Stop()
 		}
 	}
 }

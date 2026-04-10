@@ -90,7 +90,9 @@ describe("GroupDetailSheet", () => {
   });
 
   it("再表示時はキャッシュを使ってスケルトンを出さない", async () => {
-    vi.mocked(fetchGroup).mockResolvedValueOnce(mockGroup).mockReturnValueOnce(new Promise(() => {}));
+    vi.mocked(fetchGroup)
+      .mockResolvedValueOnce(mockGroup)
+      .mockReturnValueOnce(new Promise(() => {}));
     vi.mocked(fetchGroupMembers)
       .mockResolvedValueOnce(mockMembersResponse)
       .mockReturnValueOnce(new Promise(() => {}));

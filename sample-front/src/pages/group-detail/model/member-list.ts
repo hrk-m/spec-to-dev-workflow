@@ -35,7 +35,9 @@ export function useMemberList(groupId: number) {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(() => !cachedEntry);
   const [fetchedOffset, setFetchedOffset] = useState(() => cachedEntry?.fetchedOffset ?? 0);
-  const [lastBatchSize, setLastBatchSize] = useState(() => cachedEntry?.lastBatchSize ?? FETCH_LIMIT);
+  const [lastBatchSize, setLastBatchSize] = useState(
+    () => cachedEntry?.lastBatchSize ?? FETCH_LIMIT,
+  );
 
   useEffect(() => {
     cachedMembersRef.current = cachedMembers;
@@ -52,7 +54,8 @@ export function useMemberList(groupId: number) {
             ? [
                 ...cachedMembersRef.current,
                 ...data.members.filter(
-                  (member) => !cachedMembersRef.current.some((cachedMember) => cachedMember.id === member.id),
+                  (member) =>
+                    !cachedMembersRef.current.some((cachedMember) => cachedMember.id === member.id),
                 ),
               ]
             : !query && cachedMembersRef.current.length > 0
@@ -69,7 +72,7 @@ export function useMemberList(groupId: number) {
 
                   return next;
                 })()
-            : data.members;
+              : data.members;
 
           setCachedMembers(nextMembers);
 
@@ -162,7 +165,16 @@ export function useMemberList(groupId: number) {
         lastBatchSize,
       });
     }
-  }, [groupId, cachedMembers, total, currentPage, perPage, fetchedOffset, lastBatchSize, debouncedQuery]);
+  }, [
+    groupId,
+    cachedMembers,
+    total,
+    currentPage,
+    perPage,
+    fetchedOffset,
+    lastBatchSize,
+    debouncedQuery,
+  ]);
 
   return {
     members: visibleMembers,

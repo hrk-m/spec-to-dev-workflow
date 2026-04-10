@@ -10,7 +10,9 @@ export function clearGroupDetailCache() {
 }
 
 export function useGroupDetail(groupId: number) {
-  const [group, setGroup] = useState<GroupDetail | null>(() => groupDetailCache.get(groupId) ?? null);
+  const [group, setGroup] = useState<GroupDetail | null>(
+    () => groupDetailCache.get(groupId) ?? null,
+  );
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(() => !groupDetailCache.has(groupId));
 

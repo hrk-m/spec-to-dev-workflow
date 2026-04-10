@@ -252,4 +252,136 @@ test.describe("シートナビゲーション", () => {
     const dialog = page.getByRole("dialog");
     await expect(dialog.getByText(/404/)).toBeVisible({ timeout: 5000 });
   });
+
+  test("グループ一覧で検索後にシートを開閉しても再検索が機能する", async ({ page }) => {
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+
+    const searchBox = page.getByPlaceholder("Search by name or description");
+    await searchBox.fill("Group 001");
+    await page.waitForTimeout(500);
+
+    await page.getByRole("button").filter({ hasText: "Group 001" }).first().click();
+    await page.waitForSelector('[role="dialog"]');
+    await expect(page.getByRole("dialog")).toBeVisible();
+
+    await page.getByRole("button", { name: "Close" }).click();
+    await page.waitForTimeout(600);
+
+    // シートを閉じると navigate(-1) でホームに戻り検索はリセットされるが、
+    // 再度検索すればグループが表示されることを確認する
+    await searchBox.fill("Group 001");
+    await page.waitForTimeout(500);
+    await expect(page.getByRole("button").filter({ hasText: "Group 001" }).first()).toBeVisible();
+  });
+
+  test("シートが開いた状態で URL が /groups/:id になる（sheet presentation）", async ({ page }) => {
+    await goToHomeAndShowGroup001(page);
+
+    await page.getByRole("button").filter({ hasText: "Group 001" }).first().click();
+    await page.waitForSelector('[role="dialog"]');
+    await expect(page.getByRole("dialog")).toBeVisible();
+
+    // アプリは navigate('/groups/1', { state: { presentation: 'sheet' } }) でシートを開く
+    expect(page.url()).toContain("/groups/1");
+  });
+
+  test("Group 002 のシートを開くと Group 002 の名前・メンバー数が表示される", async ({ page }) => {
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+
+    const searchBox = page.getByPlaceholder("Search by name or description");
+    await searchBox.fill("Group 002");
+    await page.waitForTimeout(500);
+    await expect(page.getByRole("button").filter({ hasText: "Group 002" }).first()).toBeVisible();
+
+    await page.getByRole("button").filter({ hasText: "Group 002" }).first().click();
+    await page.waitForSelector('[role="dialog"]');
+
+    const dialog = page.getByRole("dialog");
+    await expect(dialog.getByText("Group 002", { exact: true })).toBeVisible();
+    await expect(dialog.getByText("Description for Group 002")).toBeVisible();
+    await expect(dialog.getByText("1 total")).toBeVisible();
+  });
+
+  test("GroupDetailSheet 内でメンバー検索 → Yamada で絞り込みが機能する", async ({ page }) => {
+    await goToHomeAndShowGroup001(page);
+
+    await page.getByRole("button").filter({ hasText: "Group 001" }).first().click();
+    await page.waitForSelector('[role="dialog"]');
+
+    const dialog = page.getByRole("dialog");
+
+    await expect(dialog.getByText("Yamada Taro")).toBeVisible();
+
+    const memberSearchBox = dialog.getByPlaceholder("Search members");
+    await memberSearchBox.fill("Yamada");
+    await page.waitForTimeout(500);
+
+    await expect(dialog.getByText(/Yamada/)).toBeVisible();
+  });
+
+  test("GroupDetailSheet 内でメンバー検索 0 件時に空状態とページネーション非表示", async ({ page }) => {
+    await goToHomeAndShowGroup001(page);
+
+    await page.getByRole("button").filter({ hasText: "Group 001" }).first().click();
+    await page.waitForSelector('[role="dialog"]');
+
+    const dialog = page.getByRole("dialog");
+
+    await expect(dialog.getByText("Yamada Taro")).toBeVisible();
+
+    const memberSearchBox = dialog.getByPlaceholder("Search members");
+    await memberSearchBox.fill("ZZZZNONEXISTENT");
+    await page.waitForTimeout(500);
+
+    await expect(dialog.getByText("No members found.")).toBeVisible();
+    expect(await dialog.getByRole("button", { name: /Previous/ }).count()).toBe(0);
+    expect(await dialog.getByRole("button", { name: /Next/ }).count()).toBe(0);
+  });
+
+  test("GroupDetailSheet 内で検索クリア後に全メンバーが再表示される", async ({ page }) => {
+    await goToHomeAndShowGroup001(page);
+
+    await page.getByRole("button").filter({ hasText: "Group 001" }).first().click();
+    await page.waitForSelector('[role="dialog"]');
+
+    const dialog = page.getByRole("dialog");
+
+    await expect(dialog.getByText("Yamada Taro")).toBeVisible();
+
+    const memberSearchBox = dialog.getByPlaceholder("Search members");
+    await memberSearchBox.fill("Yamada");
+    await page.waitForTimeout(500);
+    await expect(dialog.getByText("Yamada Taro")).toBeVisible();
+
+    await memberSearchBox.clear();
+    await page.waitForTimeout(500);
+
+    await expect(dialog.getByText("Yamada Taro")).toBeVisible();
+    await expect(dialog.getByText("Suzuki Hanako")).toBeVisible();
+  });
+
+  test("シート閉閉後もグループ一覧の検索が継続して機能する", async ({ page }) => {
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+
+    const searchBox = page.getByPlaceholder("Search by name or description");
+    await searchBox.fill("Group 001");
+    await page.waitForTimeout(500);
+    await page.getByRole("button").filter({ hasText: "Group 001" }).first().click();
+    await page.waitForSelector('[role="dialog"]');
+    await expect(page.getByRole("dialog")).toBeVisible();
+
+    await page.getByRole("button", { name: "Close" }).click();
+    await page.waitForTimeout(600);
+    await expect(page.getByRole("dialog")).not.toBeVisible();
+
+    await searchBox.clear();
+    await searchBox.fill("Group 002");
+    await page.waitForTimeout(500);
+
+    await expect(page.getByRole("button").filter({ hasText: "Group 002" }).first()).toBeVisible();
+    expect(await page.getByRole("button").filter({ hasText: "Group 001" }).count()).toBe(0);
+  });
 });

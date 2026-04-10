@@ -49,16 +49,17 @@ src/
 
 - `index.ts` — Public API（barrel export）。**外部からは必ずここを経由してインポートする**
 - `ui/<Component>.tsx` — ページコンポーネント本体
-- `ui/__tests__/` — ページのテスト
+- `ui/__tests__/` — UI コンポーネントのテスト
 - `api/` — ページ固有の API 通信ロジック（必要に応じて配置）
-- `model/` — ページ固有の型定義・ドメインモデル（必要に応じて配置）
+- `model/` — ページ固有の型定義・ドメインモデル・カスタムフック（必要に応じて配置）
+- `model/__tests__/` — モデル層のテスト（カスタムフック等）
 
 **現在のページスライス:**
 
-| スライス       | 状態                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `home`         | 実装済み（`HomePage` + `GroupList` + `CreateGroupDialog` コンポーネント、`api/fetch-groups.ts`、`api/create-group.ts`、`model/group.ts`、`model/useGroupList.ts`、`model/useCreateGroup.ts`、`GroupList.styles.ts`、`CreateGroupDialog.styles.ts`、テスト）                                                                                                                                                                          |
-| `group-detail` | 実装済み（`GroupDetailPage` + `GroupDetailSheet` + `GroupDetailView` + `MemberDetailSheet` + `MemberList` コンポーネント、`api/fetch-group.ts`、`api/fetch-group-members.ts`、`model/group-detail.ts`、`model/useGroupDetail.ts`、`model/useMemberList.ts`、スタイル、テスト）。`GroupDetailView` がフルページとシート表示の共通描画ロジックを担い、`GroupDetailSheet`・`GroupDetailPage` はそれぞれの表示コンテキスト固有のラッパー |
+| スライス       | 状態                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `home`         | 実装済み（`HomePage` + `GroupList` + `CreateGroupDialog` コンポーネント、`api/fetch-groups.ts`、`api/create-group.ts`、`model/group.ts`（型定義）、`model/group-list.ts`（`useGroupList` フック）、`model/group-create.ts`（`useCreateGroup` フック）、`GroupList.styles.ts`、`CreateGroupDialog.styles.ts`、テスト）                                                                                                                                                          |
+| `group-detail` | 実装済み（`GroupDetailPage` + `GroupDetailSheet` + `GroupDetailView` + `GroupDetailContent` + `MemberDetailSheet` + `MemberList` コンポーネント、`api/fetch-group.ts`、`api/fetch-group-members.ts`、`model/group-detail.ts`（型定義）、`model/group-detail-state.ts`（`useGroupDetail` フック）、`model/member-list.ts`（`useMemberList` フック）、スタイル、テスト）。`GroupDetailView` がフルページとシート表示の共通描画ロジックを担い、`GroupDetailSheet`・`GroupDetailPage` はそれぞれの表示コンテキスト固有のラッパー |
 
 ### `widgets/`
 
@@ -123,13 +124,13 @@ FSD の widgets レイヤー。ページ横断で使われる独立した UI ブ
 1. **一括取得**: API から `FETCH_LIMIT`（500 件）単位でデータを取得し、ローカルにキャッシュ
 2. **クライアント側ページ分割**: キャッシュ済みデータを
    `perPage`（20/50/100 件切り替え可能）で slice して表示
-3. **遅延追加取得**: `lastBatchSize === FETCH_LIMIT`（前回取得が上限件数）かつ表示範囲がキャッシュを超える場合のみ、次の
-   500 件を追加取得。`lastBatchSize` が `FETCH_LIMIT` 未満であればデータ末尾と判断し追加取得しない
-4. **検索**: 入力値を 300ms デバウンス（`debouncedQuery`）してからキャッシュをクリアし、offset 0
-   から再取得。検索中の `effectiveTotal` はキャッシュ済み件数（`cachedItems.length`）を使い、非検索時は
-   API レスポンスの `total` を使う
-5. **ページネーション表示条件**: 表示アイテムが 1 件以上（`items.length > 0`）の場合にページネーション UI
-   を表示する
+3. **遅延追加取得**:
+   `lastBatchSize === FETCH_LIMIT`（前回取得が上限件数）かつ表示範囲がキャッシュを超える場合のみ、次の 500 件を追加取得。`lastBatchSize`
+   が `FETCH_LIMIT` 未満であればデータ末尾と判断し追加取得しない
+4. **検索**: 入力値を 300ms デバウンス（`debouncedQuery`）してからキャッシュをクリアし、offset
+   0から再取得。検索中の `effectiveTotal`
+   はキャッシュ済み件数（`cachedItems.length`）を使い、非検索時は API レスポンスの `total` を使う
+5. **ページネーション表示条件**: 表示アイテムが 1 件以上（`items.length > 0`）の場合にページネーション UI を表示する
 6. **件数ラベル**: ローディング中は "Loading..." 系メッセージ、`effectiveTotal > 0`
    で件数表示、`effectiveTotal === 0` で "No ... found" を表示する（`useGroupList` の
    `groupCountLabel` パターン）

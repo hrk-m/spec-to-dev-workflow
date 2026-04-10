@@ -30,8 +30,7 @@ sample-api/
 │           └── {feature}_service_mock.go
 ├── .env.local               # 環境変数（ローカル用、git ignore）
 ├── .env.local.example       # ローカル環境変数のサンプル
-├── .env.docker             # Docker 用環境変数
-├── .env.example             # 後方互換のサンプル
+├── .env.docker.example      # Docker 用環境変数のサンプル
 ├── .golangci.yml            # golangci-lint 設定
 ├── bin/                     # ビルド成果物
 ├── docker-compose.yml       # ローカル開発用 MySQL コンテナ定義

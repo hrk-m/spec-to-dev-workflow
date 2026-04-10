@@ -155,9 +155,9 @@ describe("GroupList", () => {
   });
 
   it("再表示時はキャッシュを使って loading を出さない", async () => {
-    vi.mocked(fetchGroups).mockResolvedValueOnce(mockGroupsResponse).mockReturnValueOnce(
-      new Promise(() => {}),
-    );
+    vi.mocked(fetchGroups)
+      .mockResolvedValueOnce(mockGroupsResponse)
+      .mockReturnValueOnce(new Promise(() => {}));
 
     const { unmount } = renderWithRouter();
 
@@ -177,7 +177,9 @@ describe("GroupList", () => {
   it("2ページ目でも再表示時はキャッシュを使って loading を出さない", async () => {
     const user = userEvent.setup();
     const manyGroups = createManyGroups(50);
-    vi.mocked(fetchGroups).mockResolvedValueOnce(manyGroups).mockReturnValueOnce(new Promise(() => {}));
+    vi.mocked(fetchGroups)
+      .mockResolvedValueOnce(manyGroups)
+      .mockReturnValueOnce(new Promise(() => {}));
 
     const { unmount } = renderWithRouter();
 
