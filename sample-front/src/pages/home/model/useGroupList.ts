@@ -17,9 +17,11 @@ export function useGroupList() {
   const [currentPage, setCurrentPage] = useState(1);
   const [perPage, setPerPage] = useState<PerPage>(DEFAULT_PER_PAGE);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchedOffset, setFetchedOffset] = useState(0);
+  const [lastBatchSize, setLastBatchSize] = useState(FETCH_LIMIT);
   const [isWideLayout, setIsWideLayout] = useState(
     () => typeof window !== "undefined" && window.innerWidth >= WIDE_LAYOUT_BREAKPOINT,
   );
@@ -57,9 +59,11 @@ export function useGroupList() {
         });
         setTotal(data.total);
         setFetchedOffset(offset + FETCH_LIMIT);
+        setLastBatchSize(data.groups.length);
       })
       .catch((err: unknown) => {
         setError(String(err));
+        setLastBatchSize(0);
       })
       .finally(() => {
         setIsLoading(false);
@@ -67,24 +71,33 @@ export function useGroupList() {
   }, []);
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  useEffect(() => {
     setCachedGroups([]);
     setCurrentPage(1);
     setFetchedOffset(0);
-    doFetch(0, searchQuery, false);
-  }, [searchQuery, doFetch]);
+    setLastBatchSize(FETCH_LIMIT);
+    doFetch(0, debouncedQuery, false);
+  }, [debouncedQuery, doFetch]);
 
-  const totalPages = Math.max(1, Math.ceil(total / perPage));
+  const effectiveTotal = debouncedQuery ? cachedGroups.length : total;
+  const totalPages = Math.max(1, Math.ceil(effectiveTotal / perPage));
 
   const startIndex = (currentPage - 1) * perPage;
   const endIndex = startIndex + perPage;
 
-  const needsMoreData = endIndex > cachedGroups.length && cachedGroups.length < total;
+  const needsMoreData = endIndex > cachedGroups.length && lastBatchSize === FETCH_LIMIT;
 
   useEffect(() => {
     if (needsMoreData && !isLoading) {
-      doFetch(fetchedOffset, searchQuery, true);
+      doFetch(fetchedOffset, debouncedQuery, true);
     }
-  }, [needsMoreData, isLoading, fetchedOffset, searchQuery, doFetch]);
+  }, [needsMoreData, isLoading, fetchedOffset, debouncedQuery, doFetch]);
 
   const visibleGroups = cachedGroups.slice(startIndex, endIndex);
 
@@ -98,15 +111,21 @@ export function useGroupList() {
     setCurrentPage(1);
   }, []);
 
-  const groupCountLabel = total > 0 ? `${String(total)} groups` : "Loading groups...";
-  const visibleGroupCountLabel =
-    total > 0
-      ? `Showing ${String(visibleGroups.length)} of ${String(total)} groups`
-      : "Preparing your list...";
+  const groupCountLabel = isLoading
+    ? "Loading groups..."
+    : effectiveTotal > 0
+      ? `${String(effectiveTotal)} groups`
+      : "No groups found";
+
+  const visibleGroupCountLabel = isLoading
+    ? "Preparing your list..."
+    : effectiveTotal > 0
+      ? `Showing ${String(visibleGroups.length)} of ${String(effectiveTotal)} groups`
+      : "";
 
   return {
     groups: visibleGroups,
-    total,
+    total: effectiveTotal,
     currentPage,
     totalPages,
     perPage,

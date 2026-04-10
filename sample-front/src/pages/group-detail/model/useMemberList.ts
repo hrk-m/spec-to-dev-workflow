@@ -14,9 +14,11 @@ export function useMemberList(groupId: number) {
   const [currentPage, setCurrentPage] = useState(1);
   const [perPage, setPerPage] = useState<PerPage>(DEFAULT_PER_PAGE);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [fetchedOffset, setFetchedOffset] = useState(0);
+  const [lastBatchSize, setLastBatchSize] = useState(FETCH_LIMIT);
 
   const doFetch = useCallback(
     (offset: number, query: string, append: boolean) => {
@@ -35,9 +37,11 @@ export function useMemberList(groupId: number) {
           });
           setTotal(data.total);
           setFetchedOffset(offset + FETCH_LIMIT);
+          setLastBatchSize(data.members.length);
         })
         .catch((err: unknown) => {
           setError(String(err));
+          setLastBatchSize(0);
         })
         .finally(() => {
           setIsLoading(false);
@@ -47,24 +51,33 @@ export function useMemberList(groupId: number) {
   );
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  useEffect(() => {
     setCachedMembers([]);
     setCurrentPage(1);
     setFetchedOffset(0);
-    doFetch(0, searchQuery, false);
-  }, [groupId, searchQuery, doFetch]);
+    setLastBatchSize(FETCH_LIMIT);
+    doFetch(0, debouncedQuery, false);
+  }, [groupId, debouncedQuery, doFetch]);
 
-  const totalPages = Math.max(1, Math.ceil(total / perPage));
+  const effectiveTotal = debouncedQuery ? cachedMembers.length : total;
+  const totalPages = Math.max(1, Math.ceil(effectiveTotal / perPage));
 
   const startIndex = (currentPage - 1) * perPage;
   const endIndex = startIndex + perPage;
 
-  const needsMoreData = endIndex > cachedMembers.length && cachedMembers.length < total;
+  const needsMoreData = endIndex > cachedMembers.length && lastBatchSize === FETCH_LIMIT;
 
   useEffect(() => {
     if (needsMoreData && !isLoading) {
-      doFetch(fetchedOffset, searchQuery, true);
+      doFetch(fetchedOffset, debouncedQuery, true);
     }
-  }, [needsMoreData, isLoading, fetchedOffset, searchQuery, doFetch]);
+  }, [needsMoreData, isLoading, fetchedOffset, debouncedQuery, doFetch]);
 
   const visibleMembers = cachedMembers.slice(startIndex, endIndex);
 
@@ -80,7 +93,7 @@ export function useMemberList(groupId: number) {
 
   return {
     members: visibleMembers,
-    total,
+    total: effectiveTotal,
     currentPage,
     totalPages,
     perPage,

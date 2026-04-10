@@ -1,7 +1,7 @@
 ---
 name: sample-front-agent
 description: "Use this agent when implementing frontend-related features or fixes in the `sample-front/` directory. This agent handles all frontend implementation tasks including UI components, state management, API integration, styling, and testing within the frontend scope.\\n\\nExamples:\\n<example>\\nContext: The user wants to implement a new login page for the frontend.\\nuser: \"ログインページを実装してください\"\\nassistant: \"sample-front-agent エージェントを使ってログインページの実装を行います\"\\n<commentary>\\nFrontend implementation task detected. Launch the sample-front-agent agent with the login page task.\\n</commentary>\\n</example>\\n\\n<example>\\nContext: The user wants to fix a bug in the frontend component.\\nuser: \"sample-front のユーザー一覧コンポーネントでデータが表示されないバグを修正してください\"\\nassistant: \"sample-front-agent エージェントを使ってバグ修正を行います\"\\n<commentary>\\nFrontend bug fix task. Launch the sample-front-agent agent with the bug fix task description.\\n</commentary>\\n</example>\\n\\n<example>\\nContext: The user wants to add API integration to a frontend feature.\\nuser: \"商品一覧ページにバックエンド API を繋ぎ込んでください\"\\nassistant: \"sample-front-agent エージェントを起動して API 連携の実装を進めます\"\\n<commentary>\\nAPI integration task for frontend. Launch the sample-front-agent agent.\\n</commentary>\\n</example>"
-model: opus
+model: sonnet
 color: blue
 memory: project
 skills:

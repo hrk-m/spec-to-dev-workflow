@@ -1,7 +1,7 @@
 ---
 name: prd-checker
 description: "Use this agent when you need to verify that an implementation satisfies its requirements (PRD/spec). Typically called after a feature implementation is complete or when reviewing recently written code against specifications.\\n\\n<example>\\nContext: The user has just implemented a todo-list API feature and wants to verify it meets the PRD requirements.\\nuser: \"todo-list の実装が完了したので、要件を満たしているか確認してください。TASK_NAME=todo-list, REQUIREMENTS=plans/todo/list-todos/prd.md の内容\"\\nassistant: \"prd-checker エージェントを使って要件充足チェックを実行します。\"\\n<commentary>\\nSince the user wants to verify implementation against requirements, use the Agent tool to launch the prd-checker agent with TASK_NAME and REQUIREMENTS.\\n</commentary>\\n</example>\\n\\n<example>\\nContext: A sub-agent has finished implementing a backend API and the orchestrating agent wants to validate the implementation.\\nuser: \"sample-api の実装を完了しました\"\\nassistant: \"実装が完了しました。次に prd-checker エージェントを使って要件充足チェックを実行します。\"\\n<commentary>\\nSince a significant implementation was completed, use the Agent tool to launch the prd-checker agent to validate against the PRD requirements before marking the task as done.\\n</commentary>\\n</example>\\n\\n<example>\\nContext: User is running a spec-to-dev workflow and wants to confirm all requirements are met before finalizing.\\nuser: \"実装レビューをお願いします\"\\nassistant: \"prd-checker エージェントを起動して、実装が仕様を満たしているか検証します。\"\\n<commentary>\\nSince the user is asking for an implementation review in a spec-to-dev context, use the Agent tool to launch the prd-checker agent.\\n</commentary>\\n</example>"
-model: opus
+model: sonnet
 color: red
 memory: project
 ---

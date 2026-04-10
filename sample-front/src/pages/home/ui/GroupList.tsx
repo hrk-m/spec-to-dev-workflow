@@ -98,7 +98,6 @@ export function GroupList({ onGroupClick }: GroupListProps) {
   const navigate = useNavigate();
   const {
     groups,
-    total,
     currentPage,
     totalPages,
     perPage,
@@ -234,7 +233,7 @@ export function GroupList({ onGroupClick }: GroupListProps) {
         </Callout.Root>
       )}
 
-      {!isInitialLoading && total > 0 && (
+      {!isInitialLoading && groups.length > 0 && (
         <Flex style={styles.footerSection}>
           <Text as="p" style={styles.footerMeta}>
             Page {currentPage} of {totalPages}
