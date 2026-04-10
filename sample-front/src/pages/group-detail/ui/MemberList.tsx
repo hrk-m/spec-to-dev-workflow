@@ -2,7 +2,7 @@ import { Box, Button, Flex, Skeleton, Text, TextField } from "@radix-ui/themes";
 import { FaChevronLeft, FaChevronRight, FaMagnifyingGlass } from "react-icons/fa6";
 
 import type { Member } from "@/pages/group-detail/model/group-detail";
-import { useMemberList } from "@/pages/group-detail/model/useMemberList";
+import { useMemberList } from "@/pages/group-detail/model/member-list";
 import { styles } from "./MemberList.styles";
 
 const PER_PAGE_OPTIONS = [20, 50, 100] as const;

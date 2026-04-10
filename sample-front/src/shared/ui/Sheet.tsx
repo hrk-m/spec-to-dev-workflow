@@ -8,6 +8,7 @@ type SheetProps = {
   onClose: () => void;
   onRemove: () => void;
   closing?: boolean;
+  isTopMost?: boolean;
   zIndex?: number;
   width?: CSSProperties["width"];
 };
@@ -17,6 +18,7 @@ export function Sheet({
   onClose,
   onRemove,
   closing = false,
+  isTopMost = true,
   zIndex = sheetConstants.baseZIndex,
   width = sheetConstants.defaultWidth,
 }: SheetProps) {
@@ -41,7 +43,7 @@ export function Sheet({
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") {
+      if (e.key === "Escape" && isTopMost && !closing) {
         onClose();
       }
     }
@@ -50,7 +52,7 @@ export function Sheet({
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, [onClose]);
+  }, [closing, isTopMost, onClose]);
 
   const handleTransitionEnd = useCallback(() => {
     if (closing) {

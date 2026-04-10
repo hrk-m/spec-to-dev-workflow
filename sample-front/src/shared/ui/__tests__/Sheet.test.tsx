@@ -61,6 +61,20 @@ describe("Sheet", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it("最前面でないシートは ESC キーで onClose が呼ばれない", () => {
+    const onClose = vi.fn();
+
+    render(
+      <Sheet onClose={onClose} onRemove={vi.fn()} isTopMost={false}>
+        <p>Sheet content</p>
+      </Sheet>,
+    );
+
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
   it("マウント時に translateX(100%) から translateX(0) へアニメーションする", async () => {
     render(
       <Sheet onClose={vi.fn()} onRemove={vi.fn()}>

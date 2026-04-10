@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 
 import { createGroup } from "@/pages/home/api/create-group";
 import type { CreateGroupRequest } from "@/pages/home/model/group";
-import { prependGroupToGroupListCache } from "@/pages/home/model/useGroupList";
+import { prependGroupToGroupListCache } from "@/pages/home/model/group-list";
 
 const NAME_MAX_LENGTH = 100;
 

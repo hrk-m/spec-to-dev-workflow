@@ -43,6 +43,7 @@ export function SheetStackProvider({ children }: { children: ReactNode }) {
           onClose={closeSheet}
           onRemove={() => removeSheet(sheet.id)}
           closing={sheet.closing ?? false}
+          isTopMost={index === sheets.length - 1 && !sheet.closing}
           zIndex={BASE_Z_INDEX + index * 2}
           width={
             index === sheets.length - 1 ? sheetConstants.defaultWidth : sheetConstants.fullWidth

@@ -1,7 +1,7 @@
 import { Box, Skeleton, Text } from "@radix-ui/themes";
 
 import type { Member } from "@/pages/group-detail/model/group-detail";
-import { useGroupDetail } from "@/pages/group-detail/model/useGroupDetail";
+import { useGroupDetail } from "@/pages/group-detail/model/group-detail-state";
 import { styles } from "./GroupDetailPage.styles";
 import { MemberList } from "./MemberList";
 

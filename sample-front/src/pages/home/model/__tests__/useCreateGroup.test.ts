@@ -2,7 +2,7 @@ import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createGroup } from "@/pages/home/api/create-group";
-import { useCreateGroup } from "@/pages/home/model/useCreateGroup";
+import { useCreateGroup } from "@/pages/home/model/group-create";
 
 vi.mock("@/pages/home/api/create-group", () => ({
   createGroup: vi.fn(),
@@ -11,7 +11,7 @@ vi.mock("@/pages/home/api/create-group", () => ({
 const { prependGroupToGroupListCache } = vi.hoisted(() => ({
   prependGroupToGroupListCache: vi.fn(),
 }));
-vi.mock("@/pages/home/model/useGroupList", () => ({
+vi.mock("@/pages/home/model/group-list", () => ({
   prependGroupToGroupListCache,
 }));
 

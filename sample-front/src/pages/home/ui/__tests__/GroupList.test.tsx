@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fetchGroups } from "@/pages/home/api/fetch-groups";
 import type { Group, GroupsResponse } from "@/pages/home/model/group";
-import { clearGroupListCache } from "@/pages/home/model/useGroupList";
+import { clearGroupListCache } from "@/pages/home/model/group-list";
 import { GroupList } from "@/pages/home/ui/GroupList";
 
 const mockNavigate = vi.fn();

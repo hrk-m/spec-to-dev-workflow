@@ -3,7 +3,7 @@ import { FaChevronLeft, FaChevronRight, FaMagnifyingGlass } from "react-icons/fa
 import { useNavigate } from "react-router";
 
 import type { Group } from "@/pages/home/model/group";
-import { PER_PAGE_OPTIONS, useGroupList } from "@/pages/home/model/useGroupList";
+import { PER_PAGE_OPTIONS, useGroupList } from "@/pages/home/model/group-list";
 import { PageContainer } from "@/shared/ui";
 import { CreateGroupDialog } from "./CreateGroupDialog";
 import { styles } from "./GroupList.styles";

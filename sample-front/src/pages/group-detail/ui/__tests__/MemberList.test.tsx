@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fetchGroupMembers } from "@/pages/group-detail/api/fetch-group-members";
 import type { MembersResponse } from "@/pages/group-detail/model/group-detail";
-import { clearMemberListCache } from "@/pages/group-detail/model/useMemberList";
+import { clearMemberListCache } from "@/pages/group-detail/model/member-list";
 import { MemberList } from "@/pages/group-detail/ui/MemberList";
 
 vi.mock("@/pages/group-detail/api/fetch-group-members", () => ({

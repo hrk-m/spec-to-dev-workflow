@@ -40,6 +40,7 @@ function GroupDetailRouteSheet({ groupId }: { groupId: number }) {
       onClose={() => setClosing(true)}
       onRemove={() => navigate(-1)}
       closing={closing}
+      isTopMost={sheets.length === 0}
       zIndex={GROUP_DETAIL_SHEET_Z_INDEX}
       width={
         sheets.some((s) => !s.closing) ? sheetConstants.fullWidth : sheetConstants.defaultWidth
