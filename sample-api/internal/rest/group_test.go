@@ -163,7 +163,7 @@ func TestGroupHandler_ListGroupMembers_OK(t *testing.T) {
 	c.SetParamValues("1")
 
 	svc := new(mocks.MockGroupService)
-	members := []domain.GroupMember{
+	members := []domain.User{
 		{ID: 1, FirstName: "Taro", LastName: "Yamada"},
 	}
 	svc.On("ListGroupMembers", mock.Anything, uint64(1), uint64(500), uint64(0), "").
@@ -176,8 +176,8 @@ func TestGroupHandler_ListGroupMembers_OK(t *testing.T) {
 	assert.Equal(t, http.StatusOK, rec.Code)
 
 	var result struct {
-		Members []domain.GroupMember `json:"members"`
-		Total   int                  `json:"total"`
+		Members []domain.User `json:"members"`
+		Total   int           `json:"total"`
 	}
 	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
 	assert.Len(t, result.Members, 1)
@@ -196,7 +196,7 @@ func TestGroupHandler_ListGroupMembers_DefaultParams(t *testing.T) {
 
 	svc := new(mocks.MockGroupService)
 	svc.On("ListGroupMembers", mock.Anything, uint64(1), uint64(500), uint64(0), "").
-		Return([]domain.GroupMember{}, 0, nil)
+		Return([]domain.User{}, 0, nil)
 
 	h := &rest.GroupHandler{Service: svc}
 	err := h.ListGroupMembers(c)
@@ -216,7 +216,7 @@ func TestGroupHandler_ListGroupMembers_WithSearch(t *testing.T) {
 	c.SetParamValues("1")
 
 	svc := new(mocks.MockGroupService)
-	members := []domain.GroupMember{
+	members := []domain.User{
 		{ID: 1, FirstName: "Taro", LastName: "Yamada"},
 	}
 	svc.On("ListGroupMembers", mock.Anything, uint64(1), uint64(500), uint64(0), "Yamada").
@@ -321,7 +321,7 @@ func TestGroupHandler_ListGroupMembers_GroupNotFound(t *testing.T) {
 
 	svc := new(mocks.MockGroupService)
 	svc.On("ListGroupMembers", mock.Anything, uint64(9999), uint64(500), uint64(0), "").
-		Return([]domain.GroupMember(nil), 0, domain.ErrNotFound)
+		Return([]domain.User(nil), 0, domain.ErrNotFound)
 
 	h := &rest.GroupHandler{Service: svc}
 	err := h.ListGroupMembers(c)
@@ -346,7 +346,7 @@ func TestGroupHandler_ListGroupMembers_InternalError(t *testing.T) {
 
 	svc := new(mocks.MockGroupService)
 	svc.On("ListGroupMembers", mock.Anything, uint64(1), uint64(500), uint64(0), "").
-		Return([]domain.GroupMember(nil), 0, domain.ErrInternalServerError)
+		Return([]domain.User(nil), 0, domain.ErrInternalServerError)
 
 	h := &rest.GroupHandler{Service: svc}
 	err := h.ListGroupMembers(c)
@@ -357,6 +357,48 @@ func TestGroupHandler_ListGroupMembers_InternalError(t *testing.T) {
 	var result map[string]string
 	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
 	assert.Equal(t, "internal server error", result["message"])
+	svc.AssertExpectations(t)
+}
+
+func TestGroupHandler_ListGroupMembers_LimitUpperBound(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/groups/1/members?limit=500", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/groups/:id/members")
+	c.SetParamNames("id")
+	c.SetParamValues("1")
+
+	svc := new(mocks.MockGroupService)
+	svc.On("ListGroupMembers", mock.Anything, uint64(1), uint64(500), uint64(0), "").
+		Return([]domain.User{}, 0, nil)
+
+	h := &rest.GroupHandler{Service: svc}
+	err := h.ListGroupMembers(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, rec.Code)
+	svc.AssertExpectations(t)
+}
+
+func TestGroupHandler_ListGroupMembers_OffsetZero(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/groups/1/members?offset=0", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/groups/:id/members")
+	c.SetParamNames("id")
+	c.SetParamValues("1")
+
+	svc := new(mocks.MockGroupService)
+	svc.On("ListGroupMembers", mock.Anything, uint64(1), uint64(500), uint64(0), "").
+		Return([]domain.User{}, 0, nil)
+
+	h := &rest.GroupHandler{Service: svc}
+	err := h.ListGroupMembers(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, rec.Code)
 	svc.AssertExpectations(t)
 }
 
@@ -925,6 +967,393 @@ func TestGroupHandler_Delete_ServiceInternalError(t *testing.T) {
 
 	h := &rest.GroupHandler{Service: svc}
 	err := h.Delete(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+
+	var result map[string]string
+	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
+	assert.Equal(t, "internal server error", result["message"])
+	svc.AssertExpectations(t)
+}
+
+func TestGroupHandler_ListNonGroupMembers_OK(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/groups/1/non-members", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/groups/:id/non-members")
+	c.SetParamNames("id")
+	c.SetParamValues("1")
+
+	svc := new(mocks.MockGroupService)
+	users := []domain.User{
+		{ID: 2, FirstName: "Hanako", LastName: "Suzuki"},
+	}
+	svc.On("ListNonGroupMembers", mock.Anything, 1, 500, 0, "").Return(users, int64(1), nil)
+
+	h := &rest.GroupHandler{Service: svc}
+	err := h.ListNonGroupMembers(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var result struct {
+		Users []domain.User `json:"users"`
+		Total int64         `json:"total"`
+	}
+	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
+	assert.Len(t, result.Users, 1)
+	assert.Equal(t, int64(1), result.Total)
+	svc.AssertExpectations(t)
+}
+
+func TestGroupHandler_ListNonGroupMembers_WithQuery(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/groups/1/non-members?q=Suzuki", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/groups/:id/non-members")
+	c.SetParamNames("id")
+	c.SetParamValues("1")
+
+	svc := new(mocks.MockGroupService)
+	users := []domain.User{
+		{ID: 2, FirstName: "Hanako", LastName: "Suzuki"},
+	}
+	svc.On("ListNonGroupMembers", mock.Anything, 1, 500, 0, "Suzuki").Return(users, int64(5), nil)
+
+	h := &rest.GroupHandler{Service: svc}
+	err := h.ListNonGroupMembers(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, rec.Code)
+	svc.AssertExpectations(t)
+}
+
+func TestGroupHandler_ListNonGroupMembers_EmptyResult(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/groups/1/non-members", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/groups/:id/non-members")
+	c.SetParamNames("id")
+	c.SetParamValues("1")
+
+	svc := new(mocks.MockGroupService)
+	svc.On("ListNonGroupMembers", mock.Anything, 1, 500, 0, "").Return([]domain.User{}, int64(0), nil)
+
+	h := &rest.GroupHandler{Service: svc}
+	err := h.ListNonGroupMembers(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var result struct {
+		Users []domain.User `json:"users"`
+		Total int64         `json:"total"`
+	}
+	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
+	assert.Empty(t, result.Users)
+	assert.Equal(t, int64(0), result.Total)
+	svc.AssertExpectations(t)
+}
+
+func TestGroupHandler_ListNonGroupMembers_InvalidID(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/groups/abc/non-members", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/groups/:id/non-members")
+	c.SetParamNames("id")
+	c.SetParamValues("abc")
+
+	h := &rest.GroupHandler{Service: new(mocks.MockGroupService)}
+	err := h.ListNonGroupMembers(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+
+	var result map[string]string
+	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
+	assert.Equal(t, "given param is not valid", result["message"])
+}
+
+func TestGroupHandler_ListNonGroupMembers_ZeroID(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/groups/0/non-members", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/groups/:id/non-members")
+	c.SetParamNames("id")
+	c.SetParamValues("0")
+
+	h := &rest.GroupHandler{Service: new(mocks.MockGroupService)}
+	err := h.ListNonGroupMembers(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+
+	var result map[string]string
+	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
+	assert.Equal(t, "given param is not valid", result["message"])
+}
+
+func TestGroupHandler_ListNonGroupMembers_InvalidLimit(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/groups/1/non-members?limit=abc", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/groups/:id/non-members")
+	c.SetParamNames("id")
+	c.SetParamValues("1")
+
+	h := &rest.GroupHandler{Service: new(mocks.MockGroupService)}
+	err := h.ListNonGroupMembers(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+
+	var result map[string]string
+	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
+	assert.Equal(t, "given param is not valid", result["message"])
+}
+
+func TestGroupHandler_ListNonGroupMembers_InvalidOffset(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/groups/1/non-members?offset=-1", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/groups/:id/non-members")
+	c.SetParamNames("id")
+	c.SetParamValues("1")
+
+	h := &rest.GroupHandler{Service: new(mocks.MockGroupService)}
+	err := h.ListNonGroupMembers(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+
+	var result map[string]string
+	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
+	assert.Equal(t, "given param is not valid", result["message"])
+}
+
+func TestGroupHandler_ListNonGroupMembers_GroupNotFound(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/groups/9999/non-members", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/groups/:id/non-members")
+	c.SetParamNames("id")
+	c.SetParamValues("9999")
+
+	svc := new(mocks.MockGroupService)
+	svc.On("ListNonGroupMembers", mock.Anything, 9999, 500, 0, "").
+		Return([]domain.User(nil), int64(0), domain.ErrNotFound)
+
+	h := &rest.GroupHandler{Service: svc}
+	err := h.ListNonGroupMembers(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusNotFound, rec.Code)
+
+	var result map[string]string
+	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
+	assert.Equal(t, "your requested item is not found", result["message"])
+	svc.AssertExpectations(t)
+}
+
+func TestGroupHandler_ListNonGroupMembers_InternalError(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/groups/1/non-members", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/groups/:id/non-members")
+	c.SetParamNames("id")
+	c.SetParamValues("1")
+
+	svc := new(mocks.MockGroupService)
+	svc.On("ListNonGroupMembers", mock.Anything, 1, 500, 0, "").
+		Return([]domain.User(nil), int64(0), domain.ErrInternalServerError)
+
+	h := &rest.GroupHandler{Service: svc}
+	err := h.ListNonGroupMembers(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+
+	var result map[string]string
+	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
+	assert.Equal(t, "internal server error", result["message"])
+	svc.AssertExpectations(t)
+}
+
+func TestGroupHandler_AddGroupMembers_OK(t *testing.T) {
+	e := echo.New()
+	body := strings.NewReader(`{"user_ids":[2,3]}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/groups/1/members", body)
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/groups/:id/members")
+	c.SetParamNames("id")
+	c.SetParamValues("1")
+
+	svc := new(mocks.MockGroupService)
+	added := []domain.User{
+		{ID: 2, FirstName: "Hanako", LastName: "Suzuki"},
+		{ID: 3, FirstName: "Jiro", LastName: "Tanaka"},
+	}
+	svc.On("AddGroupMembers", mock.Anything, uint64(1), []uint64{2, 3}).Return(added, nil)
+
+	h := &rest.GroupHandler{Service: svc}
+	err := h.AddGroupMembers(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusCreated, rec.Code)
+
+	var result struct {
+		Members []domain.User `json:"members"`
+	}
+	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
+	assert.Len(t, result.Members, 2)
+	svc.AssertExpectations(t)
+}
+
+func TestGroupHandler_AddGroupMembers_InvalidID(t *testing.T) {
+	e := echo.New()
+	body := strings.NewReader(`{"user_ids":[1]}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/groups/abc/members", body)
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/groups/:id/members")
+	c.SetParamNames("id")
+	c.SetParamValues("abc")
+
+	h := &rest.GroupHandler{Service: new(mocks.MockGroupService)}
+	err := h.AddGroupMembers(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+
+	var result map[string]string
+	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
+	assert.Equal(t, "given param is not valid", result["message"])
+}
+
+func TestGroupHandler_AddGroupMembers_ZeroID(t *testing.T) {
+	e := echo.New()
+	body := strings.NewReader(`{"user_ids":[1]}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/groups/0/members", body)
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/groups/:id/members")
+	c.SetParamNames("id")
+	c.SetParamValues("0")
+
+	h := &rest.GroupHandler{Service: new(mocks.MockGroupService)}
+	err := h.AddGroupMembers(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+func TestGroupHandler_AddGroupMembers_EmptyUserIDs(t *testing.T) {
+	e := echo.New()
+	body := strings.NewReader(`{"user_ids":[]}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/groups/1/members", body)
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/groups/:id/members")
+	c.SetParamNames("id")
+	c.SetParamValues("1")
+
+	h := &rest.GroupHandler{Service: new(mocks.MockGroupService)}
+	err := h.AddGroupMembers(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+
+	var result map[string]string
+	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
+	assert.Equal(t, "given param is not valid", result["message"])
+}
+
+func TestGroupHandler_AddGroupMembers_GroupNotFound(t *testing.T) {
+	e := echo.New()
+	body := strings.NewReader(`{"user_ids":[1]}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/groups/9999/members", body)
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/groups/:id/members")
+	c.SetParamNames("id")
+	c.SetParamValues("9999")
+
+	svc := new(mocks.MockGroupService)
+	svc.On("AddGroupMembers", mock.Anything, uint64(9999), []uint64{1}).
+		Return([]domain.User(nil), domain.ErrNotFound)
+
+	h := &rest.GroupHandler{Service: svc}
+	err := h.AddGroupMembers(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusNotFound, rec.Code)
+
+	var result map[string]string
+	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
+	assert.Equal(t, "your requested item is not found", result["message"])
+	svc.AssertExpectations(t)
+}
+
+func TestGroupHandler_AddGroupMembers_AlreadyMember(t *testing.T) {
+	e := echo.New()
+	body := strings.NewReader(`{"user_ids":[1]}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/groups/1/members", body)
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/groups/:id/members")
+	c.SetParamNames("id")
+	c.SetParamValues("1")
+
+	svc := new(mocks.MockGroupService)
+	svc.On("AddGroupMembers", mock.Anything, uint64(1), []uint64{1}).
+		Return([]domain.User(nil), domain.ErrConflict)
+
+	h := &rest.GroupHandler{Service: svc}
+	err := h.AddGroupMembers(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusConflict, rec.Code)
+
+	var result map[string]string
+	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
+	assert.Equal(t, "your item already exist", result["message"])
+	svc.AssertExpectations(t)
+}
+
+func TestGroupHandler_AddGroupMembers_InternalError(t *testing.T) {
+	e := echo.New()
+	body := strings.NewReader(`{"user_ids":[2]}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/groups/1/members", body)
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/groups/:id/members")
+	c.SetParamNames("id")
+	c.SetParamValues("1")
+
+	svc := new(mocks.MockGroupService)
+	svc.On("AddGroupMembers", mock.Anything, uint64(1), []uint64{2}).
+		Return([]domain.User(nil), domain.ErrInternalServerError)
+
+	h := &rest.GroupHandler{Service: svc}
+	err := h.AddGroupMembers(c)
 
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)

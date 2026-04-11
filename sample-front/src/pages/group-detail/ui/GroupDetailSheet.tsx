@@ -1,9 +1,9 @@
-import type { Member } from "@/pages/group-detail/model/group-detail";
+import type { UserSummary } from "@/pages/group-detail/model/group-detail";
 import { GroupDetailView } from "./GroupDetailView";
 
 type GroupDetailSheetProps = {
   groupId: number;
-  onMemberClick?: (member: Member) => void;
+  onMemberClick?: (member: UserSummary) => void;
 };
 
 export function GroupDetailSheet({ groupId, onMemberClick }: GroupDetailSheetProps) {

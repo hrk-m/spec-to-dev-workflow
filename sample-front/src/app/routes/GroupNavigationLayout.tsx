@@ -5,7 +5,7 @@ import {
   GroupDetailPage,
   GroupDetailSheet,
   MemberDetailSheet,
-  type Member,
+  type UserSummary,
 } from "@/pages/group-detail";
 import { HomePage } from "@/pages/home";
 import { useSheetStack } from "@/shared/lib/sheet-stack";
@@ -48,7 +48,7 @@ function GroupDetailRouteSheet({ groupId }: { groupId: number }) {
     >
       <GroupDetailSheet
         groupId={groupId}
-        onMemberClick={(member: Member) =>
+        onMemberClick={(member: UserSummary) =>
           openSheet({
             id: `member-${member.id}`,
             content: <MemberDetailSheet member={member} />,

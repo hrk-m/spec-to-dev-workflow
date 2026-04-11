@@ -48,9 +48,10 @@
 
 #### インデックス
 
-| インデックス名 | 対象カラム | 種別    | 用途           |
-| -------------- | ---------- | ------- | -------------- |
-| `PRIMARY`      | `id`       | PRIMARY | 主キーアクセス |
+| インデックス名      | 対象カラム           | 種別    | 用途                                        |
+| ------------------- | -------------------- | ------- | ------------------------------------------- |
+| `PRIMARY`           | `id`                 | PRIMARY | 主キーアクセス                              |
+| `idx_groups_active` | `(deleted_at, id)` | INDEX   | 有効グループ取得の高速化（deleted_at IS NULL 検索） |
 
 ---
 
@@ -159,7 +160,7 @@
 | --------------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | `groups`        | API 経由（ユーザー操作） / シードデータ（`db/seed/001_groups.sql`）        | `GET /api/v1/groups` — グループ一覧取得 / `GET /api/v1/groups/:id` — グループ詳細取得                     |
 | `group_members` | API 経由（ユーザー操作） / シードデータ（`db/seed/003_group_members.sql`） | `GET /api/v1/groups` — メンバー数集計 / `GET /api/v1/groups/:id/members` — メンバー一覧取得（users JOIN） |
-| `users`         | API 経由（ユーザー操作） / シードデータ（`db/seed/002_users.sql`）         | `GET /api/v1/groups/:id/members` — メンバー情報取得（group_members JOIN）<br>`GET /api/v1/groups/:id/non-members` — 未所属ユーザー取得（`search_key LIKE` 検索） |
+| `users`         | API 経由（ユーザー操作） / シードデータ（`db/seed/002_users.sql`）         | `GET /api/v1/users` — ユーザー一覧取得（`search_key LIKE` 検索）<br>`GET /api/v1/groups/:id/members` — メンバー情報取得（group_members JOIN）<br>`GET /api/v1/groups/:id/non-members` — 未所属ユーザー取得（`search_key LIKE` 検索） |
 
 ---
 
@@ -167,9 +168,9 @@
 
 | テーブル        | 更新方式               | 備考                                                        |
 | --------------- | ---------------------- | ----------------------------------------------------------- |
-| `groups`        | オンライン（API 経由） | 現時点は SELECT のみ実装。INSERT / UPDATE / DELETE は未実装 |
-| `group_members` | オンライン（API 経由） | SELECT（JOIN）のみ。`POST /api/v1/groups/:id/members` で INSERT が追加される（add-group-member） |
-| `users`         | オンライン（API 経由） | SELECT（group_members JOIN）のみ。直接操作 API は未実装     |
+| `groups`        | オンライン（API 経由） | SELECT / INSERT / UPDATE / DELETE（論理削除）すべて実装済み |
+| `group_members` | オンライン（API 経由） | SELECT（JOIN）と `POST /api/v1/groups/:id/members` による INSERT が実装済み |
+| `users`         | オンライン（API 経由） | `GET /api/v1/users` による SELECT 実装済み。直接の INSERT / UPDATE / DELETE API は未実装 |
 
 ---
 
@@ -188,8 +189,7 @@
 | ファイル                                                                         | 内容                                                                           |
 | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
 | `sample-api/db/migrate/20260403120000_create_tables.up.sql`                      | `groups` / `users` / `group_members` テーブル定義（統合）                      |
-| `sample-api/db/migrate/{timestamp}_add_search_key_to_users.up.sql`               | `users` テーブルへの `search_key` VIRTUAL GENERATED COLUMN 追加（add-group-member） |
-| `sample-api/db/migrate/{timestamp}_add_search_key_to_users.down.sql`             | `search_key` カラムの DROP（ロールバック用）                                    |
+| `sample-api/db/migrate/20260411120000_add_search_key_to_users.up.sql`            | `users` テーブルへの `search_key` VIRTUAL GENERATED COLUMN 追加（add-group-member） |
 
 ### シードデータファイル一覧
 

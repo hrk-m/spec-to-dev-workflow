@@ -1,14 +1,14 @@
 import { Box, Button, Flex, Skeleton, Text, TextField } from "@radix-ui/themes";
 import { FaChevronLeft, FaChevronRight, FaMagnifyingGlass } from "react-icons/fa6";
 
-import type { Member } from "@/pages/group-detail/model/group-detail";
+import type { UserSummary } from "@/pages/group-detail/model/group-detail";
 import { useMemberList } from "@/pages/group-detail/model/member-list";
 import { styles } from "./MemberList.styles";
 
 const PER_PAGE_OPTIONS = [20, 50, 100] as const;
 const SKELETON_ROWS = 5;
 
-function MemberAvatar({ member }: { member: Member }) {
+function MemberAvatar({ member }: { member: UserSummary }) {
   const initials = `${member.last_name.charAt(0)}${member.first_name.charAt(0)}`.toUpperCase();
 
   return (
@@ -23,7 +23,7 @@ function MemberRow({
   isLast,
   onClick,
 }: {
-  member: Member;
+  member: UserSummary;
   isLast: boolean;
   onClick?: () => void;
 }) {
@@ -68,7 +68,7 @@ function SkeletonMemberRow({ isLast }: { isLast: boolean }) {
 
 type MemberListProps = {
   groupId: number;
-  onMemberClick?: (member: Member) => void;
+  onMemberClick?: (member: UserSummary) => void;
 };
 
 export function MemberList({ groupId, onMemberClick }: MemberListProps) {

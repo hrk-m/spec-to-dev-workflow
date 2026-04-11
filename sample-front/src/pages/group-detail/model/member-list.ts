@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { fetchGroupMembers } from "@/pages/group-detail/api/fetch-group-members";
-import type { Member } from "@/pages/group-detail/model/group-detail";
+import type { UserSummary } from "@/pages/group-detail/model/group-detail";
 
 const FETCH_LIMIT = 500;
 const DEFAULT_PER_PAGE = 20;
@@ -9,7 +9,7 @@ const DEFAULT_PER_PAGE = 20;
 type PerPage = 20 | 50 | 100;
 
 type MemberListCacheEntry = {
-  members: Member[];
+  members: UserSummary[];
   total: number;
   currentPage: number;
   perPage: PerPage;
@@ -25,7 +25,9 @@ export function clearMemberListCache() {
 
 export function useMemberList(groupId: number) {
   const cachedEntry = memberListCache.get(groupId) ?? null;
-  const [cachedMembers, setCachedMembers] = useState<Member[]>(() => cachedEntry?.members ?? []);
+  const [cachedMembers, setCachedMembers] = useState<UserSummary[]>(
+    () => cachedEntry?.members ?? [],
+  );
   const cachedMembersRef = useRef(cachedMembers);
   const [total, setTotal] = useState(() => cachedEntry?.total ?? 0);
   const [currentPage, setCurrentPage] = useState(() => cachedEntry?.currentPage ?? 1);

@@ -26,13 +26,13 @@ db/seed/                    →  Seed data (DML only)
 ```
 
 - `domain/`: フレームワーク依存ゼロ。純粋な struct とセンチネルエラーのみ
-- `group/` など機能別パッケージ: ビジネスロジックを実装し、repository interface を宣言する
+- `group/`、`user/` など機能別パッケージ: ビジネスロジックを実装し、repository interface を宣言する
 - `internal/repository/mysql/`: MySQL ベースの repository adapter を実装する
 - `internal/rest/`: Echo ハンドラ。上位層のインターフェースを定義し、DI で受け取る
 
 ### インターフェース定義の配置
 
-インターフェースは**消費側**で定義する。たとえば `GroupService` は `internal/rest/` が定義し、`GroupRepository` は `group/` が定義する。これにより delivery 層と use case 層が実装詳細に依存しない。
+インターフェースは**消費側**で定義する。たとえば `GroupService` は `internal/rest/` が定義し、`GroupRepository` は `group/` が定義する。`UserRepository` も `user/` が定義する。これにより delivery 層と use case 層が実装詳細に依存しない。
 
 ### エラーハンドリング
 
@@ -57,11 +57,12 @@ db/seed/                    →  Seed data (DML only)
 - mock は手動保守し、interface 変更時は同じ変更セットで追随させる
 - エラー系（センチネルエラー、予期しないエラー）のケースを必ず網羅する
 
-## サービスインターフェース（`GroupService`）
+## サービスインターフェース（`GroupService` / `UserService`）
 
-`internal/rest/group.go` に定義された `GroupService` インターフェース。delivery 層が use case 層に依存するパターンを示す。
+インターフェースは消費側（`internal/rest/`）で宣言する。
 
 ```go
+// GroupService: internal/rest/group.go で宣言
 type GroupService interface {
     ListGroups(ctx context.Context, q string, limit, offset int) ([]domain.Group, int, error)
     GetByID(ctx context.Context, id uint64) (domain.Group, error)
@@ -72,6 +73,11 @@ type GroupService interface {
     ListNonGroupMembers(ctx context.Context, groupID, limit, offset int, q string) ([]domain.User, int64, error)
     AddGroupMembers(ctx context.Context, groupID uint64, userIDs []uint64) ([]domain.User, error)
 }
+
+// UserService: internal/rest/user.go で宣言
+type UserService interface {
+    ListUsers(ctx context.Context, q string, limit, offset int) ([]domain.User, int, error)
+}
 ```
 
 `Update` は ID（`int64`）・name・description を受け取り、更新後の `*domain.Group` を返す。`Delete` は ID（`int64`）を受け取り、soft delete を実行する（成功時は `nil`、対象未存在時は `ErrNotFound`）。
@@ -80,13 +86,14 @@ type GroupService interface {
 
 `ListNonGroupMembers` は `groupID` の存在確認を service 層で行い（`GetByID` 経由）、存在しない場合は `ErrNotFound` を返す。
 
-`AddGroupMembers` は handler 層で `user_ids` の空チェック（`len == 0` → 400）を行い、service 層でグループ存在確認と各ユーザー存在確認（`GetUserByID`）を行い、いずれかが存在しない場合は `ErrNotFound` を返す。重複チェック（既にメンバー）は repository 層で行い、`ErrConflict` を返す。
+`AddGroupMembers` は handler 層で `user_ids` の空チェック（`len == 0` → 400）を行い、service 層でグループ存在確認と各ユーザー存在確認（`userRepo.GetByID`）を行い、いずれかが存在しない場合は `ErrNotFound` を返す。重複チェック（既にメンバー）は repository 層で行い、`ErrConflict` を返す。
 
-## リポジトリインターフェース（`GroupRepository`）
+## リポジトリインターフェース（`GroupRepository` と `UserRepository`）
 
-`group/service.go` に定義された `GroupRepository` インターフェース。use case 層が repository adapter に依存するパターンを示す。
+`group/service.go` に定義された 2 つのインターフェース。use case 層が repository adapter に依存するパターンを示す。
 
 ```go
+// GroupRepository はグループデータアクセスのインターフェース（group/service.go で宣言）
 type GroupRepository interface {
     ListGroups(ctx context.Context, q string, limit, offset int) ([]domain.Group, int, error)
     GetByID(ctx context.Context, id uint64) (domain.Group, error)
@@ -95,8 +102,12 @@ type GroupRepository interface {
     Update(ctx context.Context, id int64, name, description string) (*domain.Group, error)
     Delete(ctx context.Context, id int64) error
     ListNonGroupMembers(ctx context.Context, groupID uint64, limit, offset int, q string) ([]domain.User, int64, error)
-    GetUserByID(ctx context.Context, userID uint64) (domain.User, error)
     AddGroupMembers(ctx context.Context, groupID uint64, userIDs []uint64) ([]domain.User, error)
+}
+
+// UserRepository はグループサービスが使うユーザーデータアクセスのインターフェース（group/service.go で宣言）
+type UserRepository interface {
+    GetByID(ctx context.Context, id uint64) (domain.User, error)
 }
 ```
 
@@ -104,6 +115,8 @@ type GroupRepository interface {
 
 `ListNonGroupMembers` は `users` テーブルから `group_members` に存在しないユーザーを返す。total は `q` フィルタなしの全非メンバー数。名前検索は `users.search_key` カラムへの LIKE 検索で行う。`search_key` は `CONCAT(first_name, last_name, last_name, first_name)` を値とする VIRTUAL GENERATED カラムで、`db/migrate/20260411120000_add_search_key_to_users.up.sql` で追加された。
 
-`GetUserByID` は `users` テーブルから `deleted_at IS NULL` の条件で単一ユーザーを取得する。存在しない場合は `ErrNotFound` を返す。
+`group.UserRepository.GetByID` は `mysql.UserRepository` が実装する。`users` テーブルから `deleted_at IS NULL` の条件で単一ユーザーを取得し、存在しない場合は `ErrNotFound` を返す。
 
 `AddGroupMembers` はトランザクション内で `group_members` へ一括 INSERT する。INSERT 前に重複チェックを行い、既存メンバーが含まれる場合は `ErrConflict` を返す。成功後は追加したユーザーを `users` テーブルから SELECT して返す。
+
+> **補足**: `mysql.UserRepository` は `group.UserRepository`（`GetByID`）と `user.UserRepository`（`ListUsers`）の両インターフェースを実装する単一の struct。`app/main.go` で 1 インスタンスを `group.NewService` と `user.NewService` の両方に渡す。

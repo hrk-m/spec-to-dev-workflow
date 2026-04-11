@@ -24,9 +24,9 @@ func (m *MockGroupRepository) GetByID(ctx context.Context, id uint64) (domain.Gr
 	return args.Get(0).(domain.Group), args.Error(1)
 }
 
-func (m *MockGroupRepository) ListGroupMembers(ctx context.Context, id, limit, offset uint64, q string) ([]domain.GroupMember, int, error) {
+func (m *MockGroupRepository) ListGroupMembers(ctx context.Context, id, limit, offset uint64, q string) ([]domain.User, int, error) {
 	args := m.Called(ctx, id, limit, offset, q)
-	return args.Get(0).([]domain.GroupMember), args.Int(1), args.Error(2)
+	return args.Get(0).([]domain.User), args.Int(1), args.Error(2)
 }
 
 func (m *MockGroupRepository) Store(ctx context.Context, name, description string) (domain.Group, error) {
@@ -43,4 +43,14 @@ func (m *MockGroupRepository) Update(ctx context.Context, id int64, name, descri
 func (m *MockGroupRepository) Delete(ctx context.Context, id int64) error {
 	args := m.Called(ctx, id)
 	return args.Error(0)
+}
+
+func (m *MockGroupRepository) ListNonGroupMembers(ctx context.Context, groupID uint64, limit, offset int, q string) ([]domain.User, int64, error) {
+	args := m.Called(ctx, groupID, limit, offset, q)
+	return args.Get(0).([]domain.User), args.Get(1).(int64), args.Error(2)
+}
+
+func (m *MockGroupRepository) AddGroupMembers(ctx context.Context, groupID uint64, userIDs []uint64) ([]domain.User, error) {
+	args := m.Called(ctx, groupID, userIDs)
+	return args.Get(0).([]domain.User), args.Error(1)
 }

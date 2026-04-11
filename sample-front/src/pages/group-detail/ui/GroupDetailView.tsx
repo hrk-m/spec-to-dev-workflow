@@ -1,14 +1,14 @@
 import type { ReactNode } from "react";
 import { Box } from "@radix-ui/themes";
 
-import type { Member } from "@/pages/group-detail/model/group-detail";
+import type { UserSummary } from "@/pages/group-detail/model/group-detail";
 import { PageContainer } from "@/shared/ui";
 import { GroupDetailContent } from "./GroupDetailContent";
 import { styles } from "./GroupDetailPage.styles";
 
 type GroupDetailViewProps = {
   groupId: number;
-  onMemberClick?: (member: Member) => void;
+  onMemberClick?: (member: UserSummary) => void;
   header?: ReactNode;
 };
 

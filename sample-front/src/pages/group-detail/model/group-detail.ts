@@ -5,13 +5,13 @@ export type GroupDetail = {
   member_count: number;
 };
 
-export type Member = {
+export type UserSummary = {
   id: number;
   first_name: string;
   last_name: string;
 };
 
 export type MembersResponse = {
-  members: Member[];
+  members: UserSummary[];
   total: number;
 };

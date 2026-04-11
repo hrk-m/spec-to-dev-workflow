@@ -18,6 +18,14 @@ vi.mock("@/pages/group-detail/api/fetch-group-members", () => ({
   fetchGroupMembers: vi.fn(),
 }));
 
+vi.mock("@/shared/lib/sheet-stack", () => ({
+  useSheetStack: vi.fn(() => ({
+    openSheet: vi.fn(),
+    closeSheet: vi.fn(),
+    sheets: [],
+  })),
+}));
+
 const mockGroup: GroupDetail = {
   id: 1,
   name: "dev-team",

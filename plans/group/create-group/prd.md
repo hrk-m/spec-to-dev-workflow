@@ -86,20 +86,9 @@
 
 ---
 
-## DB 操作
+## 確認ステップ 5-3: DB 操作
 
-スキーマ変更なし。INSERT のみ追加。
-
-```sql
-INSERT INTO `groups` (name, description) VALUES (?, ?)
-```
-
-| カラム        | 値                   |
-| ------------- | -------------------- |
-| `name`        | トリム済み入力値     |
-| `description` | 入力値（空文字容認） |
-| `id`          | AUTO_INCREMENT       |
-| `deleted_at`  | NULL（デフォルト）   |
+→ [plans/schema.md](../../schema.md) を参照。
 
 ---
 

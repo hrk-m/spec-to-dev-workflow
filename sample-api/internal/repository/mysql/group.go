@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/hrk-m/spec-to-dev-workflow/sample-api/domain"
@@ -187,7 +188,7 @@ func (r *GroupRepository) GetByID(ctx context.Context, id uint64) (domain.Group,
 }
 
 // ListGroupMembers returns paginated members for a group with optional name search.
-func (r *GroupRepository) ListGroupMembers(ctx context.Context, id, limit, offset uint64, q string) ([]domain.GroupMember, int, error) {
+func (r *GroupRepository) ListGroupMembers(ctx context.Context, id, limit, offset uint64, q string) ([]domain.User, int, error) {
 	// Count total members for the group (without q filter).
 	countQuery := "SELECT COUNT(*) FROM group_members WHERE group_id = ?"
 	var total int
@@ -197,7 +198,7 @@ func (r *GroupRepository) ListGroupMembers(ctx context.Context, id, limit, offse
 	}
 
 	if total == 0 {
-		return []domain.GroupMember{}, 0, nil
+		return []domain.User{}, 0, nil
 	}
 
 	// Fetch paginated members with optional q filter.
@@ -207,9 +208,8 @@ func (r *GroupRepository) ListGroupMembers(ctx context.Context, id, limit, offse
 	args := []interface{}{id}
 
 	if q != "" {
-		query += " AND (u.first_name LIKE ? OR u.last_name LIKE ?)"
-		like := "%" + q + "%"
-		args = append(args, like, like)
+		query += searchKeyLikeClause
+		args = append(args, "%"+q+"%")
 	}
 
 	query += " ORDER BY u.id LIMIT ? OFFSET ?"
@@ -221,10 +221,10 @@ func (r *GroupRepository) ListGroupMembers(ctx context.Context, id, limit, offse
 	}
 	defer func() { _ = rows.Close() }()
 
-	var members []domain.GroupMember
+	var members []domain.User
 
 	for rows.Next() {
-		var m domain.GroupMember
+		var m domain.User
 		if scanErr := rows.Scan(&m.ID, &m.FirstName, &m.LastName); scanErr != nil {
 			return nil, 0, domain.ErrInternalServerError
 		}
@@ -237,10 +237,158 @@ func (r *GroupRepository) ListGroupMembers(ctx context.Context, id, limit, offse
 	}
 
 	if members == nil {
-		members = []domain.GroupMember{}
+		members = []domain.User{}
 	}
 
 	return members, total, nil
+}
+
+// ListNonGroupMembers returns paginated users not in the given group.
+func (r *GroupRepository) ListNonGroupMembers(ctx context.Context, groupID uint64, limit, offset int, q string) ([]domain.User, int64, error) {
+	// Count total non-members (without q filter, deleted_at IS NULL).
+	countQuery := "SELECT COUNT(*) FROM users WHERE id NOT IN" +
+		" (SELECT user_id FROM group_members WHERE group_id = ?)" +
+		" AND deleted_at IS NULL"
+
+	var total int64
+
+	if err := r.db.QueryRowContext(ctx, countQuery, groupID).Scan(&total); err != nil {
+		return nil, 0, domain.ErrInternalServerError
+	}
+
+	if total == 0 {
+		return []domain.User{}, 0, nil
+	}
+
+	// Fetch paginated non-members with optional q filter.
+	query := "SELECT id, first_name, last_name FROM users" +
+		" WHERE id NOT IN (SELECT user_id FROM group_members WHERE group_id = ?)" +
+		" AND deleted_at IS NULL"
+	args := []interface{}{groupID}
+
+	if q != "" {
+		query += searchKeyLikeClause
+		args = append(args, "%"+q+"%")
+	}
+
+	query += orderByIDPaginationClause
+	args = append(args, limit, offset)
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, 0, domain.ErrInternalServerError
+	}
+	defer func() { _ = rows.Close() }()
+
+	var users []domain.User
+
+	for rows.Next() {
+		var u domain.User
+		if scanErr := rows.Scan(&u.ID, &u.FirstName, &u.LastName); scanErr != nil {
+			return nil, 0, domain.ErrInternalServerError
+		}
+
+		users = append(users, u)
+	}
+
+	if rowsErr := rows.Err(); rowsErr != nil {
+		return nil, 0, domain.ErrInternalServerError
+	}
+
+	if users == nil {
+		users = []domain.User{}
+	}
+
+	return users, total, nil
+}
+
+// AddGroupMembers inserts all userIDs into group_members within a transaction and returns added users.
+func (r *GroupRepository) AddGroupMembers(ctx context.Context, groupID uint64, userIDs []uint64) ([]domain.User, error) {
+	// Check for existing members before starting the transaction.
+	for _, userID := range userIDs {
+		checkQuery := "SELECT COUNT(*) FROM group_members WHERE group_id = ? AND user_id = ?"
+
+		var count int
+		if err := r.db.QueryRowContext(ctx, checkQuery, groupID, userID).Scan(&count); err != nil {
+			return nil, domain.ErrInternalServerError
+		}
+
+		if count > 0 {
+			return nil, domain.ErrConflict
+		}
+	}
+
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, domain.ErrInternalServerError
+	}
+
+	for _, userID := range userIDs {
+		_, execErr := tx.ExecContext(ctx, "INSERT INTO group_members (group_id, user_id) VALUES (?, ?)", groupID, userID)
+		if execErr != nil {
+			_ = tx.Rollback()
+
+			if isUniqueConstraintError(execErr) {
+				return nil, domain.ErrConflict
+			}
+
+			return nil, domain.ErrInternalServerError
+		}
+	}
+
+	if commitErr := tx.Commit(); commitErr != nil {
+		_ = tx.Rollback()
+
+		return nil, domain.ErrInternalServerError
+	}
+
+	// Fetch the added users.
+	placeholders := make([]string, len(userIDs))
+	args := make([]interface{}, len(userIDs))
+
+	for i, id := range userIDs {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	selectQuery := fmt.Sprintf("SELECT id, first_name, last_name FROM users WHERE id IN (%s) ORDER BY id ASC", //nolint:gosec
+		strings.Join(placeholders, ","))
+
+	rows, err := r.db.QueryContext(ctx, selectQuery, args...)
+	if err != nil {
+		return nil, domain.ErrInternalServerError
+	}
+	defer func() { _ = rows.Close() }()
+
+	var users []domain.User
+
+	for rows.Next() {
+		var u domain.User
+		if scanErr := rows.Scan(&u.ID, &u.FirstName, &u.LastName); scanErr != nil {
+			return nil, domain.ErrInternalServerError
+		}
+
+		users = append(users, u)
+	}
+
+	if rowsErr := rows.Err(); rowsErr != nil {
+		return nil, domain.ErrInternalServerError
+	}
+
+	if users == nil {
+		users = []domain.User{}
+	}
+
+	return users, nil
+}
+
+// isUniqueConstraintError reports whether err is a MySQL duplicate entry error (error 1062).
+func isUniqueConstraintError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	return strings.Contains(err.Error(), "Error 1062") || strings.Contains(err.Error(), "Duplicate entry")
 }
 
 // buildSearchCondition returns an AND search condition for each whitespace-delimited token.

@@ -25,10 +25,12 @@ const (
 type GroupService interface {
 	ListGroups(ctx context.Context, q string, limit, offset int) ([]domain.Group, int, error)
 	GetByID(ctx context.Context, id uint64) (domain.Group, error)
-	ListGroupMembers(ctx context.Context, id, limit, offset uint64, q string) ([]domain.GroupMember, int, error)
+	ListGroupMembers(ctx context.Context, id, limit, offset uint64, q string) ([]domain.User, int, error)
 	Store(ctx context.Context, name, description string) (domain.Group, error)
 	Update(ctx context.Context, id int64, name, description string) (*domain.Group, error)
 	Delete(ctx context.Context, id int64) error
+	ListNonGroupMembers(ctx context.Context, groupID, limit, offset int, q string) ([]domain.User, int64, error)
+	AddGroupMembers(ctx context.Context, groupID uint64, userIDs []uint64) ([]domain.User, error)
 }
 
 // GroupHandler handles HTTP requests for the group endpoints.
@@ -42,7 +44,9 @@ func NewGroupHandler(e *echo.Echo, svc GroupService) {
 	e.GET("/api/v1/groups", h.ListGroups)
 	e.GET("/api/v1/groups/:id", h.GetByID)
 	e.GET("/api/v1/groups/:id/members", h.ListGroupMembers)
+	e.GET("/api/v1/groups/:id/non-members", h.ListNonGroupMembers)
 	e.POST("/api/v1/groups", h.Store)
+	e.POST("/api/v1/groups/:id/members", h.AddGroupMembers)
 	e.PUT("/api/v1/groups/:id", h.Update)
 	e.DELETE("/api/v1/groups/:id", h.Delete)
 }
@@ -53,8 +57,8 @@ type groupListResponse struct {
 }
 
 type groupMemberListResponse struct {
-	Members []domain.GroupMember `json:"members"`
-	Total   int                  `json:"total"`
+	Members []domain.User `json:"members"`
+	Total   int           `json:"total"`
 }
 
 type storeGroupRequest struct {
@@ -65,6 +69,19 @@ type storeGroupRequest struct {
 type updateGroupRequest struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
+}
+
+type nonMemberListResponse struct {
+	Users []domain.User `json:"users"`
+	Total int64         `json:"total"`
+}
+
+type addGroupMembersRequest struct {
+	UserIDs []uint64 `json:"user_ids"`
+}
+
+type addGroupMembersResponse struct {
+	Members []domain.User `json:"members"`
 }
 
 // Store handles POST /api/v1/groups.
@@ -208,6 +225,69 @@ func (h *GroupHandler) ListGroups(c echo.Context) error {
 	return c.JSON(http.StatusOK, groupListResponse{Groups: groups, Total: total})
 }
 
+// ListNonGroupMembers handles GET /api/v1/groups/:id/non-members.
+func (h *GroupHandler) ListNonGroupMembers(c echo.Context) error {
+	ctx := c.Request().Context()
+
+	idP, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, ResponseError{Message: domain.ErrBadParamInput.Error()})
+	}
+
+	if idP < 1 {
+		return c.JSON(http.StatusBadRequest, ResponseError{Message: domain.ErrBadParamInput.Error()})
+	}
+
+	limit, limitErr := parseNonMemberLimit(c.QueryParam("limit"))
+	if limitErr != nil {
+		return c.JSON(http.StatusBadRequest, ResponseError{Message: domain.ErrBadParamInput.Error()})
+	}
+
+	offset, offsetErr := parseNonMemberOffset(c.QueryParam("offset"))
+	if offsetErr != nil {
+		return c.JSON(http.StatusBadRequest, ResponseError{Message: domain.ErrBadParamInput.Error()})
+	}
+
+	q := c.QueryParam("q")
+
+	users, total, err := h.Service.ListNonGroupMembers(ctx, idP, limit, offset, q)
+	if err != nil {
+		return c.JSON(getStatusCode(err), ResponseError{Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, nonMemberListResponse{Users: users, Total: total})
+}
+
+// AddGroupMembers handles POST /api/v1/groups/:id/members.
+func (h *GroupHandler) AddGroupMembers(c echo.Context) error {
+	ctx := c.Request().Context()
+
+	idP, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, ResponseError{Message: domain.ErrBadParamInput.Error()})
+	}
+
+	if idP < 1 {
+		return c.JSON(http.StatusBadRequest, ResponseError{Message: domain.ErrBadParamInput.Error()})
+	}
+
+	var req addGroupMembersRequest
+	if bindErr := c.Bind(&req); bindErr != nil {
+		return c.JSON(http.StatusBadRequest, ResponseError{Message: domain.ErrBadParamInput.Error()})
+	}
+
+	if len(req.UserIDs) == 0 {
+		return c.JSON(http.StatusBadRequest, ResponseError{Message: domain.ErrBadParamInput.Error()})
+	}
+
+	members, err := h.Service.AddGroupMembers(ctx, uint64(idP), req.UserIDs) //nolint:gosec
+	if err != nil {
+		return c.JSON(getStatusCode(err), ResponseError{Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusCreated, addGroupMembersResponse{Members: members})
+}
+
 // parseGroupLimit parses and validates the limit query parameter for group listing.
 func parseGroupLimit(s string) (int, error) {
 	if s == "" {
@@ -262,4 +342,32 @@ func parseMemberOffset(s string) (uint64, error) {
 	}
 
 	return uint64(o), nil
+}
+
+// parseNonMemberLimit parses and validates the limit query parameter for non-member listing.
+func parseNonMemberLimit(s string) (int, error) {
+	if s == "" {
+		return defaultMemberLimit, nil
+	}
+
+	l, err := strconv.Atoi(s)
+	if err != nil || l < minMemberLimit || l > maxMemberLimit {
+		return 0, domain.ErrBadParamInput
+	}
+
+	return l, nil
+}
+
+// parseNonMemberOffset parses and validates the offset query parameter for non-member listing.
+func parseNonMemberOffset(s string) (int, error) {
+	if s == "" {
+		return 0, nil
+	}
+
+	o, err := strconv.Atoi(s)
+	if err != nil || o < 0 {
+		return 0, domain.ErrBadParamInput
+	}
+
+	return o, nil
 }

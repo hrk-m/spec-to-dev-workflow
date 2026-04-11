@@ -15,12 +15,41 @@ vi.mock("react-router", async (importOriginal) => {
   };
 });
 
+vi.mock("@/shared/lib/sheet-stack", () => ({
+  useSheetStack: vi.fn(() => ({
+    openSheet: vi.fn(),
+    closeSheet: vi.fn(),
+    sheets: [],
+  })),
+}));
+
 vi.mock("@/pages/group-detail/model/group-detail-state", () => ({
   useGroupDetail: vi.fn(),
 }));
 
 vi.mock("@/pages/group-detail/api/fetch-group-members", () => ({
   fetchGroupMembers: vi.fn(),
+}));
+
+vi.mock("@/pages/group-detail/model/member-list", () => ({
+  clearMemberListCache: vi.fn(),
+  useMemberList: vi.fn(() => ({
+    members: [],
+    total: 0,
+    currentPage: 1,
+    totalPages: 1,
+    perPage: 20,
+    searchQuery: "",
+    error: null,
+    isLoading: false,
+    setCurrentPage: vi.fn(),
+    setPerPage: vi.fn(),
+    setSearchQuery: vi.fn(),
+  })),
+}));
+
+vi.mock("@/pages/group-detail/ui/AddMemberSheet", () => ({
+  AddMemberSheet: vi.fn(() => null),
 }));
 
 const mockGroup: GroupDetail = {
@@ -64,5 +93,79 @@ describe("GroupDetailContent", () => {
     await waitFor(() => {
       expect(screen.getByRole("alertdialog")).toBeInTheDocument();
     });
+  });
+
+  it("「メンバー追加」ボタン押下で AddMemberSheet が表示される", async () => {
+    const user = userEvent.setup();
+
+    const { useSheetStack } = await import("@/shared/lib/sheet-stack");
+    const mockOpenSheet = vi.fn();
+    vi.mocked(useSheetStack).mockReturnValue({
+      openSheet: mockOpenSheet,
+      closeSheet: vi.fn(),
+      sheets: [],
+      removeSheet: vi.fn(),
+      closeAll: vi.fn(),
+    });
+
+    render(<GroupDetailContent groupId={1} />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "メンバー追加" })).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("button", { name: "メンバー追加" }));
+
+    expect(mockOpenSheet).toHaveBeenCalledOnce();
+    expect(mockOpenSheet).toHaveBeenCalledWith(expect.objectContaining({ id: "add-member-1" }));
+  });
+
+  it("追加成功後に MemberList と member_count が再取得される", async () => {
+    const user = userEvent.setup();
+
+    const { useSheetStack } = await import("@/shared/lib/sheet-stack");
+    const mockCloseSheet = vi.fn();
+    const mockOpenSheet = vi.fn();
+    vi.mocked(useSheetStack).mockReturnValue({
+      openSheet: mockOpenSheet,
+      closeSheet: mockCloseSheet,
+      sheets: [],
+      removeSheet: vi.fn(),
+      closeAll: vi.fn(),
+    });
+
+    const mockRefetch = vi.fn();
+    const { useGroupDetail } = await import("@/pages/group-detail/model/group-detail-state");
+    vi.mocked(useGroupDetail).mockReturnValue({
+      group: mockGroup,
+      error: null,
+      isLoading: false,
+      refetch: mockRefetch,
+    });
+
+    render(<GroupDetailContent groupId={1} />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "メンバー追加" })).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("button", { name: "メンバー追加" }));
+
+    expect(mockOpenSheet).toHaveBeenCalledOnce();
+
+    // openSheet に渡されたコンテンツの onClose を取得して実行する
+    const openSheetArg = mockOpenSheet.mock.calls[0]?.[0] as {
+      id: string;
+      content: { props: { onClose: () => void } };
+    };
+    expect(openSheetArg.id).toBe("add-member-1");
+
+    // onClose コールバックを直接呼び出してシミュレート
+    openSheetArg.content.props.onClose();
+
+    // AddMemberSheet 内での clearMemberListCache 呼び出しは AddMemberSheet 自身の責務のため
+    // GroupDetailContent の onClose では closeSheet と refetch が呼ばれることを検証する
+    expect(mockCloseSheet).toHaveBeenCalledOnce();
+    expect(mockRefetch).toHaveBeenCalledOnce();
   });
 });

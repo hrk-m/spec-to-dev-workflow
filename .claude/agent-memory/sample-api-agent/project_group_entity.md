@@ -42,7 +42,7 @@ type: project
 type GroupService interface {
     ListGroups(ctx context.Context, q string, limit, offset int) ([]domain.Group, int, error)
     GetByID(ctx context.Context, id uint64) (domain.Group, error)
-    ListGroupMembers(ctx context.Context, id, limit, offset uint64, q string) ([]domain.GroupMember, int, error)
+    ListGroupMembers(ctx context.Context, id, limit, offset uint64, q string) ([]domain.User, int, error)
     Store(ctx context.Context, name, description string) (domain.Group, error)
     Update(ctx context.Context, id int64, name, description string) (*domain.Group, error)
     Delete(ctx context.Context, id int64) error
@@ -53,9 +53,26 @@ type GroupService interface {
 
 ## GroupRepository インターフェース（group/service.go）
 
-ListNonGroupMembers, GetUserByID, AddGroupMembers が追加されている。
+ListNonGroupMembers, AddGroupMembers が追加されている（GetUserByID は削除済み）。
 
 注意: `ListNonGroupMembers` のシグネチャは Service 側が `(groupID, limit, offset int, ...)` で受け取り、
 内部で `uint64` に変換して Repository の `(groupID uint64, limit, offset int, ...)` を呼ぶ。
 
-**How to apply:** 新機能追加時は GroupService と GroupRepository の両 IF を同時に更新し、mock も同じ変更セットで追随させる。
+## UserRepository インターフェース（group/service.go）
+
+`GetUserByID` を分離して独立させた `UserRepository` インターフェース（2026-04-11 のリファクタリングで追加）：
+
+```go
+type UserRepository interface {
+    GetByID(ctx context.Context, id uint64) (domain.User, error)
+}
+```
+
+- `NewService(repo GroupRepository, userRepo UserRepository) *Service` — 2 引数シグネチャ
+- MySQL 実装: `internal/repository/mysql/user.go` の `UserRepository` 型
+- `main.go` では `groupRepo` と `userRepo` を分けて生成して渡す
+- `AddGroupMembers` 内の各ユーザー存在確認は `s.userRepo.GetByID` で行う
+
+`group.go` と `user.go` で共通クエリ文字列 `SELECT id, first_name, last_name FROM users WHERE id = ? AND deleted_at IS NULL` を `selectUserByIDQuery` 定数で共有している（goconst lint 対策）。
+
+**How to apply:** 新機能追加時は GroupService と GroupRepository / UserRepository の両 IF を同時に更新し、mock も同じ変更セットで追随させる。

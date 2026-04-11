@@ -27,20 +27,28 @@ const (
 type GroupRepository interface {
 	ListGroups(ctx context.Context, q string, limit, offset int) ([]domain.Group, int, error)
 	GetByID(ctx context.Context, id uint64) (domain.Group, error)
-	ListGroupMembers(ctx context.Context, id, limit, offset uint64, q string) ([]domain.GroupMember, int, error)
+	ListGroupMembers(ctx context.Context, id, limit, offset uint64, q string) ([]domain.User, int, error)
 	Store(ctx context.Context, name, description string) (domain.Group, error)
 	Update(ctx context.Context, id int64, name, description string) (*domain.Group, error)
 	Delete(ctx context.Context, id int64) error
+	ListNonGroupMembers(ctx context.Context, groupID uint64, limit, offset int, q string) ([]domain.User, int64, error)
+	AddGroupMembers(ctx context.Context, groupID uint64, userIDs []uint64) ([]domain.User, error)
+}
+
+// UserRepository defines the interface for user data access used by the group service.
+type UserRepository interface {
+	GetByID(ctx context.Context, id uint64) (domain.User, error)
 }
 
 // Service handles group business logic.
 type Service struct {
-	repo GroupRepository
+	repo     GroupRepository
+	userRepo UserRepository
 }
 
 // NewService returns a new Service instance.
-func NewService(repo GroupRepository) *Service {
-	return &Service{repo: repo}
+func NewService(repo GroupRepository, userRepo UserRepository) *Service {
+	return &Service{repo: repo, userRepo: userRepo}
 }
 
 // GetByID returns a group by its ID.
@@ -53,7 +61,7 @@ func (s *Service) GetByID(ctx context.Context, id uint64) (domain.Group, error) 
 }
 
 // ListGroupMembers returns a paginated list of members for a group.
-func (s *Service) ListGroupMembers(ctx context.Context, id, limit, offset uint64, q string) ([]domain.GroupMember, int, error) {
+func (s *Service) ListGroupMembers(ctx context.Context, id, limit, offset uint64, q string) ([]domain.User, int, error) {
 	if id < minID {
 		return nil, 0, domain.ErrBadParamInput
 	}
@@ -72,7 +80,7 @@ func (s *Service) ListGroupMembers(ctx context.Context, id, limit, offset uint64
 	}
 
 	if members == nil {
-		members = []domain.GroupMember{}
+		members = []domain.User{}
 	}
 
 	return members, total, nil
@@ -121,4 +129,49 @@ func (s *Service) ListGroups(ctx context.Context, q string, limit, offset int) (
 	}
 
 	return s.repo.ListGroups(ctx, q, limit, offset)
+}
+
+// ListNonGroupMembers returns a paginated list of users not in the given group.
+func (s *Service) ListNonGroupMembers(ctx context.Context, groupID, limit, offset int, q string) ([]domain.User, int64, error) {
+	if groupID < minID {
+		return nil, 0, domain.ErrBadParamInput
+	}
+	if limit < minMemberLimit || limit > maxMemberLimit {
+		return nil, 0, domain.ErrBadParamInput
+	}
+
+	gid := uint64(groupID) //nolint:gosec
+
+	// Check group existence first.
+	if _, err := s.repo.GetByID(ctx, gid); err != nil {
+		return nil, 0, err
+	}
+
+	users, total, err := s.repo.ListNonGroupMembers(ctx, gid, limit, offset, q)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	if users == nil {
+		users = []domain.User{}
+	}
+
+	return users, total, nil
+}
+
+// AddGroupMembers adds users to a group and returns the added members.
+func (s *Service) AddGroupMembers(ctx context.Context, groupID uint64, userIDs []uint64) ([]domain.User, error) {
+	// Check group existence.
+	if _, err := s.repo.GetByID(ctx, groupID); err != nil {
+		return nil, err
+	}
+
+	// Check each user exists.
+	for _, userID := range userIDs {
+		if _, err := s.userRepo.GetByID(ctx, userID); err != nil {
+			return nil, err
+		}
+	}
+
+	return s.repo.AddGroupMembers(ctx, groupID, userIDs)
 }

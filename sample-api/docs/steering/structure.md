@@ -16,7 +16,8 @@ sample-api/
 │   ├── service.go           # Service struct + コンストラクタ + メソッド
 │   ├── service_test.go      # 外部テストパッケージ (package {feature}_test)
 │   └── mocks/               # テスト用 mock（手動保守）
-│       └── {feature}_repository_mock.go
+│       ├── {feature}_repository_mock.go
+│       └── user_repository_mock.go  # 複数の repository IF を持つ場合（例: group は UserRepository も必要）
 ├── internal/
 │   ├── repository/
 │   │   └── mysql/           # Repository adapter（MySQL 実装）
@@ -39,6 +40,8 @@ sample-api/
 └── README.md                # プロジェクト説明
 ```
 
+例: `group/`, `user/`
+
 ## 命名パターン
 
 | 要素 | パターン | 例 |
@@ -60,12 +63,20 @@ e := echo.New()
 e.Use(middleware.CORS())           // ミドルウェア登録
 
 // group: repository → service → handler の標準パターン
+// GroupService は GroupRepository と UserRepository の両方を受け取る
 groupRepo := mysql.NewGroupRepository(db)
-gSvc := group.NewService(groupRepo)
+userRepo := mysql.NewUserRepository(db)
+gSvc := group.NewService(groupRepo, userRepo)
 rest.NewGroupHandler(e, gSvc)
+
+// user: user 一覧の標準パターン
+uSvc := user.NewService(userRepo)
+rest.NewUserHandler(e, uSvc)
 ```
 
 新しいドメインを追加する場合は group パターン（Repository → Service → Handler）を踏襲する。
+
+> **補足**: `mysql.UserRepository` は `group.UserRepository` と `user.UserRepository` の両インターフェースを実装している。複数のサービスから共有されるリポジトリ実装は 1 つのインスタンスを共有して DI する。
 
 ## 新規ドメイン追加時の手順
 

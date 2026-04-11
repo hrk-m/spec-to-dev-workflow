@@ -147,7 +147,7 @@
    - 存在しない（ErrNotFound）→
       - 404 Not Found { "message": "your requested item is not found" } を返す
       - 終了
-9. 各 user_id について Repository.GetUserByID(ctx, userID) でユーザー存在確認（WHERE id = ? AND deleted_at IS NULL）
+9. 各 user_id について UserRepository.GetByID(ctx, userID) でユーザー存在確認（WHERE id = ? AND deleted_at IS NULL）
    - 1 件でも存在しない（ErrNotFound）→
       - 404 Not Found { "message": "your requested item is not found" } を返す
       - 終了
@@ -315,16 +315,17 @@
 
 | ファイル                                                             | 役割                                                                                              |
 | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `sample-api/domain/group.go`                                         | User Entity（id, first_name, last_name）追加、または既存 GroupMember を再利用                    |
-| `sample-api/group/service.go`                                        | GroupRepository interface に `ListNonGroupMembers` / `GetUserByID` / `AddGroupMembers` 追加      |
+| `sample-api/domain/user.go`                                          | User Entity（id, first_name, last_name）定義                                                      |
+| `sample-api/group/service.go`                                        | GroupRepository interface に `ListNonGroupMembers` / `AddGroupMembers` 追加・UserRepository interface（`GetByID`）追加 |
 | `sample-api/group/service_test.go`                                   | Service ユニットテスト（各メソッド）                                                              |
 | `sample-api/group/mocks/group_repository_mock.go`                    | GroupRepository の手動 mock 更新                                                                  |
+| `sample-api/group/mocks/user_repository_mock.go`                     | UserRepository の手動 mock（group パッケージ用）                                                  |
 | `sample-api/internal/rest/group.go`                                  | HTTP Handler（`ListNonGroupMembers` / `AddGroupMembers`）・GroupService interface 追加            |
 | `sample-api/internal/rest/group_test.go`                             | Handler ユニットテスト                                                                            |
 | `sample-api/internal/rest/mocks/group_service_mock.go`               | GroupService の手動 mock 更新                                                                     |
-| `sample-api/internal/repository/mysql/group.go`                      | MySQL 実装（`ListNonGroupMembers` / `GetUserByID` / `AddGroupMembers`）                          |
-| `sample-api/db/migrate/{timestamp}_add_search_key_to_users.up.sql`  | `users` テーブルへの `search_key` VIRTUAL GENERATED COLUMN 追加マイグレーション                   |
-| `sample-api/db/migrate/{timestamp}_add_search_key_to_users.down.sql` | ロールバック用（DROP COLUMN）                                                                     |
+| `sample-api/internal/repository/mysql/group.go`                      | MySQL 実装（`ListNonGroupMembers` / `AddGroupMembers`）                                           |
+| `sample-api/internal/repository/mysql/user.go`                       | UserRepository 実装（`GetByID`）。group サービスの UserRepository IF を満たす                     |
+| `sample-api/db/migrate/20260411120000_add_search_key_to_users.up.sql` | `users` テーブルへの `search_key` VIRTUAL GENERATED COLUMN 追加マイグレーション                  |
 
 ### sample-front
 

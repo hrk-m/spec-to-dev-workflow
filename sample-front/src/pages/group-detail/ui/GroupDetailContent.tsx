@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Box, Button, Flex, Heading, Skeleton, Text } from "@radix-ui/themes";
 import { useNavigate } from "react-router";
 
-import type { Member } from "@/pages/group-detail/model/group-detail";
+import type { UserSummary } from "@/pages/group-detail/model/group-detail";
 import { useGroupDetail } from "@/pages/group-detail/model/group-detail-state";
+import { useSheetStack } from "@/shared/lib/sheet-stack";
+import { AddMemberSheet } from "./AddMemberSheet";
 import { DeleteGroupDialog } from "./DeleteGroupDialog";
 import { EditGroupDialog } from "./EditGroupDialog";
 import { styles } from "./GroupDetailPage.styles";
@@ -11,7 +13,7 @@ import { MemberList } from "./MemberList";
 
 type GroupDetailContentProps = {
   groupId: number;
-  onMemberClick?: (member: Member) => void;
+  onMemberClick?: (member: UserSummary) => void;
 };
 
 function GroupInfoSkeleton() {
@@ -35,9 +37,25 @@ function GroupInfoSkeleton() {
 export function GroupDetailContent({ groupId, onMemberClick }: GroupDetailContentProps) {
   const { group, error, isLoading, refetch } = useGroupDetail(groupId);
   const navigate = useNavigate();
+  const { openSheet, closeSheet } = useSheetStack();
   const shouldShowSkeleton = isLoading && !group;
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  const handleOpenAddMemberSheet = useCallback(() => {
+    openSheet({
+      id: `add-member-${groupId}`,
+      content: (
+        <AddMemberSheet
+          groupId={groupId}
+          onClose={() => {
+            closeSheet();
+            refetch();
+          }}
+        />
+      ),
+    });
+  }, [groupId, openSheet, closeSheet, refetch]);
 
   return (
     <>
@@ -110,9 +128,14 @@ export function GroupDetailContent({ groupId, onMemberClick }: GroupDetailConten
             <Text as="p" style={styles.sectionTitle}>
               Members
             </Text>
-            <Text as="p" style={styles.sectionMeta}>
-              {group.member_count} total
-            </Text>
+            <Flex align="center" gap="3">
+              <Text as="p" style={styles.sectionMeta}>
+                {group.member_count} total
+              </Text>
+              <Button variant="soft" size="1" onClick={handleOpenAddMemberSheet}>
+                メンバー追加
+              </Button>
+            </Flex>
           </Box>
 
           <MemberList groupId={groupId} onMemberClick={onMemberClick} />

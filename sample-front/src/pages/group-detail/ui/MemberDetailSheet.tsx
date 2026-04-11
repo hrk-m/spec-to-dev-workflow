@@ -1,9 +1,9 @@
 import { Box, Text } from "@radix-ui/themes";
 
-import type { Member } from "@/pages/group-detail/model/group-detail";
+import type { UserSummary } from "@/pages/group-detail/model/group-detail";
 
 type MemberDetailSheetProps = {
-  member: Member;
+  member: UserSummary;
 };
 
 export function MemberDetailSheet({ member }: MemberDetailSheetProps) {

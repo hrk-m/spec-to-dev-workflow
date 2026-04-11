@@ -17,6 +17,7 @@ import (
 	groupSvc "github.com/hrk-m/spec-to-dev-workflow/sample-api/group"
 	mysqlRepo "github.com/hrk-m/spec-to-dev-workflow/sample-api/internal/repository/mysql"
 	"github.com/hrk-m/spec-to-dev-workflow/sample-api/internal/rest"
+	userSvc "github.com/hrk-m/spec-to-dev-workflow/sample-api/user"
 )
 
 const (
@@ -91,8 +92,11 @@ func main() {
 	rest.RegisterHealthHandler(e, db)
 
 	groupRepo := mysqlRepo.NewGroupRepository(db)
-	gSvc := groupSvc.NewService(groupRepo)
+	userRepo := mysqlRepo.NewUserRepository(db)
+	gSvc := groupSvc.NewService(groupRepo, userRepo)
 	rest.NewGroupHandler(e, gSvc)
+	uSvc := userSvc.NewService(userRepo)
+	rest.NewUserHandler(e, uSvc)
 
 	e.Logger.Fatal(e.Start(":" + listenPort))
 }

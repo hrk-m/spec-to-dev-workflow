@@ -23,7 +23,7 @@
 | `id`       | integer (path)  | ✓    | グループの ID。正の整数                              |
 | `limit`    | integer (query) | —    | 取得件数上限。1〜500（デフォルト: 500）              |
 | `offset`   | integer (query) | —    | 取得開始位置。0 以上（デフォルト: 0）                |
-| `q`        | string (query)  | —    | 検索キーワード。first_name OR last_name の LIKE 検索 |
+| `q`        | string (query)  | —    | 検索キーワード。search_key LIKE 検索（姓名・名姓順両方向対応） |
 
 #### バリデーション一覧
 
@@ -90,7 +90,7 @@
       - 終了
 10. Repository.ListGroupMembers(ctx, id, limit, offset, q) を呼び出す
 11. DB: group_members JOIN users WHERE group_id = :id
-    - q が指定されている場合: users.first_name LIKE '%q%' OR users.last_name LIKE '%q%'
+    - q が指定されている場合: search_key LIKE '%q%'（searchKeyLikeClause 定数を使用）
     - LIMIT :limit OFFSET :offset
     - total: フィルターなしの GROUP の全メンバー数を COUNT で取得
 12. DB エラーの場合
@@ -219,7 +219,7 @@
 4. `id` が整数でない / 0 以下の場合に 400 を返す
 5. `limit` が 1〜500 の範囲外の場合に 400 を返す
 6. 対象グループが存在しない場合に 404 を返す
-7. `q` パラメータで first_name OR last_name の LIKE 検索が動作する
+7. `q` パラメータで search_key LIKE 検索が動作する（姓名・名姓順両方向対応）
 8. 詳細ページにメンバー一覧がデフォルト 20 件/ページで表示される（20/50/100 切り替え可）
 9. 500 件を超えるメンバーがいる場合、追加フェッチ（offset 増加）が実行される
 10. メンバー検索で 0 件のとき、"No members found." を表示し、ページネーションを非表示にする
