@@ -102,7 +102,7 @@ test.describe("シートナビゲーション", () => {
     await expect(dialog.getByText("Members")).toBeVisible();
   });
 
-  test("シートが開いた状態で body.style.overflow が hidden になる", async ({
+  test("シートが開いた状態で body.style.overflow が変更されない", async ({
     page,
   }) => {
     await goToHomeAndShowGroup001(page);
@@ -115,7 +115,7 @@ test.describe("シートナビゲーション", () => {
     await page.waitForSelector('[role="dialog"]');
 
     const overflow = await page.evaluate(() => document.body.style.overflow);
-    expect(overflow).toBe("hidden");
+    expect(overflow).toBe("");
   });
 
   test("メンバー行クリックで MemberDetailSheet がスタックに積まれる", async ({

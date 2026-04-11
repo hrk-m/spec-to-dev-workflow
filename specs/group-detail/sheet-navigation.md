@@ -51,15 +51,15 @@
 
 ## 使用コンポーネント・状態
 
-| 要素 | 種別 | 役割 |
-|---|---|---|
-| `GroupNavigationLayout` | コンポーネント（app/routes） | URL と state を見てシートかフルページかを振り分ける |
-| `Sheet` | コンポーネント（shared/ui） | スライドインシートの汎用コンポーネント。body scroll lock・ESC・overlay クローズを内蔵 |
-| `GroupDetailRouteSheet` | コンポーネント（app/routes） | Sheet の closing state と幅制御を担う。groupId が変わると closing をリセット |
-| `GroupDetailSheet` | コンポーネント（pages/group-detail） | GroupDetailView のシートコンテンツ版。groupId と onMemberClick を props で受取 |
-| `MemberDetailSheet` | コンポーネント（pages/group-detail） | メンバー名とプレースホルダーメッセージを表示する |
-| `SheetStackProvider` / `useSheetStack` | Context / Hook（shared/lib/sheet-stack） | MemberDetailSheet のスタック管理。sheets 配列を共有する |
-| `closing` | state | Sheet のスライドアウトアニメーションをトリガーするフラグ |
+| 要素                                   | 種別                                     | 役割                                                                                                                                                                                        |
+| -------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GroupNavigationLayout`                | コンポーネント（app/routes）             | URL と state を見てシートかフルページかを振り分ける                                                                                                                                         |
+| `Sheet`                                | コンポーネント（shared/ui）              | スライドインシートの汎用コンポーネント。ESC・overlay クローズを内蔵。overlay の `onWheel` + container の `overscrollBehavior: contain` でスクロール制御（body.style.overflow は変更しない） |
+| `GroupDetailRouteSheet`                | コンポーネント（app/routes）             | Sheet の closing state と幅制御を担う。groupId が変わると closing をリセット                                                                                                                |
+| `GroupDetailSheet`                     | コンポーネント（pages/group-detail）     | GroupDetailView のシートコンテンツ版。groupId と onMemberClick を props で受取                                                                                                              |
+| `MemberDetailSheet`                    | コンポーネント（pages/group-detail）     | メンバー名とプレースホルダーメッセージを表示する                                                                                                                                            |
+| `SheetStackProvider` / `useSheetStack` | Context / Hook（shared/lib/sheet-stack） | MemberDetailSheet のスタック管理。sheets 配列を共有する                                                                                                                                     |
+| `closing`                              | state                                    | Sheet のスライドアウトアニメーションをトリガーするフラグ                                                                                                                                    |
 
 ---
 
@@ -71,7 +71,7 @@
 - [ ] × ボタンクリックでシートが閉じる
 - [ ] ESC キーでシートが閉じる
 - [ ] シート外エリア（オーバーレイ）クリックでシートが閉じる
-- [ ] シートが開いている間 body のスクロールが無効になる（overflow: hidden）
+- [ ] シートが開いている間 body のスクロールバーが維持される（body.style.overflow は変更されない）
 - [ ] メンバー行クリックで MemberDetailSheet が積まれる（2 枚のシートが重なる）
 - [ ] MemberDetailSheet の × で MemberDetailSheet だけ閉じ、GroupDetailSheet が残る
 - [ ] MemberDetailSheet にメンバー名（姓・名）が表示される

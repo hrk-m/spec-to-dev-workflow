@@ -153,3 +153,36 @@ func TestStore_DBError(t *testing.T) {
 	assert.ErrorIs(t, err, domain.ErrInternalServerError)
 	assert.Equal(t, domain.Group{}, g)
 }
+
+func TestUpdate_OK(t *testing.T) {
+	db := testDB(t)
+	defer db.Close()
+
+	// Insert a group to update.
+	result, err := db.Exec("INSERT INTO `groups` (name, description) VALUES ('Before Update', 'old desc')")
+	require.NoError(t, err)
+
+	id, err := result.LastInsertId()
+	require.NoError(t, err)
+
+	defer db.Exec("DELETE FROM `groups` WHERE id = ?", id) //nolint:errcheck
+
+	repo := mysqlRepo.NewGroupRepository(db)
+	g, err := repo.Update(context.Background(), id, "After Update", "new desc")
+
+	require.NoError(t, err)
+	assert.Equal(t, uint64(id), g.ID) //nolint:gosec
+	assert.Equal(t, "After Update", g.Name)
+	assert.Equal(t, "new desc", g.Description)
+	assert.Equal(t, 0, g.MemberCount)
+}
+
+func TestUpdate_NotFound(t *testing.T) {
+	db := testDB(t)
+	defer db.Close()
+
+	repo := mysqlRepo.NewGroupRepository(db)
+	_, err := repo.Update(context.Background(), 999999999, "name", "desc")
+
+	assert.ErrorIs(t, err, domain.ErrNotFound)
+}

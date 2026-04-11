@@ -44,9 +44,15 @@ export const styles = {
   header: {
     display: "flex",
     alignItems: "center",
-    justifyContent: "flex-end",
+    justifyContent: "space-between",
     padding: "12px 16px",
     flexShrink: 0,
+  },
+  titleText: {
+    fontSize: 40,
+    fontWeight: 700,
+    letterSpacing: -0.7,
+    color: appColors.textPrimary,
   },
   closeButton: {
     width: 32,

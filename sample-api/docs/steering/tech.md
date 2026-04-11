@@ -39,6 +39,7 @@ db/seed/                    →  Seed data (DML only)
 - `domain/errors.go` にセンチネルエラーを集約
 - `internal/rest/errors.go` でエラーを HTTP ステータスコードにマッピング（`ErrBadParamInput` → 400、`ErrNotFound` → 404、`ErrConflict` → 409、`ErrInternalServerError` → 500、その他 → 500）
 - ハンドラは `ResponseError{Message}` で JSON エラーレスポンスを返す
+- パスパラメータの ID は `strconv.Atoi` でパースし、変換失敗または `< 1` の場合は `getStatusCode` を通さず直接 400 を返す
 
 ## コーディング規約
 
@@ -55,3 +56,35 @@ db/seed/                    →  Seed data (DML only)
 - mock は `mocks/` ディレクトリに分離配置する（`{feature}/mocks/` に `MockXxxRepository`、`internal/rest/mocks/` に `MockXxxService`）
 - mock は手動保守し、interface 変更時は同じ変更セットで追随させる
 - エラー系（センチネルエラー、予期しないエラー）のケースを必ず網羅する
+
+## サービスインターフェース（`GroupService`）
+
+`internal/rest/group.go` に定義された `GroupService` インターフェース。delivery 層が use case 層に依存するパターンを示す。
+
+```go
+type GroupService interface {
+    ListGroups(ctx context.Context, q string, limit, offset int) ([]domain.Group, int, error)
+    GetByID(ctx context.Context, id uint64) (domain.Group, error)
+    ListGroupMembers(ctx context.Context, id, limit, offset uint64, q string) ([]domain.GroupMember, int, error)
+    Store(ctx context.Context, name, description string) (domain.Group, error)
+    Update(ctx context.Context, id int64, name, description string) (*domain.Group, error)
+}
+```
+
+`Update` は ID（`int64`）・name・description を受け取り、更新後の `*domain.Group` を返す。
+
+## リポジトリインターフェース（`GroupRepository`）
+
+`group/service.go` に定義された `GroupRepository` インターフェース。use case 層が repository adapter に依存するパターンを示す。
+
+```go
+type GroupRepository interface {
+    ListGroups(ctx context.Context, q string, limit, offset int) ([]domain.Group, int, error)
+    GetByID(ctx context.Context, id uint64) (domain.Group, error)
+    ListGroupMembers(ctx context.Context, id, limit, offset uint64, q string) ([]domain.GroupMember, int, error)
+    Store(ctx context.Context, name, description string) (domain.Group, error)
+    Update(ctx context.Context, id int64, name, description string) (*domain.Group, error)
+}
+```
+
+`Update` は DB の `groups` テーブルを `WHERE id = ? AND deleted_at IS NULL` で更新し、`RowsAffected() == 0` なら `ErrNotFound` を返す。更新後に `GetByID` で最新状態を取得して返す。

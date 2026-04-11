@@ -1,7 +1,9 @@
-import { Box, Skeleton, Text } from "@radix-ui/themes";
+import { useState } from "react";
+import { Box, Button, Flex, Heading, Skeleton, Text } from "@radix-ui/themes";
 
 import type { Member } from "@/pages/group-detail/model/group-detail";
 import { useGroupDetail } from "@/pages/group-detail/model/group-detail-state";
+import { EditGroupDialog } from "./EditGroupDialog";
 import { styles } from "./GroupDetailPage.styles";
 import { MemberList } from "./MemberList";
 
@@ -29,8 +31,9 @@ function GroupInfoSkeleton() {
 }
 
 export function GroupDetailContent({ groupId, onMemberClick }: GroupDetailContentProps) {
-  const { group, error, isLoading } = useGroupDetail(groupId);
+  const { group, error, isLoading, refetch } = useGroupDetail(groupId);
   const shouldShowSkeleton = isLoading && !group;
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   return (
     <>
@@ -50,6 +53,15 @@ export function GroupDetailContent({ groupId, onMemberClick }: GroupDetailConten
             </Text>
           )}
 
+          <Flex justify="between" align="center" mb="3">
+            <Heading as="h1" style={{ fontSize: 40, fontWeight: 700, letterSpacing: -0.7 }}>
+              Group
+            </Heading>
+            <Button variant="soft" onClick={() => setEditDialogOpen(true)}>
+              Edit
+            </Button>
+          </Flex>
+
           <Box style={styles.sectionCard}>
             <Box style={{ ...styles.infoRow, ...styles.infoRowBorder }}>
               <Text as="p" style={styles.infoLabel}>
@@ -68,6 +80,15 @@ export function GroupDetailContent({ groupId, onMemberClick }: GroupDetailConten
               </Text>
             </Box>
           </Box>
+
+          <EditGroupDialog
+            groupId={groupId}
+            initialName={group.name}
+            initialDescription={group.description}
+            open={editDialogOpen}
+            onOpenChange={setEditDialogOpen}
+            onSuccess={refetch}
+          />
 
           <Box style={styles.sectionHeader}>
             <Text as="p" style={styles.sectionTitle}>

@@ -670,3 +670,158 @@ func TestGroupHandler_Store_InternalError(t *testing.T) {
 	assert.Equal(t, "internal server error", result["message"])
 	svc.AssertExpectations(t)
 }
+
+func TestGroupHandler_Update_OK(t *testing.T) {
+	e := echo.New()
+	body := strings.NewReader(`{"name":"Updated","description":"New Desc"}`)
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/groups/1", body)
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/groups/:id")
+	c.SetParamNames("id")
+	c.SetParamValues("1")
+
+	svc := new(mocks.MockGroupService)
+	resp := &domain.Group{ID: 1, Name: "Updated", Description: "New Desc", MemberCount: 5}
+	svc.On("Update", mock.Anything, int64(1), "Updated", "New Desc").Return(resp, nil)
+
+	h := &rest.GroupHandler{Service: svc}
+	err := h.Update(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	var result domain.Group
+	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
+	assert.Equal(t, uint64(1), result.ID)
+	assert.Equal(t, "Updated", result.Name)
+	assert.Equal(t, "New Desc", result.Description)
+	assert.Equal(t, 5, result.MemberCount)
+	svc.AssertExpectations(t)
+}
+
+func TestGroupHandler_Update_InvalidIDString(t *testing.T) {
+	e := echo.New()
+	body := strings.NewReader(`{"name":"Updated","description":"Desc"}`)
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/groups/abc", body)
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/groups/:id")
+	c.SetParamNames("id")
+	c.SetParamValues("abc")
+
+	h := &rest.GroupHandler{Service: new(mocks.MockGroupService)}
+	err := h.Update(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+
+	var result map[string]string
+	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
+	assert.Equal(t, "given param is not valid", result["message"])
+}
+
+func TestGroupHandler_Update_ZeroID(t *testing.T) {
+	e := echo.New()
+	body := strings.NewReader(`{"name":"Updated","description":"Desc"}`)
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/groups/0", body)
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/groups/:id")
+	c.SetParamNames("id")
+	c.SetParamValues("0")
+
+	h := &rest.GroupHandler{Service: new(mocks.MockGroupService)}
+	err := h.Update(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+
+	var result map[string]string
+	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
+	assert.Equal(t, "given param is not valid", result["message"])
+}
+
+func TestGroupHandler_Update_ServiceBadParam(t *testing.T) {
+	e := echo.New()
+	body := strings.NewReader(`{"name":"","description":"Desc"}`)
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/groups/1", body)
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/groups/:id")
+	c.SetParamNames("id")
+	c.SetParamValues("1")
+
+	svc := new(mocks.MockGroupService)
+	svc.On("Update", mock.Anything, int64(1), "", "Desc").
+		Return((*domain.Group)(nil), domain.ErrBadParamInput)
+
+	h := &rest.GroupHandler{Service: svc}
+	err := h.Update(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+
+	var result map[string]string
+	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
+	assert.Equal(t, "given param is not valid", result["message"])
+	svc.AssertExpectations(t)
+}
+
+func TestGroupHandler_Update_ServiceNotFound(t *testing.T) {
+	e := echo.New()
+	body := strings.NewReader(`{"name":"Updated","description":"Desc"}`)
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/groups/9999", body)
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/groups/:id")
+	c.SetParamNames("id")
+	c.SetParamValues("9999")
+
+	svc := new(mocks.MockGroupService)
+	svc.On("Update", mock.Anything, int64(9999), "Updated", "Desc").
+		Return((*domain.Group)(nil), domain.ErrNotFound)
+
+	h := &rest.GroupHandler{Service: svc}
+	err := h.Update(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusNotFound, rec.Code)
+
+	var result map[string]string
+	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
+	assert.Equal(t, "your requested item is not found", result["message"])
+	svc.AssertExpectations(t)
+}
+
+func TestGroupHandler_Update_ServiceInternalError(t *testing.T) {
+	e := echo.New()
+	body := strings.NewReader(`{"name":"Updated","description":"Desc"}`)
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/groups/1", body)
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/groups/:id")
+	c.SetParamNames("id")
+	c.SetParamValues("1")
+
+	svc := new(mocks.MockGroupService)
+	svc.On("Update", mock.Anything, int64(1), "Updated", "Desc").
+		Return((*domain.Group)(nil), domain.ErrInternalServerError)
+
+	h := &rest.GroupHandler{Service: svc}
+	err := h.Update(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+
+	var result map[string]string
+	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
+	assert.Equal(t, "internal server error", result["message"])
+	svc.AssertExpectations(t)
+}

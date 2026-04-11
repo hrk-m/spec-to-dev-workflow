@@ -33,3 +33,9 @@ func (m *MockGroupRepository) Store(ctx context.Context, name, description strin
 	args := m.Called(ctx, name, description)
 	return args.Get(0).(domain.Group), args.Error(1)
 }
+
+func (m *MockGroupRepository) Update(ctx context.Context, id int64, name, description string) (*domain.Group, error) {
+	args := m.Called(ctx, id, name, description)
+	g, _ := args.Get(0).(*domain.Group)
+	return g, args.Error(1)
+}

@@ -27,6 +27,7 @@ type GroupService interface {
 	GetByID(ctx context.Context, id uint64) (domain.Group, error)
 	ListGroupMembers(ctx context.Context, id, limit, offset uint64, q string) ([]domain.GroupMember, int, error)
 	Store(ctx context.Context, name, description string) (domain.Group, error)
+	Update(ctx context.Context, id int64, name, description string) (*domain.Group, error)
 }
 
 // GroupHandler handles HTTP requests for the group endpoints.
@@ -41,6 +42,7 @@ func NewGroupHandler(e *echo.Echo, svc GroupService) {
 	e.GET("/api/v1/groups/:id", h.GetByID)
 	e.GET("/api/v1/groups/:id/members", h.ListGroupMembers)
 	e.POST("/api/v1/groups", h.Store)
+	e.PUT("/api/v1/groups/:id", h.Update)
 }
 
 type groupListResponse struct {
@@ -54,6 +56,11 @@ type groupMemberListResponse struct {
 }
 
 type storeGroupRequest struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
+type updateGroupRequest struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 }
@@ -73,6 +80,32 @@ func (h *GroupHandler) Store(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusCreated, result)
+}
+
+// Update handles PUT /api/v1/groups/:id.
+func (h *GroupHandler) Update(c echo.Context) error {
+	ctx := c.Request().Context()
+
+	idP, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, ResponseError{Message: domain.ErrBadParamInput.Error()})
+	}
+
+	if idP < 1 {
+		return c.JSON(http.StatusBadRequest, ResponseError{Message: domain.ErrBadParamInput.Error()})
+	}
+
+	var req updateGroupRequest
+	if bindErr := c.Bind(&req); bindErr != nil {
+		return c.JSON(http.StatusBadRequest, ResponseError{Message: bindErr.Error()})
+	}
+
+	result, err := h.Service.Update(ctx, int64(idP), req.Name, req.Description)
+	if err != nil {
+		return c.JSON(getStatusCode(err), ResponseError{Message: err.Error()})
+	}
+
+	return c.JSON(http.StatusOK, result)
 }
 
 // GetByID handles GET /api/v1/groups/:id.

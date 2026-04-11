@@ -353,3 +353,79 @@ func TestService_Store_RepositoryError(t *testing.T) {
 	assert.ErrorIs(t, err, domain.ErrInternalServerError)
 	repo.AssertExpectations(t)
 }
+
+func TestService_Update_OK(t *testing.T) {
+	repo := new(mocks.MockGroupRepository)
+	svc := group.NewService(repo)
+
+	expected := &domain.Group{ID: 1, Name: "Updated Group", Description: "New desc", MemberCount: 3}
+	repo.On("Update", mock.Anything, int64(1), "Updated Group", "New desc").Return(expected, nil)
+
+	result, err := svc.Update(context.Background(), 1, "Updated Group", "New desc")
+
+	assert.NoError(t, err)
+	assert.Equal(t, expected, result)
+	repo.AssertExpectations(t)
+}
+
+func TestService_Update_TrimsName(t *testing.T) {
+	repo := new(mocks.MockGroupRepository)
+	svc := group.NewService(repo)
+
+	expected := &domain.Group{ID: 1, Name: "Trimmed", Description: "", MemberCount: 0}
+	repo.On("Update", mock.Anything, int64(1), "Trimmed", "").Return(expected, nil)
+
+	result, err := svc.Update(context.Background(), 1, "  Trimmed  ", "")
+
+	assert.NoError(t, err)
+	assert.Equal(t, expected, result)
+	repo.AssertExpectations(t)
+}
+
+func TestService_Update_EmptyName(t *testing.T) {
+	repo := new(mocks.MockGroupRepository)
+	svc := group.NewService(repo)
+
+	_, err := svc.Update(context.Background(), 1, "", "desc")
+
+	assert.ErrorIs(t, err, domain.ErrBadParamInput)
+	repo.AssertNotCalled(t, "Update")
+}
+
+func TestService_Update_WhitespaceOnlyName(t *testing.T) {
+	repo := new(mocks.MockGroupRepository)
+	svc := group.NewService(repo)
+
+	_, err := svc.Update(context.Background(), 1, "   ", "desc")
+
+	assert.ErrorIs(t, err, domain.ErrBadParamInput)
+	repo.AssertNotCalled(t, "Update")
+}
+
+func TestService_Update_NameTooLong(t *testing.T) {
+	repo := new(mocks.MockGroupRepository)
+	svc := group.NewService(repo)
+
+	longName := make([]byte, 101)
+	for i := range longName {
+		longName[i] = 'a'
+	}
+
+	_, err := svc.Update(context.Background(), 1, string(longName), "desc")
+
+	assert.ErrorIs(t, err, domain.ErrBadParamInput)
+	repo.AssertNotCalled(t, "Update")
+}
+
+func TestService_Update_RepositoryError(t *testing.T) {
+	repo := new(mocks.MockGroupRepository)
+	svc := group.NewService(repo)
+
+	repo.On("Update", mock.Anything, int64(1), "Valid", "desc").
+		Return((*domain.Group)(nil), domain.ErrInternalServerError)
+
+	_, err := svc.Update(context.Background(), 1, "Valid", "desc")
+
+	assert.ErrorIs(t, err, domain.ErrInternalServerError)
+	repo.AssertExpectations(t)
+}

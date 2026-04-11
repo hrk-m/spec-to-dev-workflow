@@ -118,6 +118,32 @@ func (r *GroupRepository) Store(ctx context.Context, name, description string) (
 	}, nil
 }
 
+// Update modifies a group's name and description, then returns the updated entity.
+func (r *GroupRepository) Update(ctx context.Context, id int64, name, description string) (*domain.Group, error) {
+	query := "UPDATE `groups` SET name = ?, description = ? WHERE id = ? AND deleted_at IS NULL"
+
+	result, err := r.db.ExecContext(ctx, query, name, description, id)
+	if err != nil {
+		return nil, domain.ErrInternalServerError
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return nil, domain.ErrInternalServerError
+	}
+
+	if rows == 0 {
+		return nil, domain.ErrNotFound
+	}
+
+	g, err := r.GetByID(ctx, uint64(id)) //nolint:gosec
+	if err != nil {
+		return nil, err
+	}
+
+	return &g, nil
+}
+
 // GetByID returns a single group by ID with its member count.
 func (r *GroupRepository) GetByID(ctx context.Context, id uint64) (domain.Group, error) {
 	query := "SELECT g.id, g.name, g.description, COUNT(gm.id) AS member_count" +

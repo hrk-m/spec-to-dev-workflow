@@ -11,6 +11,7 @@ type SheetProps = {
   isTopMost?: boolean;
   zIndex?: number;
   width?: CSSProperties["width"];
+  title?: string;
 };
 
 export function Sheet({
@@ -21,6 +22,7 @@ export function Sheet({
   isTopMost = true,
   zIndex = sheetConstants.baseZIndex,
   width = sheetConstants.defaultWidth,
+  title,
 }: SheetProps) {
   const [mounted, setMounted] = useState(false);
 
@@ -30,14 +32,6 @@ export function Sheet({
     });
     return () => {
       cancelAnimationFrame(frameId);
-    };
-  }, []);
-
-  useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
     };
   }, []);
 
@@ -69,6 +63,7 @@ export function Sheet({
       <div
         style={{ ...styles.overlay, zIndex, opacity: overlayOpacity }}
         onClick={onClose}
+        onWheel={(e) => e.preventDefault()}
         role="presentation"
         data-testid="sheet-overlay"
       />
@@ -78,12 +73,14 @@ export function Sheet({
           zIndex: zIndex + 1,
           width,
           transform,
+          overscrollBehavior: "contain",
         }}
         role="dialog"
         aria-modal="true"
         onTransitionEnd={handleTransitionEnd}
       >
         <div style={styles.header}>
+          {title ? <span style={styles.titleText}>{title}</span> : <span />}
           <button type="button" style={styles.closeButton} onClick={onClose} aria-label="Close">
             &times;
           </button>

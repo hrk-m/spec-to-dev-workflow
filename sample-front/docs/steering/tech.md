@@ -67,12 +67,15 @@ import { apiFetch } from "../../shared/api/client";
 
 - **アニメーション**: 500ms `cubic-bezier(0.4, 0, 0.2, 1)` で `transform` と `width`
   を同時にトランジション。オーバーレイは `ease-out` でフェード
-- **スクロールロック**: マウント時に `document.body.style.overflow = "hidden"`
-  を設定し、アンマウント時に復元
+- **スクロール制御**: `document.body.style.overflow` を操作する代わりに、オーバーレイの `onWheel` で
+  `preventDefault()` を呼び出して背面スクロールをブロックし、コンテナに
+  `overscrollBehavior: "contain"` を設定してシート内スクロールがページに伝播しないようにする
 - **ESC キー**: `keydown` イベントで `Escape` キーを検知し `onClose` を呼び出す
 - **オーバーレイクリック**: オーバーレイ領域のクリックで `onClose` を呼び出す
 - **クローズアニメーション**: `closing` prop が `true` になると `translateX(100%)`
   へスライドアウトし、`transitionend` イベントで `onRemove` を呼んで DOM から除去
+- **タイトル表示**: `title` prop（省略可能）を渡すと、ヘッダー左側に fontSize 40 / fontWeight
+  700 のタイトルを表示。省略時はヘッダー左側は空のスペースとなり、閉じるボタンが右端に配置される
 
 ### z-index 階層
 
