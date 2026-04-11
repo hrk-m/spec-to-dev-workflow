@@ -287,6 +287,17 @@ These techniques are part of systematic debugging and available in this director
 - **superpowers:test-driven-development** - For creating failing test case (Phase 4, Step 1)
 - **superpowers:verification-before-completion** - Verify fix worked before claiming success
 
+## Phase 5: Post-Fix Handoff to plan-writer
+
+Phase 4 で全バグの修正が完了し、テスト・lint・build が全 pass になったら実行する。
+
+1. 今回修正したバグをテーブル形式（バグ概要・根本原因・修正箇所）でチャットに提示する
+2. `AskUserQuestion` で「plans/ に記録しますか？」を確認する
+   - **いいえ** → `AskUserQuestion` で「まだ直っていない箇所や気になる点があれば入力してください。」とフリーテキストで確認し、入力内容とともに「他にも未修正のバグが残っている可能性があります。引き続き調査を続けてください。」と出力して終了する（入力なしの場合はそのまま終了する）
+   - **はい** → バグ一覧を持って `.claude/skills/plan-writer/SKILL.md` の「systematic-debugging からの呼び出し時」フローへ引き渡す
+
+---
+
 ## Real-World Impact
 
 From debugging sessions:

@@ -178,7 +178,7 @@ describe("Sheet", () => {
     });
   });
 
-  it("マウント時に document.body.style.overflow が hidden になる", () => {
+  it("マウント時に document.body.style.overflow が変更されない", () => {
     document.body.style.overflow = "";
 
     render(
@@ -187,23 +187,22 @@ describe("Sheet", () => {
       </Sheet>,
     );
 
-    expect(document.body.style.overflow).toBe("hidden");
+    expect(document.body.style.overflow).toBe("");
   });
 
-  it("アンマウント時に document.body.style.overflow が元に戻る", () => {
-    document.body.style.overflow = "";
-
-    const { unmount } = render(
+  it("overlay の wheel イベントで preventDefault が呼ばれる", () => {
+    render(
       <Sheet onClose={vi.fn()} onRemove={vi.fn()}>
         <p>Sheet content</p>
       </Sheet>,
     );
 
-    expect(document.body.style.overflow).toBe("hidden");
+    const overlay = screen.getByTestId("sheet-overlay");
+    const preventDefaultSpy = vi.spyOn(Event.prototype, "preventDefault");
+    fireEvent.wheel(overlay);
 
-    unmount();
-
-    expect(document.body.style.overflow).toBe("");
+    expect(preventDefaultSpy).toHaveBeenCalled();
+    preventDefaultSpy.mockRestore();
   });
 
   it("マウント直後（rAF 前）に overlay の opacity が 0 である", () => {

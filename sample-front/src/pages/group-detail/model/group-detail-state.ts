@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { fetchGroup } from "@/pages/group-detail/api/fetch-group";
 import type { GroupDetail } from "@/pages/group-detail/model/group-detail";
@@ -15,6 +15,12 @@ export function useGroupDetail(groupId: number) {
   );
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(() => !groupDetailCache.has(groupId));
+  const [refetchKey, setRefetchKey] = useState(0);
+
+  const refetch = useCallback(() => {
+    groupDetailCache.delete(groupId);
+    setRefetchKey((prev) => prev + 1);
+  }, [groupId]);
 
   useEffect(() => {
     let isActive = true;
@@ -43,7 +49,7 @@ export function useGroupDetail(groupId: number) {
     return () => {
       isActive = false;
     };
-  }, [groupId]);
+  }, [groupId, refetchKey]);
 
-  return { group, error, isLoading };
+  return { group, error, isLoading, refetch };
 }

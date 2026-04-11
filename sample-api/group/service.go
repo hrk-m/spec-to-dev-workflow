@@ -29,6 +29,7 @@ type GroupRepository interface {
 	GetByID(ctx context.Context, id uint64) (domain.Group, error)
 	ListGroupMembers(ctx context.Context, id, limit, offset uint64, q string) ([]domain.GroupMember, int, error)
 	Store(ctx context.Context, name, description string) (domain.Group, error)
+	Update(ctx context.Context, id int64, name, description string) (*domain.Group, error)
 }
 
 // Service handles group business logic.
@@ -84,6 +85,16 @@ func (s *Service) Store(ctx context.Context, name, description string) (domain.G
 	}
 
 	return s.repo.Store(ctx, name, description)
+}
+
+// Update updates a group's name and description by ID.
+func (s *Service) Update(ctx context.Context, id int64, name, description string) (*domain.Group, error) {
+	name = strings.TrimSpace(name)
+	if name == "" || len(name) > maxNameLength {
+		return nil, domain.ErrBadParamInput
+	}
+
+	return s.repo.Update(ctx, id, name, description)
 }
 
 // ListGroups returns a paginated list of groups filtered by q keyword.

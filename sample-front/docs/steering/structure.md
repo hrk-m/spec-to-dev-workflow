@@ -56,10 +56,10 @@ src/
 
 **現在のページスライス:**
 
-| スライス       | 状態                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `home`         | 実装済み（`HomePage` + `GroupList` + `CreateGroupDialog` コンポーネント、`api/fetch-groups.ts`、`api/create-group.ts`、`model/group.ts`（型定義）、`model/group-list.ts`（`useGroupList` フック）、`model/group-create.ts`（`useCreateGroup` フック）、`GroupList.styles.ts`、`CreateGroupDialog.styles.ts`、テスト）                                                                                                                                                                                                        |
-| `group-detail` | 実装済み（`GroupDetailPage` + `GroupDetailSheet` + `GroupDetailView` + `GroupDetailContent` + `MemberDetailSheet` + `MemberList` コンポーネント、`api/fetch-group.ts`、`api/fetch-group-members.ts`、`model/group-detail.ts`（型定義）、`model/group-detail-state.ts`（`useGroupDetail` フック）、`model/member-list.ts`（`useMemberList` フック）、スタイル、テスト）。`GroupDetailView` がフルページとシート表示の共通描画ロジックを担い、`GroupDetailSheet`・`GroupDetailPage` はそれぞれの表示コンテキスト固有のラッパー |
+| スライス       | 状態                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `home`         | 実装済み（`HomePage` + `GroupList` + `CreateGroupDialog` コンポーネント、`api/fetch-groups.ts`、`api/create-group.ts`、`model/group.ts`（型定義）、`model/group-list.ts`（`useGroupList` フック）、`model/group-create.ts`（`useCreateGroup` フック）、`GroupList.styles.ts`、`CreateGroupDialog.styles.ts`、テスト）                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `group-detail` | 実装済み（`GroupDetailPage` + `GroupDetailSheet` + `GroupDetailView` + `GroupDetailContent` + `EditGroupDialog` + `MemberDetailSheet` + `MemberList` コンポーネント、`api/fetch-group.ts`、`api/fetch-group-members.ts`、`api/update-group.ts`（PUT リクエスト）、`model/group-detail.ts`（型定義）、`model/group-update.ts`（`UpdateGroupRequest` 型）、`model/group-detail-state.ts`（`useGroupDetail` フック。`refetch` を返す）、`model/useUpdateGroup.ts`（`useUpdateGroup` フック）、`model/member-list.ts`（`useMemberList` フック）、スタイル、テスト）。`GroupDetailView` がフルページとシート表示の共通描画ロジックを担い、`GroupDetailSheet`・`GroupDetailPage` はそれぞれの表示コンテキスト固有のラッパー。`GroupDetailContent` が Edit ボタンと `EditGroupDialog` を統合し、編集成功時に `useGroupDetail.refetch` でキャッシュをクリアして再取得する |
 
 ### `widgets/`
 
@@ -67,9 +67,11 @@ FSD の widgets レイヤー。ページ横断で使われる独立した UI ブ
 
 - `header/` — アプリヘッダー（ハンバーガーメニューボタン付き、`z-index: 150`
   で Sheet オーバーレイより上に固定）。`ui/Header.tsx`、`ui/Header.styles.ts`、テスト
-- `sidebar/` — サイドバーナビゲーション（オーバーレイ付きドロワー）。`ui/Sidebar.tsx`、`ui/Sidebar.styles.ts`、テスト。Props:
+- `sidebar/`
+  — サイドバーナビゲーション（オーバーレイ付きドロワー）。`ui/Sidebar.tsx`、`ui/Sidebar.styles.ts`、テスト。Props:
   `isOpen`・`onClose`（必須）、`onNavigate`（任意）。"Groups" ボタンをクリックすると `onClose()` と
-  `onNavigate?.()` の両方を呼び出す。`App.tsx` では `onNavigate={() => router.navigate("/")}` を渡してトップページへ遷移させる
+  `onNavigate?.()` の両方を呼び出す。`App.tsx` では `onNavigate={() => router.navigate("/")}`
+  を渡してトップページへ遷移させる
 
 各 widget は `index.ts`（barrel export）を Public API として公開する。
 
@@ -138,6 +140,25 @@ FSD の widgets レイヤー。ページ横断で使われる独立した UI ブ
 
 このパターンは `useGroupList` と `useMemberList`
 の両カスタムフックで実装されている。新しい一覧画面を追加する場合は同パターンに従うこと。
+
+### 詳細画面の refetch パターン
+
+詳細画面の更新操作（編集・削除等）が成功した後、表示データを最新に保つためのパターン:
+
+1. **キャッシュクリア + 再フェッチ**: `useGroupDetail` の `refetch`
+   はキャッシュから対象 ID を削除し、`refetchKey` をインクリメントすることで `useEffect`
+   を再実行する
+2. **楽観的更新なし**: 更新 API の成功を待ってからキャッシュをクリアし、サーバーの最新値を取得する設計
+3. **呼び出し方**: 編集ダイアログの `onSuccess` コールバックとして `refetch`
+   を渡す。ダイアログはクローズ後に呼び出す
+
+```ts
+// useGroupDetail が返す refetch
+const refetch = useCallback(() => {
+  groupDetailCache.delete(groupId);
+  setRefetchKey((prev) => prev + 1);
+}, [groupId]);
+```
 
 ## 新規ファイルの配置基準
 
