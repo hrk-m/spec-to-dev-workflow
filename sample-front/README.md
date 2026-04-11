@@ -1,22 +1,31 @@
-# bun-react-template
+# sample-front
 
-To install dependencies:
+フロントエンドのサンプル実装です。
 
-```bash
-bun install
-```
+## ローカル起動
 
-To start a development server:
+1. 初回だけ env を作成
 
 ```bash
-bun dev
+cp .env.local.example .env.local
 ```
 
-To run for production:
+2. 開発サーバーを起動
 
 ```bash
-bun start
+make run
 ```
 
-This project was created using `bun init` in bun v1.3.9. [Bun](https://bun.com) is a fast all-in-one
-JavaScript runtime.
+- Front: `http://localhost:3000`
+- API プロキシ先: `http://localhost:8080`
+
+## Docker 起動
+
+Front / API / DB をまとめて起動する場合は、リポジトリルートで次を使う。
+
+```bash
+make up
+make down
+```
+
+Docker 側の Front は `http://localhost:3001` で公開される。

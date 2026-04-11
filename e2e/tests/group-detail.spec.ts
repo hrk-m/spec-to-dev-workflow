@@ -142,6 +142,34 @@ test.describe("グループ詳細ページ", () => {
     await expect(page.getByText("Yamada Taro")).toBeVisible();
   });
 
+  test("メンバー検索 0 件時に空状態メッセージが表示される", async ({ page }) => {
+    await page.goto("/groups/1");
+    await page.waitForLoadState("networkidle");
+    const searchBox = page.getByPlaceholder("Search members");
+    await searchBox.fill("ZZZZNONEXISTENT");
+    await page.waitForTimeout(500);
+    await expect(page.getByText("No members found.")).toBeVisible();
+  });
+
+  test("メンバー検索 0 件時にページネーションが非表示になる", async ({ page }) => {
+    await page.goto("/groups/1");
+    await page.waitForLoadState("networkidle");
+    const searchBox = page.getByPlaceholder("Search members");
+    await searchBox.fill("ZZZZNONEXISTENT");
+    await page.waitForTimeout(500);
+    expect(await page.getByRole("button", { name: /Previous/ }).count()).toBe(0);
+    expect(await page.getByRole("button", { name: /Next/ }).count()).toBe(0);
+  });
+
+  test("メンバー検索 0 件時にメンバー行が表示されない", async ({ page }) => {
+    await page.goto("/groups/1");
+    await page.waitForLoadState("networkidle");
+    const searchBox = page.getByPlaceholder("Search members");
+    await searchBox.fill("ZZZZNONEXISTENT");
+    await page.waitForTimeout(500);
+    expect(await page.getByTestId("member-row").count()).toBe(0);
+  });
+
   test("メンバー検索クリア後に全件が再表示される", async ({ page }) => {
     await page.goto("/groups/1");
     await page.waitForLoadState("networkidle");

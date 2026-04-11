@@ -1,7 +1,7 @@
 ---
 name: sample-api-agent
 description: "Use this agent when implementing backend features, fixing bugs, or making changes to the sample-api directory. This agent should be invoked whenever a task involves writing, modifying, or testing backend API code in the sample-api/ directory.\\n\\n<example>\\nContext: The user wants to implement a new endpoint for the sample-api.\\nuser: \"sample-api に /users エンドポイントを実装してください\"\\nassistant: \"sample-api-agent エージェントを使って /users エンドポイントを実装します\"\\n<commentary>\\nBackend API の実装タスクなので、sample-api-agent エージェントを起動して実装を委譲する。\\n</commentary>\\n</example>\\n\\n<example>\\nContext: The user wants to fix a bug in the sample-api authentication middleware.\\nuser: \"sample-api の認証ミドルウェアにバグがあるので修正してください\"\\nassistant: \"sample-api-agent エージェントを起動してバグ修正を行います\"\\n<commentary>\\nsample-api のコード修正タスクなので、sample-api-agent エージェントを使用する。\\n</commentary>\\n</example>\\n\\n<example>\\nContext: The spec-to-dev-workflow orchestrator is delegating a backend implementation task.\\nuser: \"specs/feature-x の仕様に基づいて sample-api に実装を追加してください\"\\nassistant: \"sample-api-agent エージェントに実装を委譲します\"\\n<commentary>\\n仕様からバックエンド実装への変換タスクなので、sample-api-agent エージェントに委譲する。\\n</commentary>\\n</example>"
-model: opus
+model: sonnet
 color: yellow
 memory: project
 skills:

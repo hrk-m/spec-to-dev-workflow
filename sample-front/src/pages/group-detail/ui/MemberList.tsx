@@ -2,7 +2,7 @@ import { Box, Button, Flex, Skeleton, Text, TextField } from "@radix-ui/themes";
 import { FaChevronLeft, FaChevronRight, FaMagnifyingGlass } from "react-icons/fa6";
 
 import type { Member } from "@/pages/group-detail/model/group-detail";
-import { useMemberList } from "@/pages/group-detail/model/useMemberList";
+import { useMemberList } from "@/pages/group-detail/model/member-list";
 import { styles } from "./MemberList.styles";
 
 const PER_PAGE_OPTIONS = [20, 50, 100] as const;
@@ -18,9 +18,37 @@ function MemberAvatar({ member }: { member: Member }) {
   );
 }
 
-function MemberRow({ member, isLast }: { member: Member; isLast: boolean }) {
+function MemberRow({
+  member,
+  isLast,
+  onClick,
+}: {
+  member: Member;
+  isLast: boolean;
+  onClick?: () => void;
+}) {
   return (
-    <Flex style={{ ...styles.memberRow, ...(isLast ? {} : styles.memberRowBorder) }}>
+    <Flex
+      data-testid="member-row"
+      style={{
+        ...styles.memberRow,
+        ...(isLast ? {} : styles.memberRowBorder),
+        ...(onClick ? { cursor: "pointer" } : {}),
+      }}
+      onClick={onClick}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
+    >
       <MemberAvatar member={member} />
       <Text as="p" style={styles.memberName}>
         {member.last_name} {member.first_name}
@@ -40,12 +68,12 @@ function SkeletonMemberRow({ isLast }: { isLast: boolean }) {
 
 type MemberListProps = {
   groupId: number;
+  onMemberClick?: (member: Member) => void;
 };
 
-export function MemberList({ groupId }: MemberListProps) {
+export function MemberList({ groupId, onMemberClick }: MemberListProps) {
   const {
     members,
-    total,
     currentPage,
     totalPages,
     perPage,
@@ -119,12 +147,17 @@ export function MemberList({ groupId }: MemberListProps) {
       {!isInitialLoading && members.length > 0 && (
         <Box style={styles.listCard}>
           {members.map((member, index) => (
-            <MemberRow key={member.id} member={member} isLast={index === members.length - 1} />
+            <MemberRow
+              key={member.id}
+              member={member}
+              isLast={index === members.length - 1}
+              onClick={onMemberClick ? () => onMemberClick(member) : undefined}
+            />
           ))}
         </Box>
       )}
 
-      {!isInitialLoading && total > 0 && (
+      {!isInitialLoading && members.length > 0 && (
         <Flex style={styles.paginationSection}>
           <Text as="p" style={styles.paginationMeta}>
             Page {currentPage} of {totalPages}

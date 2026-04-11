@@ -156,6 +156,20 @@
 
 ---
 
+## 確認ステップ 5-6: E2E テストケース（Playwright）
+
+### エンドポイント: グループ一覧・検索 0 件時の UI 挙動
+
+| #   | 観点     | テスト内容                                                       | 操作手順                                                                  | 期待結果                                                                 |
+| --- | -------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| 1   | 正常系   | 検索 0 件時にヘッダーラベルが "No groups found" に変わる         | `/` → networkidle → 検索欄に `ZZZZNONEXISTENT` → 500ms 待機               | `"No groups found"` がサブタイトルに表示される                           |
+| 2   | 正常系   | 検索 0 件時に空状態メッセージが表示される                        | `/` → networkidle → 検索欄に `ZZZZNONEXISTENT` → 500ms 待機               | `"No groups matched that search."` が表示される                          |
+| 3   | 正常系   | 検索 0 件時にページネーションが非表示になる                      | `/` → networkidle → 検索欄に `ZZZZNONEXISTENT` → 500ms 待機               | Previous / Next ボタンが DOM に存在しない                                |
+
+> **備考**: `total` は API 側でフィルターなし全件数を返す設計のため、フロントエンドは検索中に `cachedGroups.length`（実際の取得件数）を `effectiveTotal` として使用してラベル・ページネーション表示を制御する。
+
+---
+
 ## ファイル配置
 
 ### sample-api
@@ -176,9 +190,10 @@
 
 | ファイル                                            | 役割                                                                                  |
 | --------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `sample-front/src/pages/home/api/fetch-groups.ts`   | GET /api/v1/groups 呼び出し（search/page → q/offset/limit に変更）                    |
-| `sample-front/src/pages/home/model/useGroupList.ts` | グループ一覧取得・クライアントサイドページネーションカスタムフック（全面書き換え）    |
-| `sample-front/src/pages/home/ui/GroupList.tsx`      | グループ一覧コンポーネント（Load More → Previous/Next + 20/50/100 件/ページ切り替え） |
+| `sample-front/src/pages/home/api/fetch-groups.ts`   | GET /api/v1/groups 呼び出し（search/page → q/offset/limit に変更）                                              |
+| `sample-front/src/pages/home/model/useGroupList.ts` | グループ一覧取得・クライアントサイドページネーションカスタムフック（`effectiveTotal` で 0 件制御）               |
+| `sample-front/src/pages/home/ui/GroupList.tsx`      | グループ一覧コンポーネント（Load More → Previous/Next + 20/50/100 件/ページ切り替え）                           |
+| `e2e/tests/group-list.spec.ts`                      | グループ 0 件検索 E2E テスト追加（ヘッダーラベル・ページネーション非表示・空状態メッセージの確認）               |
 
 ---
 
@@ -195,6 +210,8 @@
 9. DB エラーは 500 で返す
 10. フロントエンドが 500 件一括取得 → クライアントキャッシュ → スライス表示する
 11. フロントエンドの UI が Previous/Next ボタン + 20/50/100 件/ページ切り替えを表示する（Load More 廃止）
+12. 検索で 0 件のとき、ヘッダーサブタイトルに "No groups found" を表示し、ページネーションを非表示にする
+13. フロントエンドは `total`（フィルターなし全件数）ではなく `cachedGroups.length` を `effectiveTotal` として使用し、検索中のラベル・ページネーション表示を制御する
 
 ---
 

@@ -4,13 +4,14 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "bun --hot src/index.ts",
-    "build": "bun build ./src/index.html --outdir=dist --sourcemap --target=browser --minify --define:process.env.NODE_ENV='\"production\"' --env='BUN_PUBLIC_*'",
-    "start": "NODE_ENV=production bun src/index.ts",
+    "dev": "sh -lc 'set -a; [ -f ./.env.local ] && . ./.env.local; set +a; bun --hot src/index.ts'",
+    "build": "bun build ./src/index.html --outdir=dist --sourcemap --target=browser --minify --define:process.env.NODE_ENV='\"production\"'",
+    "start": "sh -lc 'set -a; [ -f ./.env.local ] && . ./.env.local; set +a; NODE_ENV=production bun src/index.ts'",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "lint": "oxlint src",
+    "lint:fsd": "steiger src",
     "lint:fix": "oxlint src --fix",
     "format": "prettier --check \"**/*.{ts,tsx,js,jsx,mjs,md,json}\"",
     "format:fix": "prettier --write \"**/*.{ts,tsx,js,jsx,mjs,md,json}\"",
@@ -24,6 +25,7 @@
     "react-router": "^7.14.0"
   },
   "devDependencies": {
+    "@feature-sliced/steiger-plugin": "^0.5.7",
     "@ianvs/prettier-plugin-sort-imports": "^4.7.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
@@ -36,6 +38,7 @@
     "jsdom": "^29.0.1",
     "oxlint": "^1.57.0",
     "prettier": "^3.8.1",
+    "steiger": "^0.5.11",
     "vite": "^8.0.3",
     "vitest": "^4.1.2"
   }

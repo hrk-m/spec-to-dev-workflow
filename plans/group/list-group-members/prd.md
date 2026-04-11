@@ -170,6 +170,20 @@
 
 ---
 
+## 確認ステップ 5-6: E2E テストケース（Playwright）
+
+### エンドポイント: メンバー一覧・検索 0 件時の UI 挙動
+
+| #   | 観点   | テスト内容                                                    | 操作手順                                                                        | 期待結果                                      |
+| --- | ------ | ------------------------------------------------------------- | ------------------------------------------------------------------------------- | --------------------------------------------- |
+| 1   | 正常系 | メンバー検索 0 件時に空状態メッセージが表示される             | `/groups/1` → networkidle → メンバー検索欄に `ZZZZNONEXISTENT` → 500ms 待機     | `"No members found."` が表示される            |
+| 2   | 正常系 | メンバー検索 0 件時にページネーションが非表示になる           | `/groups/1` → networkidle → メンバー検索欄に `ZZZZNONEXISTENT` → 500ms 待機     | Previous / Next ボタンが DOM に存在しない     |
+| 3   | 正常系 | メンバー検索 0 件時にメンバー行が表示されない                 | `/groups/1` → networkidle → メンバー検索欄に `ZZZZNONEXISTENT` → 500ms 待機     | `data-testid="member-row"` 要素が 0 件        |
+
+> **備考**: MemberRow コンポーネントに `data-testid="member-row"` を追加し、E2E テストのセレクターを安定化させる。`total` は API 側でフィルターなし全件数を返す設計のため、フロントエンドは `cachedMembers.length` を `effectiveTotal` として使用してページネーション表示を制御する。
+
+---
+
 ## ファイル配置
 
 ### sample-api
@@ -190,9 +204,10 @@
 
 | ファイル                                                         | 役割                                                               |
 | ---------------------------------------------------------------- | ------------------------------------------------------------------ |
-| `sample-front/src/pages/group-detail/ui/MemberList.tsx`          | メンバー一覧コンポーネント（20/50/100 件/ページ切り替え）          |
-| `sample-front/src/pages/group-detail/api/fetch-group-members.ts` | GET /api/v1/groups/:id/members 呼び出し                            |
-| `sample-front/src/pages/group-detail/model/useMemberList.ts`     | メンバー一覧取得・クライアントサイドページネーションカスタムフック |
+| `sample-front/src/pages/group-detail/ui/MemberList.tsx`          | メンバー一覧コンポーネント（20/50/100 件/ページ切り替え）。MemberRow に `data-testid="member-row"` を付与 |
+| `sample-front/src/pages/group-detail/api/fetch-group-members.ts` | GET /api/v1/groups/:id/members 呼び出し                                                                   |
+| `sample-front/src/pages/group-detail/model/useMemberList.ts`     | メンバー一覧取得・クライアントサイドページネーションカスタムフック（`effectiveTotal` で 0 件制御）         |
+| `e2e/tests/group-detail.spec.ts`                                  | メンバー 0 件検索 E2E テスト追加                                                                           |
 
 ---
 
@@ -207,6 +222,9 @@
 7. `q` パラメータで first_name OR last_name の LIKE 検索が動作する
 8. 詳細ページにメンバー一覧がデフォルト 20 件/ページで表示される（20/50/100 切り替え可）
 9. 500 件を超えるメンバーがいる場合、追加フェッチ（offset 増加）が実行される
+10. メンバー検索で 0 件のとき、"No members found." を表示し、ページネーションを非表示にする
+11. フロントエンドは `total`（フィルターなし全件数）ではなく `cachedMembers.length` を `effectiveTotal` として使用し、検索中のラベル・ページネーション表示を制御する
+12. MemberRow コンポーネントに `data-testid="member-row"` を付与し、E2E テストのセレクターを安定化させる
 
 ---
 

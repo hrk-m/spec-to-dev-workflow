@@ -1,5 +1,5 @@
 import type { MembersResponse } from "@/pages/group-detail/model/group-detail";
-import { apiFetch } from "@/shared/api/client";
+import { apiFetch } from "@/shared/api";
 
 export type FetchGroupMembersParams = {
   groupId: number;

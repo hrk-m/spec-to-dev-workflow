@@ -6,18 +6,18 @@ inclusion: always
 
 ## スタック
 
-| カテゴリ                | 技術                                             |
-| ----------------------- | ------------------------------------------------ |
-| ランタイム / バンドラー | Bun                                              |
-| UI ライブラリ           | React 19                                         |
-| ルーティング            | react-router v7                                  |
-| UI コンポーネント       | Radix UI Themes                                  |
-| アイコン                | react-icons                                      |
-| スクロール制御          | react-remove-scroll-bar                          |
-| 言語                    | TypeScript (strict)                              |
-| テスト                  | Vitest + Testing Library (jsdom)                 |
-| リント                  | oxlint                                           |
-| フォーマット            | Prettier + `@ianvs/prettier-plugin-sort-imports` |
+| カテゴリ                | 技術                                                            |
+| ----------------------- | --------------------------------------------------------------- |
+| ランタイム / バンドラー | Bun                                                             |
+| UI ライブラリ           | React 19                                                        |
+| ルーティング            | react-router v7                                                 |
+| UI コンポーネント       | Radix UI Themes                                                 |
+| アイコン                | react-icons                                                     |
+| スクロール制御          | react-remove-scroll-bar（Sidebar 開閉時のスクロールバー非表示） |
+| 言語                    | TypeScript (strict)                                             |
+| テスト                  | Vitest + Testing Library (jsdom)                                |
+| リント                  | oxlint                                                          |
+| フォーマット            | Prettier + `@ianvs/prettier-plugin-sort-imports`                |
 
 ## 主要な決定事項
 
@@ -29,7 +29,11 @@ inclusion: always
 ### ルーティング
 
 react-router v7 を使用。`src/app/router.tsx` で `createBrowserRouter`
-によりルート定義を一元管理し、`App.tsx` で `RouterProvider` を通じてマウントする。
+によりルート定義を一元管理し、`App.tsx` で `RouterProvider`
+を通じてマウントする。ルート定義の最上位で `SheetStackProvider`
+をラップし、Sheet スタックのコンテキストをアプリ全体に提供する。 `GroupNavigationLayout` が `/` と
+`/groups/:id` のルーティングを制御し、`location.state.presentation === "sheet"`
+の場合はシート表示、それ以外はフルページ遷移を行う。
 
 ### パスエイリアス
 
@@ -44,15 +48,47 @@ import { apiFetch } from "../../shared/api/client";
 
 ### サーバーサイド API プロキシ
 
-`src/index.ts` の Bun サーバーが `/api/*` パスへのリクエストをバックエンド（`BUN_PUBLIC_API_URL`
+`src/index.ts` の Bun サーバーが `/api/*` パスへのリクエストをバックエンド（`API_UPSTREAM_URL`
 環境変数、デフォルト
-`http://localhost:8080`）へ中継する。ブラウザからは同一オリジンへのリクエストとなるため、`API_BASE_URL`
-は空文字列。CORS を気にせずフロントエンドから API を呼び出せる。
+`http://localhost:8080`）へ中継する。ブラウザからは同一オリジンへのリクエストとなるため、
+`API_BASE_URL` は空文字列。CORS を気にせずフロントエンドから API を呼び出せる。
 
 ### 環境変数
 
-`BUN_PUBLIC_*` プレフィックスを使用。`BUN_PUBLIC_API_URL`
-でバックエンド API のアップストリーム先を上書き可能（デフォルト: `http://localhost:8080`）。
+- `PORT`: Bun サーバーの待受ポート
+- `API_UPSTREAM_URL`: `/api/*` のプロキシ先
+
+ローカル起動では `sample-front/.env.local`、Docker 起動では `sample-front/.env.docker`
+を使う。ホスト公開ポートはローカルが `3000`、Docker が `3001`。
+
+### Sheet コンポーネントの動作規約
+
+`shared/ui/Sheet` は右からスライドインするモーダルパネル。以下の動作を標準とする:
+
+- **アニメーション**: 500ms `cubic-bezier(0.4, 0, 0.2, 1)` で `transform` と `width`
+  を同時にトランジション。オーバーレイは `ease-out` でフェード
+- **スクロールロック**: マウント時に `document.body.style.overflow = "hidden"`
+  を設定し、アンマウント時に復元
+- **ESC キー**: `keydown` イベントで `Escape` キーを検知し `onClose` を呼び出す
+- **オーバーレイクリック**: オーバーレイ領域のクリックで `onClose` を呼び出す
+- **クローズアニメーション**: `closing` prop が `true` になると `translateX(100%)`
+  へスライドアウトし、`transitionend` イベントで `onRemove` を呼んで DOM から除去
+
+### z-index 階層
+
+| 要素                      | z-index | 備考                                                     |
+| ------------------------- | ------- | -------------------------------------------------------- |
+| Radix Dialog オーバーレイ | 200     | `index.css` で `!important` 指定                         |
+| Header                    | 150     | Sheet オーバーレイより上に表示するため                   |
+| Sheet (base)              | 100     | `sheetConstants.baseZIndex`。スタック時は `+2` ずつ加算  |
+| GroupDetail シート        | 98      | `baseZIndex - 2`。子シート（メンバー詳細等）より下に配置 |
+
+### Sheet スタック
+
+`shared/lib/sheet-stack` が複数シートの重ね合わせを管理する。`SheetStackProvider`
+がコンテキストを提供し、`useSheetStack` フックで `openSheet` / `closeSheet` / `removeSheet` /
+`closeAll` を操作する。最前面以外のシートは `fullWidth`（100vw）に拡大され、最前面のシートのみ
+`defaultWidth`（90vw）で表示される。
 
 ### リント構成
 
@@ -111,7 +147,7 @@ Prettier +
 ### bun scripts
 
 ```bash
-bun dev             # 開発サーバー起動 (HMR)
+bun dev             # .env.local を読み込んで開発サーバー起動 (HMR)
 bun run build       # 本番ビルド → dist/
 bun test            # テスト実行
 bun run test:watch  # ウォッチモード
@@ -130,6 +166,6 @@ make test           # テスト実行
 make lint           # oxlint でリント
 make fix            # oxlint 自動修正
 make build          # 本番ビルド
-make run            # 開発サーバー起動
+make run            # .env.local を使って開発サーバー起動
 make check          # typecheck + lint + format + test をまとめて実行
 ```

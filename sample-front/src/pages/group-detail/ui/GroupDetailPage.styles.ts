@@ -18,8 +18,7 @@ export const styles = {
     padding: "22px 16px 36px",
   },
   content: {
-    maxWidth: 720,
-    margin: "0 auto",
+    width: "100%",
   },
   backButton: {
     fontSize: 15,

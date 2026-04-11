@@ -1,19 +1,28 @@
-import { createBrowserRouter } from "react-router";
+import { createBrowserRouter, Outlet } from "react-router";
 
-import { GroupDetailPage } from "@/pages/group-detail";
-import { HomePage } from "@/pages/home";
+import { SheetStackProvider } from "@/shared/lib/sheet-stack";
+import { GroupNavigationLayout } from "./routes/GroupNavigationLayout";
+
+function Layout() {
+  return (
+    <SheetStackProvider>
+      <Outlet />
+    </SheetStackProvider>
+  );
+}
 
 export const router = createBrowserRouter([
   {
-    path: "/",
-    element: <HomePage />,
-  },
-  {
-    path: "/groups",
-    element: <HomePage />,
-  },
-  {
-    path: "/groups/:id",
-    element: <GroupDetailPage />,
+    element: <Layout />,
+    children: [
+      {
+        element: <GroupNavigationLayout />,
+        children: [
+          { index: true, element: <></> },
+          { path: "groups", element: <></> },
+          { path: "groups/:id", element: <></> },
+        ],
+      },
+    ],
   },
 ]);

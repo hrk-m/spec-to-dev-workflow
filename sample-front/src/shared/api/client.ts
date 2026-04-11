@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "@/shared/config/env";
+import { API_BASE_URL } from "@/shared/config";
 
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE_URL}${path}`, init);

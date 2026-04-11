@@ -2,10 +2,17 @@ import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createGroup } from "@/pages/home/api/create-group";
-import { useCreateGroup } from "@/pages/home/model/useCreateGroup";
+import { useCreateGroup } from "@/pages/home/model/group-create";
 
 vi.mock("@/pages/home/api/create-group", () => ({
   createGroup: vi.fn(),
+}));
+
+const { prependGroupToGroupListCache } = vi.hoisted(() => ({
+  prependGroupToGroupListCache: vi.fn(),
+}));
+vi.mock("@/pages/home/model/group-list", () => ({
+  prependGroupToGroupListCache,
 }));
 
 const mockNavigate = vi.fn();
@@ -51,6 +58,12 @@ describe("useCreateGroup", () => {
       await result.current.submit({ name: "Test Group", description: "desc" });
     });
 
+    expect(prependGroupToGroupListCache).toHaveBeenCalledWith({
+      id: 42,
+      name: "Test Group",
+      description: "desc",
+      member_count: 0,
+    });
     expect(mockNavigate).toHaveBeenCalledWith("/groups/42");
     expect(result.current.isLoading).toBe(false);
     expect(result.current.error).toBeNull();

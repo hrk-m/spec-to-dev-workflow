@@ -3,7 +3,7 @@ import { FaChevronLeft, FaChevronRight, FaMagnifyingGlass } from "react-icons/fa
 import { useNavigate } from "react-router";
 
 import type { Group } from "@/pages/home/model/group";
-import { PER_PAGE_OPTIONS, useGroupList } from "@/pages/home/model/useGroupList";
+import { PER_PAGE_OPTIONS, useGroupList } from "@/pages/home/model/group-list";
 import { PageContainer } from "@/shared/ui";
 import { CreateGroupDialog } from "./CreateGroupDialog";
 import { styles } from "./GroupList.styles";
@@ -90,11 +90,14 @@ function GroupRow({
   );
 }
 
-export function GroupList() {
+type GroupListProps = {
+  onGroupClick?: (groupId: number) => void;
+};
+
+export function GroupList({ onGroupClick }: GroupListProps) {
   const navigate = useNavigate();
   const {
     groups,
-    total,
     currentPage,
     totalPages,
     perPage,
@@ -199,7 +202,13 @@ export function GroupList() {
                   group={group}
                   isLast={index === groups.length - 1}
                   isWideLayout={isWideLayout}
-                  onClick={() => navigate(`/groups/${String(group.id)}`)}
+                  onClick={() => {
+                    if (onGroupClick) {
+                      onGroupClick(group.id);
+                    } else {
+                      navigate(`/groups/${String(group.id)}`);
+                    }
+                  }}
                 />
               ))}
             </Box>
@@ -224,7 +233,7 @@ export function GroupList() {
         </Callout.Root>
       )}
 
-      {!isInitialLoading && total > 0 && (
+      {!isInitialLoading && groups.length > 0 && (
         <Flex style={styles.footerSection}>
           <Text as="p" style={styles.footerMeta}>
             Page {currentPage} of {totalPages}

@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fetchGroupMembers } from "@/pages/group-detail/api/fetch-group-members";
 import type { MembersResponse } from "@/pages/group-detail/model/group-detail";
+import { clearMemberListCache } from "@/pages/group-detail/model/member-list";
 import { MemberList } from "@/pages/group-detail/ui/MemberList";
 
 vi.mock("@/pages/group-detail/api/fetch-group-members", () => ({
@@ -30,6 +31,7 @@ function createManyMembers(count: number): MembersResponse {
 describe("MemberList", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    clearMemberListCache();
   });
 
   it("ローディング中にスケルトンを表示する", () => {
@@ -167,6 +169,75 @@ describe("MemberList", () => {
     });
   });
 
+  it("onMemberClick が渡されたときメンバー行クリックで呼ばれる", async () => {
+    const user = userEvent.setup();
+    const onMemberClick = vi.fn();
+    vi.mocked(fetchGroupMembers).mockResolvedValueOnce(mockMembersResponse);
+
+    render(<MemberList groupId={1} onMemberClick={onMemberClick} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Yamada Taro")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByText("Yamada Taro"));
+
+    expect(onMemberClick).toHaveBeenCalledTimes(1);
+    expect(onMemberClick).toHaveBeenCalledWith({
+      id: 1,
+      first_name: "Taro",
+      last_name: "Yamada",
+    });
+  });
+
+  it("再表示時はキャッシュを使ってスケルトンを出さない", async () => {
+    vi.mocked(fetchGroupMembers)
+      .mockResolvedValueOnce(mockMembersResponse)
+      .mockReturnValueOnce(new Promise(() => {}));
+
+    const { unmount } = render(<MemberList groupId={1} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Yamada Taro")).toBeInTheDocument();
+    });
+
+    unmount();
+
+    render(<MemberList groupId={1} />);
+
+    expect(screen.getByText("Yamada Taro")).toBeInTheDocument();
+    expect(screen.queryByText("loading members...")).not.toBeInTheDocument();
+  });
+
+  it("2ページ目でも再表示時はキャッシュを使ってスケルトンを出さない", async () => {
+    const user = userEvent.setup();
+    const manyMembers = createManyMembers(50);
+    vi.mocked(fetchGroupMembers)
+      .mockResolvedValueOnce(manyMembers)
+      .mockReturnValueOnce(new Promise(() => {}));
+
+    const { unmount } = render(<MemberList groupId={1} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Last1 First1")).toBeInTheDocument();
+    });
+
+    const nextButton = screen.getByRole("button", { name: "Next" });
+    await user.click(nextButton);
+
+    await waitFor(() => {
+      expect(screen.getByText("Last21 First21")).toBeInTheDocument();
+    });
+
+    unmount();
+
+    render(<MemberList groupId={1} />);
+
+    expect(screen.getByText("Last21 First21")).toBeInTheDocument();
+    expect(screen.getByText("Last40 First40")).toBeInTheDocument();
+    expect(screen.queryByText("loading members...")).not.toBeInTheDocument();
+  });
+
   it("500 件キャッシュを超えるページに遷移すると offset=500 で追加フェッチする", async () => {
     const user = userEvent.setup();
 
@@ -237,5 +308,64 @@ describe("MemberList", () => {
     await waitFor(() => {
       expect(screen.getByText("Page 1 of 3")).toBeInTheDocument();
     });
+  });
+
+  it("検索で 0 件のとき API の total が全件数でもページネーションを非表示にする", async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchGroupMembers).mockResolvedValueOnce(mockMembersResponse).mockResolvedValueOnce({
+      members: [],
+      total: 31,
+    });
+
+    render(<MemberList groupId={1} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Yamada Taro")).toBeInTheDocument();
+    });
+
+    const searchInput = screen.getByPlaceholderText("Search members");
+    await user.clear(searchInput);
+    await user.type(searchInput, "nonexistent");
+
+    await waitFor(() => {
+      expect(screen.getByText("No members found.")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText(/Page \d+ of \d+/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Next" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Previous" })).not.toBeInTheDocument();
+  });
+
+  it("検索入力がデバウンスされ、最後の入力から 300ms 後にフェッチが発火する", async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchGroupMembers)
+      .mockResolvedValueOnce(mockMembersResponse)
+      .mockResolvedValueOnce({
+        members: [{ id: 1, first_name: "Taro", last_name: "Yamada" }],
+        total: 1,
+      });
+
+    render(<MemberList groupId={1} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Yamada Taro")).toBeInTheDocument();
+    });
+
+    const initialCallCount = vi.mocked(fetchGroupMembers).mock.calls.length;
+
+    const searchInput = screen.getByPlaceholderText("Search members");
+    await user.type(searchInput, "Yamada");
+
+    // デバウンス後にフェッチが発火する（300ms 後）
+    await waitFor(() => {
+      expect(vi.mocked(fetchGroupMembers).mock.calls.length).toBeGreaterThan(initialCallCount);
+    });
+
+    // 文字ごとに個別フェッチされるのではなく、デバウンス後にまとめて 1 回だけ発火する
+    const searchCalls = vi.mocked(fetchGroupMembers).mock.calls.slice(initialCallCount);
+    expect(searchCalls).toHaveLength(1);
+    expect(vi.mocked(fetchGroupMembers)).toHaveBeenLastCalledWith(
+      expect.objectContaining({ q: "Yamada" }),
+    );
   });
 });

@@ -33,9 +33,11 @@
   │
   └─ エラーメッセージがメンバーセクションに表示される
 
-メンバーが 0 件の場合
+メンバーが 0 件の場合（検索0件・メンバー未所属グループを含む）
   │
-  └─ 「No members found.」メッセージが表示される
+  ├─ effectiveTotal（cachedMembers.length）が 0 になる
+  ├─ 「No members found.」メッセージが表示される
+  └─ ページネーション（Previous / Next ボタン）が非表示になる
 ```
 
 ---
@@ -45,15 +47,18 @@
 | 要素 | 種別 | 役割 |
 |---|---|---|
 | `MemberList` | コンポーネント | メンバー検索・表示件数切替・一覧・ページネーションを表示する |
-| `MemberRow` | コンポーネント | 個々のメンバー行（アバター＋名前）を表示する |
+| `MemberRow` | コンポーネント | 個々のメンバー行（アバター＋名前）を表示する。`data-testid="member-row"` が付与されており E2E テストのセレクターとして使用される |
 | `MemberAvatar` | コンポーネント | メンバーのイニシャルアバターを表示する |
 | `useMemberList` | カスタム Hook | fetch・検索・表示件数・ページネーション・キャッシュの状態と処理を管理する |
 | `cachedMembers` | state | サーバーから取得したメンバーをキャッシュする |
-| `total` | state | メンバーの総件数を保持する |
+| `total` | state | メンバーの総件数を保持する（フィルターなし全件数） |
 | `currentPage` | state | 現在のページ番号を保持する |
 | `perPage` | state | 1 ページあたりの表示件数（20 / 50 / 100）を保持する |
 | `searchQuery` | state | メンバー検索キーワードを保持する |
-| `totalPages` | derived | 総ページ数を算出する |
+| `debouncedQuery` | state | 300ms デバウンス済みの検索キーワード（API リクエストに使用） |
+| `lastBatchSize` | state | 直前のフェッチで取得した件数（500 件未満なら追加フェッチ不要と判定） |
+| `effectiveTotal` | derived | 検索中は cachedMembers.length、非検索時は API の total を使用する |
+| `totalPages` | derived | effectiveTotal と perPage から算出する |
 
 ---
 
@@ -71,6 +76,8 @@
 - [ ] 最初のページでは Previous ボタンが無効になる
 - [ ] 最後のページでは Next ボタンが無効になる
 - [ ] メンバーが 0 件のとき「No members found.」が表示される
+- [ ] 検索結果が 0 件のときページネーション（Previous / Next ボタン）が非表示になる
+- [ ] 検索結果が 0 件のとき `data-testid="member-row"` 要素が DOM に存在しない
 - [ ] バックエンドへの通信が失敗するとエラーメッセージが表示される
 - [ ] キャッシュ不足時に追加フェッチが自動実行される
 ```

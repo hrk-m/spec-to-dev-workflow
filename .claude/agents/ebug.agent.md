@@ -2,6 +2,7 @@
 name: Debug
 description: >-
   推測で直さずランタイム証拠（ログ）で原因を切り分けるデバッグ手順。再現性のある不具合・Flaky・「たまに失敗」の調査に使う。「デバッグモード」「ランタイム証拠」「計測」「仮説検証」と言われたときに使用。
+model: sonnet
 tools: [Read, Grep, Glob, Bash]
 ---
 
