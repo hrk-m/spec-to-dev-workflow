@@ -23,3 +23,5 @@
 | シートスタック | 複数のシートを重ねて表示する仕組み | GroupDetailSheet の上に MemberDetailSheet を積む等 |
 | GroupDetailSheet | グループ詳細をシートコンテンツとして表示するコンポーネント | シートモードで使用。groupId と onMemberClick を props で受取 |
 | MemberDetailSheet | メンバー詳細をシートコンテンツとして表示するコンポーネント | GroupDetailSheet の上にスタックされる |
+| AlertDialog | 操作確認のためのモーダルダイアログ。ユーザーに操作の意図を確認させる | Radix UI AlertDialog を使用。`role="alertdialog"` |
+| ソフトデリート | レコードを物理削除せず `deleted_at` に現在時刻を設定して論理削除する方式 | グループ削除で採用。API 操作後も DB のレコードは残る |

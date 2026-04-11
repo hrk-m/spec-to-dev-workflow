@@ -825,3 +825,112 @@ func TestGroupHandler_Update_ServiceInternalError(t *testing.T) {
 	assert.Equal(t, "internal server error", result["message"])
 	svc.AssertExpectations(t)
 }
+
+func TestGroupHandler_Delete_OK(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/groups/1", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/groups/:id")
+	c.SetParamNames("id")
+	c.SetParamValues("1")
+
+	svc := new(mocks.MockGroupService)
+	svc.On("Delete", mock.Anything, int64(1)).Return(nil)
+
+	h := &rest.GroupHandler{Service: svc}
+	err := h.Delete(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusNoContent, rec.Code)
+	assert.Empty(t, rec.Body.String())
+	svc.AssertExpectations(t)
+}
+
+func TestGroupHandler_Delete_InvalidIDString(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/groups/abc", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/groups/:id")
+	c.SetParamNames("id")
+	c.SetParamValues("abc")
+
+	h := &rest.GroupHandler{Service: new(mocks.MockGroupService)}
+	err := h.Delete(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+
+	var result map[string]string
+	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
+	assert.Equal(t, "given param is not valid", result["message"])
+}
+
+func TestGroupHandler_Delete_ZeroID(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/groups/0", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/groups/:id")
+	c.SetParamNames("id")
+	c.SetParamValues("0")
+
+	h := &rest.GroupHandler{Service: new(mocks.MockGroupService)}
+	err := h.Delete(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+
+	var result map[string]string
+	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
+	assert.Equal(t, "given param is not valid", result["message"])
+}
+
+func TestGroupHandler_Delete_ServiceNotFound(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/groups/9999", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/groups/:id")
+	c.SetParamNames("id")
+	c.SetParamValues("9999")
+
+	svc := new(mocks.MockGroupService)
+	svc.On("Delete", mock.Anything, int64(9999)).Return(domain.ErrNotFound)
+
+	h := &rest.GroupHandler{Service: svc}
+	err := h.Delete(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusNotFound, rec.Code)
+
+	var result map[string]string
+	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
+	assert.Equal(t, "your requested item is not found", result["message"])
+	svc.AssertExpectations(t)
+}
+
+func TestGroupHandler_Delete_ServiceInternalError(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/groups/1", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/groups/:id")
+	c.SetParamNames("id")
+	c.SetParamValues("1")
+
+	svc := new(mocks.MockGroupService)
+	svc.On("Delete", mock.Anything, int64(1)).Return(domain.ErrInternalServerError)
+
+	h := &rest.GroupHandler{Service: svc}
+	err := h.Delete(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+
+	var result map[string]string
+	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
+	assert.Equal(t, "internal server error", result["message"])
+	svc.AssertExpectations(t)
+}

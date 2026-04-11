@@ -68,10 +68,11 @@ type GroupService interface {
     ListGroupMembers(ctx context.Context, id, limit, offset uint64, q string) ([]domain.GroupMember, int, error)
     Store(ctx context.Context, name, description string) (domain.Group, error)
     Update(ctx context.Context, id int64, name, description string) (*domain.Group, error)
+    Delete(ctx context.Context, id int64) error
 }
 ```
 
-`Update` は ID（`int64`）・name・description を受け取り、更新後の `*domain.Group` を返す。
+`Update` は ID（`int64`）・name・description を受け取り、更新後の `*domain.Group` を返す。`Delete` は ID（`int64`）を受け取り、soft delete を実行する（成功時は `nil`、対象未存在時は `ErrNotFound`）。
 
 ## リポジトリインターフェース（`GroupRepository`）
 
@@ -84,7 +85,8 @@ type GroupRepository interface {
     ListGroupMembers(ctx context.Context, id, limit, offset uint64, q string) ([]domain.GroupMember, int, error)
     Store(ctx context.Context, name, description string) (domain.Group, error)
     Update(ctx context.Context, id int64, name, description string) (*domain.Group, error)
+    Delete(ctx context.Context, id int64) error
 }
 ```
 
-`Update` は DB の `groups` テーブルを `WHERE id = ? AND deleted_at IS NULL` で更新し、`RowsAffected() == 0` なら `ErrNotFound` を返す。更新後に `GetByID` で最新状態を取得して返す。
+`Update` は DB の `groups` テーブルを `WHERE id = ? AND deleted_at IS NULL` で更新し、`RowsAffected() == 0` なら `ErrNotFound` を返す。更新後に `GetByID` で最新状態を取得して返す。`Delete` は `UPDATE groups SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL` で soft delete し、`RowsAffected() == 0` なら `ErrNotFound` を返す。

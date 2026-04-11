@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fetchGroup } from "@/pages/group-detail/api/fetch-group";
@@ -43,7 +44,11 @@ describe("GroupDetailSheet", () => {
     vi.mocked(fetchGroup).mockResolvedValueOnce(mockGroup);
     vi.mocked(fetchGroupMembers).mockResolvedValueOnce(mockMembersResponse);
 
-    render(<GroupDetailSheet groupId={1} />);
+    render(
+      <MemoryRouter>
+        <GroupDetailSheet groupId={1} />
+      </MemoryRouter>,
+    );
 
     await waitFor(() => {
       expect(screen.getByText("dev-team")).toBeInTheDocument();
@@ -57,7 +62,11 @@ describe("GroupDetailSheet", () => {
     vi.mocked(fetchGroup).mockResolvedValueOnce(mockGroup);
     vi.mocked(fetchGroupMembers).mockResolvedValueOnce(mockMembersResponse);
 
-    render(<GroupDetailSheet groupId={1} />);
+    render(
+      <MemoryRouter>
+        <GroupDetailSheet groupId={1} />
+      </MemoryRouter>,
+    );
 
     await waitFor(() => {
       expect(screen.getByText("Name")).toBeInTheDocument();
@@ -73,7 +82,11 @@ describe("GroupDetailSheet", () => {
     vi.mocked(fetchGroup).mockResolvedValueOnce(mockGroup);
     vi.mocked(fetchGroupMembers).mockResolvedValueOnce(mockMembersResponse);
 
-    render(<GroupDetailSheet groupId={1} onMemberClick={onMemberClick} />);
+    render(
+      <MemoryRouter>
+        <GroupDetailSheet groupId={1} onMemberClick={onMemberClick} />
+      </MemoryRouter>,
+    );
 
     await waitFor(() => {
       expect(screen.getByText("Yamada Taro")).toBeInTheDocument();
@@ -97,7 +110,11 @@ describe("GroupDetailSheet", () => {
       .mockResolvedValueOnce(mockMembersResponse)
       .mockReturnValueOnce(new Promise(() => {}));
 
-    const { unmount } = render(<GroupDetailSheet groupId={1} />);
+    const { unmount } = render(
+      <MemoryRouter>
+        <GroupDetailSheet groupId={1} />
+      </MemoryRouter>,
+    );
 
     await waitFor(() => {
       expect(screen.getByText("Yamada Taro")).toBeInTheDocument();
@@ -105,7 +122,11 @@ describe("GroupDetailSheet", () => {
 
     unmount();
 
-    render(<GroupDetailSheet groupId={1} />);
+    render(
+      <MemoryRouter>
+        <GroupDetailSheet groupId={1} />
+      </MemoryRouter>,
+    );
 
     expect(screen.getByText("dev-team")).toBeInTheDocument();
     expect(screen.getByText("Yamada Taro")).toBeInTheDocument();

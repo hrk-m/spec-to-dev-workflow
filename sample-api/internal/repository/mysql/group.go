@@ -144,6 +144,27 @@ func (r *GroupRepository) Update(ctx context.Context, id int64, name, descriptio
 	return &g, nil
 }
 
+// Delete soft-deletes a group by setting deleted_at.
+func (r *GroupRepository) Delete(ctx context.Context, id int64) error {
+	query := "UPDATE `groups` SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL"
+
+	result, err := r.db.ExecContext(ctx, query, id)
+	if err != nil {
+		return domain.ErrInternalServerError
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return domain.ErrInternalServerError
+	}
+
+	if rows == 0 {
+		return domain.ErrNotFound
+	}
+
+	return nil
+}
+
 // GetByID returns a single group by ID with its member count.
 func (r *GroupRepository) GetByID(ctx context.Context, id uint64) (domain.Group, error) {
 	query := "SELECT g.id, g.name, g.description, COUNT(gm.id) AS member_count" +

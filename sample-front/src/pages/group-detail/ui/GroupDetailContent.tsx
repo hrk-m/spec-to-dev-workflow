@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { Box, Button, Flex, Heading, Skeleton, Text } from "@radix-ui/themes";
+import { useNavigate } from "react-router";
 
 import type { Member } from "@/pages/group-detail/model/group-detail";
 import { useGroupDetail } from "@/pages/group-detail/model/group-detail-state";
+import { DeleteGroupDialog } from "./DeleteGroupDialog";
 import { EditGroupDialog } from "./EditGroupDialog";
 import { styles } from "./GroupDetailPage.styles";
 import { MemberList } from "./MemberList";
@@ -32,8 +34,10 @@ function GroupInfoSkeleton() {
 
 export function GroupDetailContent({ groupId, onMemberClick }: GroupDetailContentProps) {
   const { group, error, isLoading, refetch } = useGroupDetail(groupId);
+  const navigate = useNavigate();
   const shouldShowSkeleton = isLoading && !group;
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   return (
     <>
@@ -57,9 +61,14 @@ export function GroupDetailContent({ groupId, onMemberClick }: GroupDetailConten
             <Heading as="h1" style={{ fontSize: 40, fontWeight: 700, letterSpacing: -0.7 }}>
               Group
             </Heading>
-            <Button variant="soft" onClick={() => setEditDialogOpen(true)}>
-              Edit
-            </Button>
+            <Flex gap="2">
+              <Button variant="soft" onClick={() => setEditDialogOpen(true)}>
+                Edit
+              </Button>
+              <Button variant="soft" color="red" onClick={() => setDeleteDialogOpen(true)}>
+                Delete
+              </Button>
+            </Flex>
           </Flex>
 
           <Box style={styles.sectionCard}>
@@ -88,6 +97,13 @@ export function GroupDetailContent({ groupId, onMemberClick }: GroupDetailConten
             open={editDialogOpen}
             onOpenChange={setEditDialogOpen}
             onSuccess={refetch}
+          />
+
+          <DeleteGroupDialog
+            groupId={groupId}
+            open={deleteDialogOpen}
+            onOpenChange={setDeleteDialogOpen}
+            onSuccess={() => void navigate("/")}
           />
 
           <Box style={styles.sectionHeader}>

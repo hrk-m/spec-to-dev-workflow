@@ -30,6 +30,7 @@ type GroupRepository interface {
 	ListGroupMembers(ctx context.Context, id, limit, offset uint64, q string) ([]domain.GroupMember, int, error)
 	Store(ctx context.Context, name, description string) (domain.Group, error)
 	Update(ctx context.Context, id int64, name, description string) (*domain.Group, error)
+	Delete(ctx context.Context, id int64) error
 }
 
 // Service handles group business logic.
@@ -95,6 +96,11 @@ func (s *Service) Update(ctx context.Context, id int64, name, description string
 	}
 
 	return s.repo.Update(ctx, id, name, description)
+}
+
+// Delete soft-deletes a group by ID.
+func (s *Service) Delete(ctx context.Context, id int64) error {
+	return s.repo.Delete(ctx, id)
 }
 
 // ListGroups returns a paginated list of groups filtered by q keyword.

@@ -49,6 +49,13 @@
   - レスポンス: 更新後のグループ情報（id, name, description, member_count）(200)
   - エラー: 不正な ID/パラメータ → 400、バリデーション失敗 → 400、存在しない ID → 404
 
+### グループ削除
+
+- `DELETE /api/v1/groups/:id` — 指定 ID のグループを soft delete するエンドポイント
+  - パスパラメータ: `id`（グループ ID、1 以上の整数）
+  - レスポンス: 204 No Content
+  - エラー: 不正な ID → 400、存在しない ID → 404
+
 ### グループメンバー一覧取得
 
 - `GET /api/v1/groups/:id/members` — 指定グループのメンバー一覧を返すエンドポイント

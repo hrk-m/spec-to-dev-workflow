@@ -28,6 +28,7 @@ type GroupService interface {
 	ListGroupMembers(ctx context.Context, id, limit, offset uint64, q string) ([]domain.GroupMember, int, error)
 	Store(ctx context.Context, name, description string) (domain.Group, error)
 	Update(ctx context.Context, id int64, name, description string) (*domain.Group, error)
+	Delete(ctx context.Context, id int64) error
 }
 
 // GroupHandler handles HTTP requests for the group endpoints.
@@ -43,6 +44,7 @@ func NewGroupHandler(e *echo.Echo, svc GroupService) {
 	e.GET("/api/v1/groups/:id/members", h.ListGroupMembers)
 	e.POST("/api/v1/groups", h.Store)
 	e.PUT("/api/v1/groups/:id", h.Update)
+	e.DELETE("/api/v1/groups/:id", h.Delete)
 }
 
 type groupListResponse struct {
@@ -106,6 +108,26 @@ func (h *GroupHandler) Update(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, result)
+}
+
+// Delete handles DELETE /api/v1/groups/:id.
+func (h *GroupHandler) Delete(c echo.Context) error {
+	ctx := c.Request().Context()
+
+	idP, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, ResponseError{Message: domain.ErrBadParamInput.Error()})
+	}
+
+	if idP < 1 {
+		return c.JSON(http.StatusBadRequest, ResponseError{Message: domain.ErrBadParamInput.Error()})
+	}
+
+	if err := h.Service.Delete(ctx, int64(idP)); err != nil {
+		return c.JSON(getStatusCode(err), ResponseError{Message: err.Error()})
+	}
+
+	return c.NoContent(http.StatusNoContent)
 }
 
 // GetByID handles GET /api/v1/groups/:id.

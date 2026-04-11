@@ -429,3 +429,39 @@ func TestService_Update_RepositoryError(t *testing.T) {
 	assert.ErrorIs(t, err, domain.ErrInternalServerError)
 	repo.AssertExpectations(t)
 }
+
+func TestService_Delete_OK(t *testing.T) {
+	repo := new(mocks.MockGroupRepository)
+	svc := group.NewService(repo)
+
+	repo.On("Delete", mock.Anything, int64(1)).Return(nil)
+
+	err := svc.Delete(context.Background(), 1)
+
+	assert.NoError(t, err)
+	repo.AssertExpectations(t)
+}
+
+func TestService_Delete_NotFound(t *testing.T) {
+	repo := new(mocks.MockGroupRepository)
+	svc := group.NewService(repo)
+
+	repo.On("Delete", mock.Anything, int64(9999)).Return(domain.ErrNotFound)
+
+	err := svc.Delete(context.Background(), 9999)
+
+	assert.ErrorIs(t, err, domain.ErrNotFound)
+	repo.AssertExpectations(t)
+}
+
+func TestService_Delete_RepositoryError(t *testing.T) {
+	repo := new(mocks.MockGroupRepository)
+	svc := group.NewService(repo)
+
+	repo.On("Delete", mock.Anything, int64(1)).Return(domain.ErrInternalServerError)
+
+	err := svc.Delete(context.Background(), 1)
+
+	assert.ErrorIs(t, err, domain.ErrInternalServerError)
+	repo.AssertExpectations(t)
+}

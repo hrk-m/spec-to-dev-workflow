@@ -39,3 +39,8 @@ func (m *MockGroupRepository) Update(ctx context.Context, id int64, name, descri
 	g, _ := args.Get(0).(*domain.Group)
 	return g, args.Error(1)
 }
+
+func (m *MockGroupRepository) Delete(ctx context.Context, id int64) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
+}

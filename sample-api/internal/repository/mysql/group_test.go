@@ -186,3 +186,38 @@ func TestUpdate_NotFound(t *testing.T) {
 
 	assert.ErrorIs(t, err, domain.ErrNotFound)
 }
+
+func TestDelete_OK(t *testing.T) {
+	db := testDB(t)
+	defer db.Close()
+
+	// Insert a group to delete.
+	result, err := db.Exec("INSERT INTO `groups` (name, description) VALUES ('To Delete', 'delete me')")
+	require.NoError(t, err)
+
+	id, err := result.LastInsertId()
+	require.NoError(t, err)
+
+	defer db.Exec("DELETE FROM `groups` WHERE id = ?", id) //nolint:errcheck
+
+	repo := mysqlRepo.NewGroupRepository(db)
+	err = repo.Delete(context.Background(), id)
+
+	require.NoError(t, err)
+
+	// Verify deleted_at is set.
+	var deletedAt sql.NullTime
+	row := db.QueryRow("SELECT deleted_at FROM `groups` WHERE id = ?", id)
+	require.NoError(t, row.Scan(&deletedAt))
+	assert.True(t, deletedAt.Valid)
+}
+
+func TestDelete_NotFound(t *testing.T) {
+	db := testDB(t)
+	defer db.Close()
+
+	repo := mysqlRepo.NewGroupRepository(db)
+	err := repo.Delete(context.Background(), 999999999)
+
+	assert.ErrorIs(t, err, domain.ErrNotFound)
+}
