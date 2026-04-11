@@ -22,6 +22,13 @@ inclusion: always
   エンドポイント）。名前バリデーション（必須・100 文字以内）付き。編集成功時はグループ詳細を再取得して表示を更新
 - グループ削除（確認ダイアログ形式、`DELETE /api/v1/groups/:id` エンドポイント）。Radix UI
   `AlertDialog` による削除確認 UI。削除成功時はトップページ（`/`）へ自動遷移
+- メンバー追加（Sheet 形式、`POST /api/v1/groups/:id/members`
+  エンドポイント）。グループ詳細画面の「メンバー追加」ボタンから `AddMemberSheet`
+  をシートで開き、`GET /api/v1/groups/:id/non-members`
+  で取得した未所属ユーザーをチェックボックスで複数選択して一括追加する。検索（300ms デバウンス）・ページネーション・ページサイズ切り替え（20/50/100）を備え、追加成功時は
+  `clearMemberListCache()` → `refetch()`（グループ詳細再取得）→ `onClose()`（`closeSheet()` +
+  `refetch()`
+  を再呼び出し）の順に呼び出してメンバー一覧とグループ詳細を更新する。409 競合エラーは「選択したユーザーはすでにメンバーです」と表示する
 - App Shell パターン（Header + Sidebar によるナビゲーション）。サイドバー開閉時は
   `react-remove-scroll-bar`
   でスクロールバーを非表示にし、ヘッダーの padding-right で幅のズレを補正。Sidebar の "Groups" ボタンはクローズと同時に

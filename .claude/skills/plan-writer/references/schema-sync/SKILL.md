@@ -76,7 +76,7 @@ migration ディレクトリの SQL ファイルを番号順に読み、`CREATE 
 対象ドキュメントの `## ファイル配置` に migration ファイルがない場合のみ追記する。
 
 ```markdown
-| `sample-api/db/migrations/{ファイル名}.sql` | テーブル定義・マイグレーション |
+| `sample-api/db/migrate/{ファイル名}.sql` | テーブル定義・マイグレーション |
 ```
 
 **Step 10: Repository コードとのドリフトを検出する**

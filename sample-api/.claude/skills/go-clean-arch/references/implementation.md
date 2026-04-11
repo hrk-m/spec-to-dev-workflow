@@ -85,7 +85,6 @@
 db/
 ├── migrate/          ← schema 変更（DDL）, golang-migrate 形式
 │   ├── 20260403120000_create_groups.up.sql
-│   ├── 20260403120000_create_groups.down.sql
 │   └── ...
 └── seed/             ← 初期データ（DML のみ）
     ├── 001_groups.sql

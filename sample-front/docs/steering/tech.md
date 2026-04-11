@@ -132,11 +132,12 @@ Prettier +
 
 - `printWidth: 100`, `singleQuote: false`, `semi: true`, `trailingComma: "all"`
 - `tabWidth: 2`, `arrowParens: "always"`, `proseWrap: "always"`, `endOfLine: "lf"`
-- インポート順: React → サードパーティ → `@/app` → `@/pages` → `@/shared` → 親相対パス(`../`)
-  → 同階層相対パス(`./`)
-- 注意: `@/widgets`・`@/features`・`@/entities` は `.prettierrc.mjs` の `importOrder`
+- インポート順: React → サードパーティ → `@/app` → `@/pages` → `@/entities` → `@/shared`
+  → 親相対パス(`../`) → 同階層相対パス(`./`)
+- 注意: `@/widgets`・`@/features` は `.prettierrc.mjs` の `importOrder`
   に明示指定されていないため、サードパーティと `@/app`
-  の間にフォールバック配置される。FSD レイヤーを追加した際は `importOrder` への追記を忘れないこと
+  の間にフォールバック配置される。新しい FSD レイヤー（`@/widgets` 等）を追加した際は `importOrder`
+  への追記を忘れないこと
 
 ### テスト構成
 

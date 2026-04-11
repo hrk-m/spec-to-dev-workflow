@@ -64,12 +64,29 @@
   - レスポンス: メンバー一覧（members）+ 総件数（total）
   - エラー: 不正な ID/パラメータ → 400、グループ未存在 → 404
 
+### グループ未所属ユーザー一覧取得
+
+- `GET /api/v1/groups/:id/non-members` — 指定グループに所属していないユーザー一覧を返すエンドポイント
+  - パスパラメータ: `id`（グループ ID、1 以上の整数）
+  - 任意パラメータ: `limit`（取得件数、1-500、デフォルト 500）、`offset`（オフセット、0 以上、デフォルト 0）、`q`（名前検索、`search_key` カラムで LIKE 検索）
+  - レスポンス: ユーザー一覧（users）+ 総件数（total、フィルタなしの全件数）
+  - エラー: 不正な ID/パラメータ → 400、グループ未存在 → 404
+
+### グループメンバー追加
+
+- `POST /api/v1/groups/:id/members` — 指定グループにユーザーを追加するエンドポイント
+  - パスパラメータ: `id`（グループ ID、1 以上の整数）
+  - リクエストボディ: `{"user_ids": [uint64, ...]}`
+  - バリデーション: `user_ids` は空でないこと。指定ユーザーが存在すること。指定ユーザーが既にグループメンバーでないこと
+  - レスポンス: 追加されたユーザー一覧（members）(201)
+  - エラー: 不正な ID/パラメータ → 400、グループ未存在 → 404、ユーザー未存在 → 404、既にメンバー → 409
+
 ## ドメインモデル
 
 - **Group**: id, name, description, member_count
-- **GroupMember**: id, first_name, last_name
+- **User**: id, first_name, last_name
 
-> **補足**: User は DB テーブル（`users`）として存在するが、`domain/` パッケージには User 型を定義していない。API レスポンスではグループメンバーを `GroupMember` 型で返す。
+> **補足**: `User` はメンバー一覧（`GET /api/v1/groups/:id/members`）、未所属ユーザー一覧（`GET /api/v1/groups/:id/non-members`）、グループメンバー追加レスポンス（`POST /api/v1/groups/:id/members`）のすべてで使用する。`GroupMember` という別型は存在せず、`domain.User` で統一している。
 
 ## ユーザーとユースケース
 

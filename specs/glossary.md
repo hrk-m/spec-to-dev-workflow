@@ -25,3 +25,6 @@
 | MemberDetailSheet | メンバー詳細をシートコンテンツとして表示するコンポーネント | GroupDetailSheet の上にスタックされる |
 | AlertDialog | 操作確認のためのモーダルダイアログ。ユーザーに操作の意図を確認させる | Radix UI AlertDialog を使用。`role="alertdialog"` |
 | ソフトデリート | レコードを物理削除せず `deleted_at` に現在時刻を設定して論理削除する方式 | グループ削除で採用。API 操作後も DB のレコードは残る |
+| AddMemberSheet | グループ未所属のユーザーを検索・選択してグループに一括追加するシートコンポーネント | グループ詳細の「メンバー追加」ボタンから開く。`role="dialog"` |
+| 非メンバー | あるグループにまだ所属していないユーザー。AddMemberSheet の一覧対象 | API では `non-members` |
+| 一括追加 | チェックボックスで選択した複数ユーザーを一度のリクエストでグループメンバーに追加する操作 | AddMemberSheet の「一括追加」ボタンで実行 |
