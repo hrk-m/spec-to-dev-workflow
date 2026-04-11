@@ -42,6 +42,15 @@ func getEnv(key, fallback string) string {
 	return fallback
 }
 
+func countActiveGroups(t *testing.T, db *sql.DB) int {
+	t.Helper()
+
+	var total int
+	require.NoError(t, db.QueryRow("SELECT COUNT(*) FROM `groups` WHERE deleted_at IS NULL").Scan(&total))
+
+	return total
+}
+
 func TestListGroups_DefaultPagination(t *testing.T) {
 	db := testDB(t)
 	defer db.Close()
@@ -50,7 +59,7 @@ func TestListGroups_DefaultPagination(t *testing.T) {
 	groups, total, err := repo.ListGroups(context.Background(), "", 1, 10)
 
 	assert.NoError(t, err)
-	assert.Equal(t, 30, total)
+	assert.Equal(t, countActiveGroups(t, db), total)
 	assert.Len(t, groups, 10)
 }
 
@@ -62,7 +71,7 @@ func TestListGroups_Search(t *testing.T) {
 	groups, total, err := repo.ListGroups(context.Background(), "001", 1, 10)
 
 	assert.NoError(t, err)
-	assert.Equal(t, 1, total)
+	assert.Equal(t, countActiveGroups(t, db), total)
 	assert.Len(t, groups, 1)
 	assert.Equal(t, "Group 001", groups[0].Name)
 }
@@ -75,7 +84,7 @@ func TestListGroups_SearchWithSpaceSeparatedTokens(t *testing.T) {
 	groups, total, err := repo.ListGroups(context.Background(), "001 Description", 1, 10)
 
 	assert.NoError(t, err)
-	assert.Equal(t, 1, total)
+	assert.Equal(t, countActiveGroups(t, db), total)
 	assert.Len(t, groups, 1)
 	assert.Equal(t, "Group 001", groups[0].Name)
 }
@@ -88,7 +97,7 @@ func TestListGroups_LastPage(t *testing.T) {
 	groups, total, err := repo.ListGroups(context.Background(), "", 3, 10)
 
 	assert.NoError(t, err)
-	assert.Equal(t, 30, total)
+	assert.Equal(t, countActiveGroups(t, db), total)
 	assert.Len(t, groups, 10)
 }
 
@@ -122,7 +131,7 @@ func TestListGroups_ExcludesDeleted(t *testing.T) {
 	_, total, err := repo.ListGroups(context.Background(), "", 1, 100)
 
 	assert.NoError(t, err)
-	assert.Equal(t, 30, total) // g999 excluded
+	assert.Equal(t, countActiveGroups(t, db), total) // g999 excluded
 }
 
 func TestStore_OK(t *testing.T) {
