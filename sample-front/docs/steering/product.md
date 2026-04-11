@@ -20,8 +20,8 @@ inclusion: always
   エンドポイント）。メンバー一覧も同様のクライアントキャッシュ・ページネーション・検索（300msデバウンス）・ページサイズ切り替えを備える
 - グループ編集（ダイアログ形式、`PUT /api/v1/groups/:id`
   エンドポイント）。名前バリデーション（必須・100 文字以内）付き。編集成功時はグループ詳細を再取得して表示を更新
-- グループ削除（確認ダイアログ形式、`DELETE /api/v1/groups/:id`
-  エンドポイント）。Radix UI `AlertDialog` による削除確認 UI。削除成功時はトップページ（`/`）へ自動遷移
+- グループ削除（確認ダイアログ形式、`DELETE /api/v1/groups/:id` エンドポイント）。Radix UI
+  `AlertDialog` による削除確認 UI。削除成功時はトップページ（`/`）へ自動遷移
 - App Shell パターン（Header + Sidebar によるナビゲーション）。サイドバー開閉時は
   `react-remove-scroll-bar`
   でスクロールバーを非表示にし、ヘッダーの padding-right で幅のズレを補正。Sidebar の "Groups" ボタンはクローズと同時に

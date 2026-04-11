@@ -25,7 +25,7 @@
 ```
 API エラー（404 / 500）
   │
-  └─ ダイアログ内にエラーメッセージを表示する（"Error: your requested item is not found" など）
+  └─ ダイアログ内にエラーメッセージを表示する（例: "Error: 404 Not Found", "Error: 500 Internal Server Error"）
      ダイアログは開いたまま維持される
 
 Cancel クリック

@@ -39,4 +39,11 @@ describe("apiFetch", () => {
 
     expect(fetch).toHaveBeenCalledWith(expect.any(String), init);
   });
+
+  it("204 No Content レスポンス時は undefined を返す", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(new Response(null, { status: 204 }));
+
+    const result = await apiFetch<void>("/delete-endpoint");
+    expect(result).toBeUndefined();
+  });
 });

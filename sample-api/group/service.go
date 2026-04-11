@@ -90,6 +90,10 @@ func (s *Service) Store(ctx context.Context, name, description string) (domain.G
 
 // Update updates a group's name and description by ID.
 func (s *Service) Update(ctx context.Context, id int64, name, description string) (*domain.Group, error) {
+	if id < minID {
+		return nil, domain.ErrBadParamInput
+	}
+
 	name = strings.TrimSpace(name)
 	if name == "" || len(name) > maxNameLength {
 		return nil, domain.ErrBadParamInput
@@ -100,6 +104,10 @@ func (s *Service) Update(ctx context.Context, id int64, name, description string
 
 // Delete soft-deletes a group by ID.
 func (s *Service) Delete(ctx context.Context, id int64) error {
+	if id < minID {
+		return domain.ErrBadParamInput
+	}
+
 	return s.repo.Delete(ctx, id)
 }
 

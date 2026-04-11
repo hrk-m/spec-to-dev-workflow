@@ -95,7 +95,7 @@
 4. ダイアログ内に「削除の確認」メッセージを表示
 5. キャンセルボタン（AlertDialog.Cancel）クリック → ダイアログを閉じる
 6. 確認ボタン（AlertDialog.Action 内）クリック
-7. DELETE /api/v1/groups/:id を呼び出す（fetch 直呼び、apiFetch は使わない）
+7. DELETE /api/v1/groups/:id を呼び出す（`apiFetch<void>` を使用）
 8. 呼び出し中は確認ボタンを disabled にする（isLoading）
 9. 成功時（204）
    - ダイアログを閉じる
@@ -105,7 +105,7 @@
 11. 終了
 ```
 
-> **実装メモ**: `shared/api/client.ts` の `apiFetch` は常に `res.json()` を呼ぶため、204 No Content では `SyntaxError` が発生する。`delete-group.ts` では `apiFetch` を使わず `fetch` を直接呼び出す。
+> **実装メモ**: `shared/api/client.ts` の `apiFetch` は `res.status === 204` の場合に `res.json()` を呼ばず `undefined` を返す。`delete-group.ts` では `apiFetch<void>` を使用する。エラー時のメッセージ形式は `"${status} ${statusText}"`（例: `"404 Not Found"`, `"500 Internal Server Error"`）。
 
 ---
 
@@ -217,7 +217,7 @@ WHERE id = ? AND deleted_at IS NULL
 
 | ファイル                                                             | 変更内容                                                  |
 | -------------------------------------------------------------------- | --------------------------------------------------------- |
-| `src/pages/group-detail/api/delete-group.ts`                         | 新規: `fetch` 直呼びで DELETE /api/v1/groups/:id を呼ぶ関数 |
+| `src/pages/group-detail/api/delete-group.ts`                         | 新規: `apiFetch<void>` で DELETE /api/v1/groups/:id を呼ぶ関数 |
 | `src/pages/group-detail/model/useDeleteGroup.ts`                     | 新規: `useDeleteGroup` フック（isLoading・error・onSuccess・navigate） |
 | `src/pages/group-detail/ui/DeleteGroupDialog.tsx`                    | 新規: Radix UI AlertDialog 確認ダイアログコンポーネント   |
 | `src/pages/group-detail/ui/GroupDetailContent.tsx`                   | `[Delete]` ボタン追加・Edit/Delete を `<Flex gap="2">` でグループ化 |

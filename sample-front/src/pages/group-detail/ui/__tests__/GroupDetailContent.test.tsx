@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type * as ReactRouter from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fetchGroupMembers } from "@/pages/group-detail/api/fetch-group-members";
@@ -7,7 +8,7 @@ import type { GroupDetail } from "@/pages/group-detail/model/group-detail";
 import { GroupDetailContent } from "@/pages/group-detail/ui/GroupDetailContent";
 
 vi.mock("react-router", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("react-router")>();
+  const actual = await importOriginal<typeof ReactRouter>();
   return {
     ...actual,
     useNavigate: vi.fn(() => vi.fn()),

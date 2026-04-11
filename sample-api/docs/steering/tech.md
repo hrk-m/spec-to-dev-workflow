@@ -74,6 +74,8 @@ type GroupService interface {
 
 `Update` は ID（`int64`）・name・description を受け取り、更新後の `*domain.Group` を返す。`Delete` は ID（`int64`）を受け取り、soft delete を実行する（成功時は `nil`、対象未存在時は `ErrNotFound`）。
 
+`Update` および `Delete` は、`GetByID` や `ListGroupMembers` と同様に、service 層で `id < minID`（`minID = 1`）のバリデーションを行い、不正な ID には `ErrBadParamInput` を返す（repository は呼び出さない）。
+
 ## リポジトリインターフェース（`GroupRepository`）
 
 `group/service.go` に定義された `GroupRepository` インターフェース。use case 層が repository adapter に依存するパターンを示す。

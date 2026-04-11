@@ -417,6 +417,16 @@ func TestService_Update_NameTooLong(t *testing.T) {
 	repo.AssertNotCalled(t, "Update")
 }
 
+func TestService_Update_InvalidID(t *testing.T) {
+	repo := new(mocks.MockGroupRepository)
+	svc := group.NewService(repo)
+
+	_, err := svc.Update(context.Background(), 0, "Valid", "desc")
+
+	assert.ErrorIs(t, err, domain.ErrBadParamInput)
+	repo.AssertNotCalled(t, "Update")
+}
+
 func TestService_Update_RepositoryError(t *testing.T) {
 	repo := new(mocks.MockGroupRepository)
 	svc := group.NewService(repo)
@@ -428,6 +438,16 @@ func TestService_Update_RepositoryError(t *testing.T) {
 
 	assert.ErrorIs(t, err, domain.ErrInternalServerError)
 	repo.AssertExpectations(t)
+}
+
+func TestService_Delete_InvalidID(t *testing.T) {
+	repo := new(mocks.MockGroupRepository)
+	svc := group.NewService(repo)
+
+	err := svc.Delete(context.Background(), 0)
+
+	assert.ErrorIs(t, err, domain.ErrBadParamInput)
+	repo.AssertNotCalled(t, "Delete")
 }
 
 func TestService_Delete_OK(t *testing.T) {
