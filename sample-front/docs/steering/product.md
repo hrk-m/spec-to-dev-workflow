@@ -29,11 +29,13 @@ inclusion: always
   `clearMemberListCache()` → `refetch()`（グループ詳細再取得）→ `onClose()`（`closeSheet()` +
   `refetch()`
   を再呼び出し）の順に呼び出してメンバー一覧とグループ詳細を更新する。409 競合エラーは「選択したユーザーはすでにメンバーです」と表示する
+- ユーザー一覧表示（検索・ページネーション付き、`GET /api/v1/users`
+  エンドポイント）。クライアントキャッシュ戦略（500 件一括取得 → クライアント側でページ分割）と 20/50/100 件のページサイズ切り替えを備える。検索入力は 300ms デバウンスし、ユーザー名の部分一致検索に対応する
 - App Shell パターン（Header + Sidebar によるナビゲーション）。サイドバー開閉時は
   `react-remove-scroll-bar`
-  でスクロールバーを非表示にし、ヘッダーの padding-right で幅のズレを補正。Sidebar の "Groups" ボタンはクローズと同時に
-  `router.navigate("/")` でトップページへ遷移する（`onNavigate` prop 経由）
-- react-router v7 によるクライアントサイドルーティング（`/`, `/groups`, `/groups/:id`）
+  でスクロールバーを非表示にし、ヘッダーの padding-right で幅のズレを補正。Sidebar の "Groups" ボタンは
+  `/`、"Users" ボタンは `/users` へ遷移する（`onNavigate(path)` prop 経由）
+- react-router v7 によるクライアントサイドルーティング（`/`, `/groups`, `/groups/:id`, `/users`）
 - サーバーサイド API プロキシ（Bun サーバーが `/api/*` リクエストをバックエンドに中継）
 - Feature-Sliced Design に沿ったスケーラブルなフロントエンド構造のデモ
 

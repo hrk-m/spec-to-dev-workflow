@@ -8,6 +8,7 @@ import {
   type UserSummary,
 } from "@/pages/group-detail";
 import { HomePage } from "@/pages/home";
+import { UsersPage } from "@/pages/users";
 import { useSheetStack } from "@/shared/lib/sheet-stack";
 import { Sheet, sheetConstants } from "@/shared/ui";
 
@@ -63,13 +64,16 @@ export function GroupNavigationLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const groupDetailMatch = useMatch("/groups/:id");
+  const usersMatch = useMatch("/users");
   const { closeAll } = useSheetStack();
   const previousRouteKeyRef = useRef<string | null>(null);
 
   const isSheetPresentation = hasSheetPresentation(location.state);
   const routeKey = groupDetailMatch
     ? `${groupDetailMatch.params.id}:${isSheetPresentation ? "sheet" : "page"}`
-    : "home";
+    : usersMatch
+      ? "users"
+      : "home";
 
   useLayoutEffect(() => {
     const previousRouteKey = previousRouteKeyRef.current;
@@ -84,6 +88,10 @@ export function GroupNavigationLayout() {
   const handleGroupClick = (groupId: number) => {
     navigate(`/groups/${String(groupId)}`, { state: { presentation: "sheet" } });
   };
+
+  if (usersMatch) {
+    return <UsersPage />;
+  }
 
   if (!groupDetailMatch) {
     return <HomePage onGroupClick={handleGroupClick} />;

@@ -2,7 +2,11 @@ import { Sidebar } from "@/widgets/sidebar";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-function renderSidebar(props: { isOpen: boolean; onClose: () => void; onNavigate?: () => void }) {
+function renderSidebar(props: {
+  isOpen: boolean;
+  onClose: () => void;
+  onNavigate?: (path: string) => void;
+}) {
   return render(<Sidebar {...props} />);
 }
 
@@ -28,6 +32,12 @@ describe("Sidebar", () => {
     renderSidebar(defaultProps);
 
     expect(screen.getByText("Groups")).toBeInTheDocument();
+  });
+
+  it("Users メニュー項目を表示する", () => {
+    renderSidebar(defaultProps);
+
+    expect(screen.getByText("Users")).toBeInTheDocument();
   });
 
   it("isOpen が true のときオーバーレイを表示する", () => {
@@ -66,6 +76,7 @@ describe("Sidebar", () => {
 
     fireEvent.click(screen.getByText("Groups"));
     expect(onNavigate).toHaveBeenCalledTimes(1);
+    expect(onNavigate).toHaveBeenCalledWith("/");
   });
 
   it("onNavigate が未指定でも Groups クリックでエラーにならない", () => {
@@ -75,6 +86,17 @@ describe("Sidebar", () => {
     expect(() => {
       fireEvent.click(screen.getByText("Groups"));
     }).not.toThrow();
+  });
+
+  it("Users をクリックすると onNavigate に /users を渡す", () => {
+    const onClose = vi.fn();
+    const onNavigate = vi.fn();
+    renderSidebar({ isOpen: true, onClose, onNavigate });
+
+    fireEvent.click(screen.getByText("Users"));
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(onNavigate).toHaveBeenCalledTimes(1);
+    expect(onNavigate).toHaveBeenCalledWith("/users");
   });
 
   it("Escape キーで閉じる", () => {

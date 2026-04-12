@@ -88,9 +88,9 @@ type UserService interface {
 
 `AddGroupMembers` は handler 層で `user_ids` の空チェック（`len == 0` → 400）を行い、service 層でグループ存在確認と各ユーザー存在確認（`userRepo.GetByID`）を行い、いずれかが存在しない場合は `ErrNotFound` を返す。重複チェック（既にメンバー）は repository 層で行い、`ErrConflict` を返す。
 
-## リポジトリインターフェース（`GroupRepository` と `UserRepository`）
+## リポジトリインターフェース（`GroupRepository`、`group.UserRepository`、`user.UserRepository`）
 
-`group/service.go` に定義された 2 つのインターフェース。use case 層が repository adapter に依存するパターンを示す。
+それぞれのユースケース層が消費側でインターフェースを宣言する。
 
 ```go
 // GroupRepository はグループデータアクセスのインターフェース（group/service.go で宣言）
@@ -105,9 +105,14 @@ type GroupRepository interface {
     AddGroupMembers(ctx context.Context, groupID uint64, userIDs []uint64) ([]domain.User, error)
 }
 
-// UserRepository はグループサービスが使うユーザーデータアクセスのインターフェース（group/service.go で宣言）
+// group.UserRepository はグループサービスが使うユーザーデータアクセスのインターフェース（group/service.go で宣言）
 type UserRepository interface {
     GetByID(ctx context.Context, id uint64) (domain.User, error)
+}
+
+// user.UserRepository はユーザー一覧取得のインターフェース（user/service.go で宣言）
+type UserRepository interface {
+    ListUsers(ctx context.Context, q string, limit, offset int) ([]domain.User, int, error)
 }
 ```
 
@@ -119,4 +124,4 @@ type UserRepository interface {
 
 `AddGroupMembers` はトランザクション内で `group_members` へ一括 INSERT する。INSERT 前に重複チェックを行い、既存メンバーが含まれる場合は `ErrConflict` を返す。成功後は追加したユーザーを `users` テーブルから SELECT して返す。
 
-> **補足**: `mysql.UserRepository` は `group.UserRepository`（`GetByID`）と `user.UserRepository`（`ListUsers`）の両インターフェースを実装する単一の struct。`app/main.go` で 1 インスタンスを `group.NewService` と `user.NewService` の両方に渡す。
+> **補足**: `mysql.UserRepository` は `group.UserRepository`（`GetByID`）と `user.UserRepository`（`ListUsers`）の両インターフェースを実装する単一の struct。`app/main.go` で `mysqlRepo.NewUserRepository(db)` で 1 インスタンスを生成し、`group.NewService` と `user.NewService` の両方に渡す。

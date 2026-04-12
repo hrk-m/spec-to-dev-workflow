@@ -17,6 +17,10 @@ vi.mock("@/pages/home", () => ({
   HomePage: () => <div data-testid="home-page">HomePage</div>,
 }));
 
+vi.mock("@/pages/users", () => ({
+  UsersPage: () => <div data-testid="users-page">UsersPage</div>,
+}));
+
 vi.mock("@/shared/lib/sheet-stack", () => ({
   useSheetStack: () => ({ openSheet: vi.fn(), sheets: [], closeAll }),
 }));
@@ -73,6 +77,13 @@ describe("GroupNavigationLayout", () => {
     renderWithRouter("/groups/1");
 
     expect(screen.getByTestId("group-detail-page")).toBeInTheDocument();
+    expect(screen.queryByTestId("home-page")).not.toBeInTheDocument();
+  });
+
+  it("/users では UsersPage を表示する", () => {
+    renderWithRouter("/users");
+
+    expect(screen.getByTestId("users-page")).toBeInTheDocument();
     expect(screen.queryByTestId("home-page")).not.toBeInTheDocument();
   });
 

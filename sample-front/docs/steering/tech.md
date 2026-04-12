@@ -31,8 +31,9 @@ inclusion: always
 react-router v7 を使用。`src/app/router.tsx` で `createBrowserRouter`
 によりルート定義を一元管理し、`App.tsx` で `RouterProvider`
 を通じてマウントする。ルート定義の最上位で `SheetStackProvider`
-をラップし、Sheet スタックのコンテキストをアプリ全体に提供する。 `GroupNavigationLayout` が `/` と
-`/groups/:id` のルーティングを制御し、`location.state.presentation === "sheet"`
+をラップし、Sheet スタックのコンテキストをアプリ全体に提供する。 `GroupNavigationLayout` が
+`/`・`/groups`・`/groups/:id`・`/users` のルーティングを制御し、`/users` は
+`UsersPage`、`/groups/:id` は `location.state.presentation === "sheet"`
 の場合はシート表示、それ以外はフルページ遷移を行う。
 
 ### パスエイリアス

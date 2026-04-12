@@ -1,13 +1,13 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { Box, Button, Flex, Text } from "@radix-ui/themes";
-import { FaChevronRight, FaHouse } from "react-icons/fa6";
+import { FaChevronRight, FaHouse, FaUsers } from "react-icons/fa6";
 
 import { styles, TRANSITION_DURATION_MS } from "./Sidebar.styles";
 
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
-  onNavigate?: () => void;
+  onNavigate?: (path: string) => void;
 }
 
 export function Sidebar({ isOpen, onClose, onNavigate }: SidebarProps) {
@@ -98,12 +98,35 @@ export function Sidebar({ isOpen, onClose, onNavigate }: SidebarProps) {
                 }}
                 onClick={() => {
                   onClose();
-                  onNavigate?.();
+                  onNavigate?.("/");
                 }}
               >
                 <Flex as="span" style={styles.homeItemLabel}>
                   <FaHouse aria-hidden="true" style={styles.navIcon} />
                   <Text as="span">Groups</Text>
+                </Flex>
+                <Box as="span" aria-hidden="true" style={styles.chevron}>
+                  <FaChevronRight />
+                </Box>
+              </Button>
+              <Button
+                type="button"
+                size="3"
+                radius="large"
+                variant="surface"
+                color="gray"
+                style={{
+                  ...styles.homeItem,
+                  textAlign: "left" as const,
+                }}
+                onClick={() => {
+                  onClose();
+                  onNavigate?.("/users");
+                }}
+              >
+                <Flex as="span" style={styles.homeItemLabel}>
+                  <FaUsers aria-hidden="true" style={styles.navIcon} />
+                  <Text as="span">Users</Text>
                 </Flex>
                 <Box as="span" aria-hidden="true" style={styles.chevron}>
                   <FaChevronRight />

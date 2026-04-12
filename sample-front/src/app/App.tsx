@@ -18,7 +18,7 @@ export function App() {
       <Sidebar
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
-        onNavigate={() => router.navigate("/")}
+        onNavigate={(path) => router.navigate(path)}
       />
       <main className="app-shell__content">
         <RouterProvider router={router} />

@@ -21,6 +21,7 @@ export const router = createBrowserRouter([
           { index: true, element: <></> },
           { path: "groups", element: <></> },
           { path: "groups/:id", element: <></> },
+          { path: "users", element: <></> },
         ],
       },
     ],

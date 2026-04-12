@@ -17,7 +17,7 @@ sample-api/
 │   ├── service_test.go      # 外部テストパッケージ (package {feature}_test)
 │   └── mocks/               # テスト用 mock（手動保守）
 │       ├── {feature}_repository_mock.go
-│       └── user_repository_mock.go  # 複数の repository IF を持つ場合（例: group は UserRepository も必要）
+│       └── user_repository_mock.go  # group は UserRepository も必要なため追加（group/mocks/ 配下に配置）
 ├── internal/
 │   ├── repository/
 │   │   └── mysql/           # Repository adapter（MySQL 実装）
