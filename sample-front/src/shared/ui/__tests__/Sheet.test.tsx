@@ -190,21 +190,6 @@ describe("Sheet", () => {
     expect(document.body.style.overflow).toBe("");
   });
 
-  it("overlay の wheel イベントで preventDefault が呼ばれる", () => {
-    render(
-      <Sheet onClose={vi.fn()} onRemove={vi.fn()}>
-        <p>Sheet content</p>
-      </Sheet>,
-    );
-
-    const overlay = screen.getByTestId("sheet-overlay");
-    const preventDefaultSpy = vi.spyOn(Event.prototype, "preventDefault");
-    fireEvent.wheel(overlay);
-
-    expect(preventDefaultSpy).toHaveBeenCalled();
-    preventDefaultSpy.mockRestore();
-  });
-
   it("マウント直後（rAF 前）に overlay の opacity が 0 である", () => {
     render(
       <Sheet onClose={vi.fn()} onRemove={vi.fn()}>

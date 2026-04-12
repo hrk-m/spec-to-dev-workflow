@@ -36,6 +36,16 @@ export function Sheet({
   }, []);
 
   useEffect(() => {
+    if (!closing) {
+      const prev = document.body.style.overflowY;
+      document.body.style.overflowY = "hidden";
+      return () => {
+        document.body.style.overflowY = prev;
+      };
+    }
+  }, [closing]);
+
+  useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "Escape" && isTopMost && !closing) {
         onClose();
@@ -63,7 +73,6 @@ export function Sheet({
       <div
         style={{ ...styles.overlay, zIndex, opacity: overlayOpacity }}
         onClick={onClose}
-        onWheel={(e) => e.preventDefault()}
         role="presentation"
         data-testid="sheet-overlay"
       />

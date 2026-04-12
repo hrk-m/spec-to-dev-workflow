@@ -68,8 +68,9 @@ import { apiFetch } from "../../shared/api/client";
 
 - **アニメーション**: 500ms `cubic-bezier(0.4, 0, 0.2, 1)` で `transform` と `width`
   を同時にトランジション。オーバーレイは `ease-out` でフェード
-- **スクロール制御**: `document.body.style.overflow` を操作する代わりに、オーバーレイの `onWheel` で
-  `preventDefault()` を呼び出して背面スクロールをブロックし、コンテナに
+- **スクロール制御**: アクティブな Sheet（`closing` でない）が 1 つ以上ある間、`SheetStackProvider`
+  が `document.body.style.overflowY = "hidden"`
+  を適用して背面スクロールをブロックする。すべて閉じると元の値に戻す。コンテナには
   `overscrollBehavior: "contain"` を設定してシート内スクロールがページに伝播しないようにする
 - **ESC キー**: `keydown` イベントで `Escape` キーを検知し `onClose` を呼び出す
 - **オーバーレイクリック**: オーバーレイ領域のクリックで `onClose` を呼び出す
