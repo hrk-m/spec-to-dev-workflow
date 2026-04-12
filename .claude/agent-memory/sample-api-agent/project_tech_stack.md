@@ -28,3 +28,12 @@ app/main.go                    → DI 配線・サーバー起動のみ
 **Why:** Clean Architecture で依存方向を内側へ向け、各層を独立してテストできる構造を維持する。
 
 **How to apply:** 新機能追加時は必ず domain → service → repository → handler → main.go の順で編集する。IF は消費側で宣言すること。
+
+## 実装済みドメイン
+
+- **group**: グループ CRUD + メンバー管理（一覧・追加）・非メンバー一覧
+- **user**: ユーザー一覧取得（`GET /api/v1/users`）
+
+## mysql.UserRepository の共有
+
+`mysql.UserRepository` は `group.UserRepository`（GetByID）と `user.UserRepository`（ListUsers）の両 IF を実装する単一 struct。`app/main.go` で 1 インスタンスを `group.NewService` と `user.NewService` 両方に渡す。
