@@ -94,7 +94,7 @@ The location of type definitions follows the same rules as any other code:
 
 | Type scope                                        | Location                                                     |
 | ------------------------------------------------- | ------------------------------------------------------------ |
-| API response/request shapes shared across the app | `shared/api/types.ts` or domain-named files in `shared/api/` |
+| API response/request shapes shared across the app | `shared/api/group.ts`, `shared/api/user.ts` etc. (domain-named files in `shared/api/`) |
 | Types for a specific entity's domain model        | `entities/[name]/model/[name].ts`                            |
 | Types used only within one page                   | `pages/[name]/model/[name].ts`                               |
 | Types used only within one feature                | `features/[name]/model/[name].ts`                            |

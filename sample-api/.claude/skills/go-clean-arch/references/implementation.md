@@ -327,6 +327,106 @@ func (m *FooRepository) Update(ctx context.Context, f *domain.Foo) error {
 
 ---
 
+## 3-1. Bulk チェック・一括処理パターン
+
+複数 ID の存在確認や重複チェックは、ループで単件 SELECT を呼ぶ（N+1）のではなく 1 クエリで処理する。
+
+### 複数 ID の存在確認（`CountByIDs`）
+
+```go
+// ✅ 1 クエリで COUNT
+func (r *UserRepository) CountByIDs(ctx context.Context, ids []uint64) (int, error) {
+    if len(ids) == 0 {
+        return 0, nil
+    }
+    placeholders := make([]string, len(ids))
+    args := make([]interface{}, len(ids))
+    for i, id := range ids {
+        placeholders[i] = "?"
+        args[i] = id
+    }
+    query := fmt.Sprintf( //nolint:gosec
+        "SELECT COUNT(DISTINCT id) FROM users WHERE id IN (%s) AND deleted_at IS NULL",
+        strings.Join(placeholders, ","),
+    )
+    var count int
+    if err := r.db.QueryRowContext(ctx, query, args...).Scan(&count); err != nil {
+        return 0, domain.ErrInternalServerError
+    }
+    return count, nil
+}
+
+// ❌ N+1（IDs の数だけ SELECT が走る）
+for _, id := range ids {
+    if _, err := r.GetByID(ctx, id); err != nil {
+        return nil, err
+    }
+}
+```
+
+補足:
+
+- `COUNT(DISTINCT id)` を使うことで、入力に重複 ID があっても誤カウントを防ぐ
+- service 側で `count != len(deduplicatedIDs)` を確認して `ErrNotFound` を返す
+- 重複 ID の除去（deduplication）は service 層で行い、repository には正規化済みのスライスを渡す
+
+### 一括重複チェック（IN 句で 1 クエリ）
+
+```go
+// ✅ IN 句で一括チェック
+placeholders := make([]string, len(userIDs))
+checkArgs := make([]interface{}, 0, len(userIDs)+1)
+checkArgs = append(checkArgs, groupID)
+for i, uid := range userIDs {
+    placeholders[i] = "?"
+    checkArgs = append(checkArgs, uid)
+}
+checkQuery := fmt.Sprintf( //nolint:gosec
+    "SELECT COUNT(*) FROM group_members WHERE group_id = ? AND user_id IN (%s)",
+    strings.Join(placeholders, ","),
+)
+var existingCount int
+if err := r.db.QueryRowContext(ctx, checkQuery, checkArgs...).Scan(&existingCount); err != nil {
+    return nil, domain.ErrInternalServerError
+}
+if existingCount > 0 {
+    return nil, domain.ErrConflict
+}
+
+// ❌ ループで単件チェック（N+1）
+for _, userID := range userIDs {
+    var count int
+    if err := r.db.QueryRowContext(ctx, "SELECT COUNT(*) FROM group_members WHERE group_id = ? AND user_id = ?", groupID, userID).Scan(&count); err != nil {
+        return nil, domain.ErrInternalServerError
+    }
+    if count > 0 {
+        return nil, domain.ErrConflict
+    }
+}
+```
+
+### 一覧 API の COUNT クエリとフィルタの整合
+
+一覧取得の `total` カウントは、SELECT と同じフィルタ条件を COUNT クエリにも適用する。
+
+```go
+// ✅ フィルタ込みの COUNT
+countQuery := "SELECT COUNT(*) FROM users WHERE deleted_at IS NULL"
+var args []interface{}
+if q != "" {
+    countQuery += " AND search_key LIKE ?"
+    args = append(args, "%"+q+"%")
+}
+var total int
+r.db.QueryRowContext(ctx, countQuery, args...).Scan(&total)
+
+// ❌ フィルタなし COUNT（検索しても total が全件数になる）
+countQuery := "SELECT COUNT(*) FROM users WHERE deleted_at IS NULL"
+r.db.QueryRowContext(ctx, countQuery).Scan(&total)
+```
+
+---
+
 ## 4. Handler + Service IF（`internal/rest/foo.go`）
 
 ```go

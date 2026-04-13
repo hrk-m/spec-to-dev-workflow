@@ -253,7 +253,8 @@ entities/order/
 pages/dashboard/
   model/notification.ts ← Moved back — single use
 shared/api/
-  types.ts              ← Shared API response types
+  user.ts               ← User API response types (domain-named)
+  order.ts              ← Order API response types (domain-named)
 ```
 
 ---

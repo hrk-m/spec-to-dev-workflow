@@ -245,3 +245,11 @@ func TestFooGetByID(t *testing.T) {
 
 機能追加では「実装だけ先に入れてテストは後回し」にしない。少なくとも影響した層の主要分岐は同じ変更で更新する。
 既存コード整列でも同様で、status map 修正、error 伝搬修正、validation 修正のような挙動差分は test で固定する。
+
+複数件操作（バルク INSERT・バルク存在チェック）がある場合は追加で検討する:
+
+- 重複 ID を含む入力（deduplication が正しく動き、COUNT 比較がずれないか）
+- 一部の ID が存在しない（`count != len(ids)` で `ErrNotFound` が返るか）
+- 全 ID が存在しない
+- repository エラー（`CountByIDs` / bulk INSERT が `ErrInternalServerError` を返す）
+- 検索フィルタあり・なしで `total` の値が正しく変わるか（COUNT クエリとフィルタの整合）

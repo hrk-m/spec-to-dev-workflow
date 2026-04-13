@@ -13,10 +13,6 @@ import (
 	"github.com/hrk-m/spec-to-dev-workflow/sample-api/domain"
 )
 
-const (
-	groupBaseColumns = "g.id, g.name, g.description"
-)
-
 // GroupRepository is a MySQL implementation of group.GroupRepository.
 type GroupRepository struct {
 	db *sql.DB
@@ -63,14 +59,14 @@ func (r *GroupRepository) countFilteredGroups(ctx context.Context, q string) (in
 
 // selectGroups returns non-deleted groups with member counts, optionally filtered by q.
 func (r *GroupRepository) selectGroups(ctx context.Context, q string, limit, offset int) ([]domain.Group, error) {
-	query := "SELECT " + groupBaseColumns + ", COUNT(gm.id) AS member_count" +
+	query := "SELECT g.id, g.name, g.description, COUNT(gm.id) AS member_count" +
 		" FROM `groups` g LEFT JOIN group_members gm ON g.id = gm.group_id" +
 		" WHERE g.deleted_at IS NULL"
 
 	searchCondition, args := buildSearchCondition(q)
 	query += searchCondition //nolint:gosec // search condition uses parameterized placeholders
 
-	query += " GROUP BY " + groupBaseColumns
+	query += " GROUP BY g.id, g.name, g.description"
 	query += " ORDER BY g.id DESC LIMIT ? OFFSET ?"
 	args = append(args, limit, offset)
 
@@ -199,7 +195,7 @@ func (r *GroupRepository) ListGroupMembers(ctx context.Context, id uint64, limit
 	countArgs := []interface{}{id}
 
 	if q != "" {
-		countQuery += " AND u.search_key LIKE ?"
+		countQuery += " AND u.search_key LIKE ?" //nolint:goconst
 		countArgs = append(countArgs, "%"+q+"%")
 	}
 

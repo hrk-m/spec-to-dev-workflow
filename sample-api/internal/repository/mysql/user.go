@@ -11,10 +11,6 @@ import (
 	"github.com/hrk-m/spec-to-dev-workflow/sample-api/domain"
 )
 
-const (
-	selectUserByIDQuery = "SELECT id, first_name, last_name FROM users WHERE id = ? AND deleted_at IS NULL"
-)
-
 // UserRepository is a MySQL implementation of user.UserRepository and group.UserRepository.
 type UserRepository struct {
 	db *sql.DB
@@ -74,7 +70,7 @@ func (r *UserRepository) CountByIDs(ctx context.Context, ids []uint64) (int, err
 
 // GetByID returns a single active user by ID.
 func (r *UserRepository) GetByID(ctx context.Context, id uint64) (domain.User, error) {
-	query := selectUserByIDQuery
+	query := "SELECT id, first_name, last_name FROM users WHERE id = ? AND deleted_at IS NULL"
 
 	var u domain.User
 
@@ -96,7 +92,7 @@ func (r *UserRepository) countFilteredUsers(ctx context.Context, q string) (int,
 	var args []interface{}
 
 	if q != "" {
-		query += " AND search_key LIKE ?"
+		query += " AND search_key LIKE ?" //nolint:goconst
 		args = append(args, "%"+q+"%")
 	}
 
@@ -113,11 +109,11 @@ func (r *UserRepository) selectUsers(ctx context.Context, q string, limit, offse
 	args := make([]interface{}, 0, 3)
 
 	if q != "" {
-		query += " AND search_key LIKE ?"
+		query += " AND search_key LIKE ?" //nolint:goconst
 		args = append(args, "%"+q+"%")
 	}
 
-	query += " ORDER BY id ASC LIMIT ? OFFSET ?"
+	query += " ORDER BY id ASC LIMIT ? OFFSET ?" //nolint:goconst
 	args = append(args, limit, offset)
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
