@@ -19,3 +19,9 @@ func (m *MockUserRepository) GetByID(ctx context.Context, id uint64) (domain.Use
 	args := m.Called(ctx, id)
 	return args.Get(0).(domain.User), args.Error(1)
 }
+
+// CountByIDs returns the count of existing users for the given IDs.
+func (m *MockUserRepository) CountByIDs(ctx context.Context, ids []uint64) (int, error) {
+	args := m.Called(ctx, ids)
+	return args.Int(0), args.Error(1)
+}

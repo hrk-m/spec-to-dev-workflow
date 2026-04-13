@@ -71,7 +71,7 @@ func TestListGroups_Search(t *testing.T) {
 	groups, total, err := repo.ListGroups(context.Background(), "001", 1, 10)
 
 	assert.NoError(t, err)
-	assert.Equal(t, countActiveGroups(t, db), total)
+	assert.Equal(t, 1, total)
 	assert.Len(t, groups, 1)
 	assert.Equal(t, "Group 001", groups[0].Name)
 }
@@ -84,7 +84,7 @@ func TestListGroups_SearchWithSpaceSeparatedTokens(t *testing.T) {
 	groups, total, err := repo.ListGroups(context.Background(), "001 Description", 1, 10)
 
 	assert.NoError(t, err)
-	assert.Equal(t, countActiveGroups(t, db), total)
+	assert.Equal(t, 1, total)
 	assert.Len(t, groups, 1)
 	assert.Equal(t, "Group 001", groups[0].Name)
 }

@@ -4,32 +4,21 @@ package rest
 import (
 	"context"
 	"net/http"
-	"strconv"
 
 	"github.com/labstack/echo/v4"
 
 	"github.com/hrk-m/spec-to-dev-workflow/sample-api/domain"
 )
 
-const (
-	defaultGroupLimit = 500
-	minGroupLimit     = 1
-	maxGroupLimit     = 500
-
-	defaultMemberLimit = 500
-	minMemberLimit     = 1
-	maxMemberLimit     = 500
-)
-
 // GroupService defines the interface for the group use case.
 type GroupService interface {
 	ListGroups(ctx context.Context, q string, limit, offset int) ([]domain.Group, int, error)
 	GetByID(ctx context.Context, id uint64) (domain.Group, error)
-	ListGroupMembers(ctx context.Context, id, limit, offset uint64, q string) ([]domain.User, int, error)
+	ListGroupMembers(ctx context.Context, id uint64, limit, offset int, q string) ([]domain.User, int, error)
 	Store(ctx context.Context, name, description string) (domain.Group, error)
 	Update(ctx context.Context, id int64, name, description string) (*domain.Group, error)
 	Delete(ctx context.Context, id int64) error
-	ListNonGroupMembers(ctx context.Context, groupID, limit, offset int, q string) ([]domain.User, int64, error)
+	ListNonGroupMembers(ctx context.Context, groupID uint64, limit, offset int, q string) ([]domain.User, int, error)
 	AddGroupMembers(ctx context.Context, groupID uint64, userIDs []uint64) ([]domain.User, error)
 }
 
@@ -73,7 +62,7 @@ type updateGroupRequest struct {
 
 type nonMemberListResponse struct {
 	Users []domain.User `json:"users"`
-	Total int64         `json:"total"`
+	Total int           `json:"total"`
 }
 
 type addGroupMembersRequest struct {
@@ -105,12 +94,8 @@ func (h *GroupHandler) Store(c echo.Context) error {
 func (h *GroupHandler) Update(c echo.Context) error {
 	ctx := c.Request().Context()
 
-	idP, err := strconv.Atoi(c.Param("id"))
+	id, err := parsePathID(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ResponseError{Message: domain.ErrBadParamInput.Error()})
-	}
-
-	if idP < 1 {
 		return c.JSON(http.StatusBadRequest, ResponseError{Message: domain.ErrBadParamInput.Error()})
 	}
 
@@ -119,7 +104,7 @@ func (h *GroupHandler) Update(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, ResponseError{Message: bindErr.Error()})
 	}
 
-	result, err := h.Service.Update(ctx, int64(idP), req.Name, req.Description)
+	result, err := h.Service.Update(ctx, int64(id), req.Name, req.Description) //nolint:gosec
 	if err != nil {
 		return c.JSON(getStatusCode(err), ResponseError{Message: err.Error()})
 	}
@@ -131,16 +116,12 @@ func (h *GroupHandler) Update(c echo.Context) error {
 func (h *GroupHandler) Delete(c echo.Context) error {
 	ctx := c.Request().Context()
 
-	idP, err := strconv.Atoi(c.Param("id"))
+	id, err := parsePathID(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ResponseError{Message: domain.ErrBadParamInput.Error()})
 	}
 
-	if idP < 1 {
-		return c.JSON(http.StatusBadRequest, ResponseError{Message: domain.ErrBadParamInput.Error()})
-	}
-
-	if err := h.Service.Delete(ctx, int64(idP)); err != nil {
+	if err := h.Service.Delete(ctx, int64(id)); err != nil { //nolint:gosec
 		return c.JSON(getStatusCode(err), ResponseError{Message: err.Error()})
 	}
 
@@ -151,16 +132,12 @@ func (h *GroupHandler) Delete(c echo.Context) error {
 func (h *GroupHandler) GetByID(c echo.Context) error {
 	ctx := c.Request().Context()
 
-	idP, err := strconv.Atoi(c.Param("id"))
+	id, err := parsePathID(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ResponseError{Message: domain.ErrBadParamInput.Error()})
 	}
 
-	if idP < 1 {
-		return c.JSON(http.StatusBadRequest, ResponseError{Message: domain.ErrBadParamInput.Error()})
-	}
-
-	result, err := h.Service.GetByID(ctx, uint64(idP))
+	result, err := h.Service.GetByID(ctx, id)
 	if err != nil {
 		return c.JSON(getStatusCode(err), ResponseError{Message: err.Error()})
 	}
@@ -172,28 +149,24 @@ func (h *GroupHandler) GetByID(c echo.Context) error {
 func (h *GroupHandler) ListGroupMembers(c echo.Context) error {
 	ctx := c.Request().Context()
 
-	idP, err := strconv.Atoi(c.Param("id"))
+	id, err := parsePathID(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ResponseError{Message: domain.ErrBadParamInput.Error()})
 	}
 
-	if idP < 1 {
-		return c.JSON(http.StatusBadRequest, ResponseError{Message: domain.ErrBadParamInput.Error()})
-	}
-
-	limit, limitErr := parseMemberLimit(c.QueryParam("limit"))
+	limit, limitErr := parseLimit(c.QueryParam("limit"))
 	if limitErr != nil {
 		return c.JSON(http.StatusBadRequest, ResponseError{Message: domain.ErrBadParamInput.Error()})
 	}
 
-	offset, offsetErr := parseMemberOffset(c.QueryParam("offset"))
+	offset, offsetErr := parseOffset(c.QueryParam("offset"))
 	if offsetErr != nil {
 		return c.JSON(http.StatusBadRequest, ResponseError{Message: domain.ErrBadParamInput.Error()})
 	}
 
 	q := c.QueryParam("q")
 
-	members, total, err := h.Service.ListGroupMembers(ctx, uint64(idP), limit, offset, q)
+	members, total, err := h.Service.ListGroupMembers(ctx, id, limit, offset, q)
 	if err != nil {
 		return c.JSON(getStatusCode(err), ResponseError{Message: err.Error()})
 	}
@@ -205,12 +178,12 @@ func (h *GroupHandler) ListGroupMembers(c echo.Context) error {
 func (h *GroupHandler) ListGroups(c echo.Context) error {
 	ctx := c.Request().Context()
 
-	limit, limitErr := parseGroupLimit(c.QueryParam("limit"))
+	limit, limitErr := parseLimit(c.QueryParam("limit"))
 	if limitErr != nil {
 		return c.JSON(http.StatusBadRequest, ResponseError{Message: domain.ErrBadParamInput.Error()})
 	}
 
-	offset, offsetErr := parseGroupOffset(c.QueryParam("offset"))
+	offset, offsetErr := parseOffset(c.QueryParam("offset"))
 	if offsetErr != nil {
 		return c.JSON(http.StatusBadRequest, ResponseError{Message: domain.ErrBadParamInput.Error()})
 	}
@@ -229,28 +202,24 @@ func (h *GroupHandler) ListGroups(c echo.Context) error {
 func (h *GroupHandler) ListNonGroupMembers(c echo.Context) error {
 	ctx := c.Request().Context()
 
-	idP, err := strconv.Atoi(c.Param("id"))
+	id, err := parsePathID(c.Param("id"))
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, ResponseError{Message: domain.ErrBadParamInput.Error()})
 	}
 
-	if idP < 1 {
-		return c.JSON(http.StatusBadRequest, ResponseError{Message: domain.ErrBadParamInput.Error()})
-	}
-
-	limit, limitErr := parseNonMemberLimit(c.QueryParam("limit"))
+	limit, limitErr := parseLimit(c.QueryParam("limit"))
 	if limitErr != nil {
 		return c.JSON(http.StatusBadRequest, ResponseError{Message: domain.ErrBadParamInput.Error()})
 	}
 
-	offset, offsetErr := parseNonMemberOffset(c.QueryParam("offset"))
+	offset, offsetErr := parseOffset(c.QueryParam("offset"))
 	if offsetErr != nil {
 		return c.JSON(http.StatusBadRequest, ResponseError{Message: domain.ErrBadParamInput.Error()})
 	}
 
 	q := c.QueryParam("q")
 
-	users, total, err := h.Service.ListNonGroupMembers(ctx, idP, limit, offset, q)
+	users, total, err := h.Service.ListNonGroupMembers(ctx, id, limit, offset, q)
 	if err != nil {
 		return c.JSON(getStatusCode(err), ResponseError{Message: err.Error()})
 	}
@@ -262,12 +231,8 @@ func (h *GroupHandler) ListNonGroupMembers(c echo.Context) error {
 func (h *GroupHandler) AddGroupMembers(c echo.Context) error {
 	ctx := c.Request().Context()
 
-	idP, err := strconv.Atoi(c.Param("id"))
+	id, err := parsePathID(c.Param("id"))
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, ResponseError{Message: domain.ErrBadParamInput.Error()})
-	}
-
-	if idP < 1 {
 		return c.JSON(http.StatusBadRequest, ResponseError{Message: domain.ErrBadParamInput.Error()})
 	}
 
@@ -280,94 +245,10 @@ func (h *GroupHandler) AddGroupMembers(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, ResponseError{Message: domain.ErrBadParamInput.Error()})
 	}
 
-	members, err := h.Service.AddGroupMembers(ctx, uint64(idP), req.UserIDs) //nolint:gosec
+	members, err := h.Service.AddGroupMembers(ctx, id, req.UserIDs)
 	if err != nil {
 		return c.JSON(getStatusCode(err), ResponseError{Message: err.Error()})
 	}
 
 	return c.JSON(http.StatusCreated, addGroupMembersResponse{Members: members})
-}
-
-// parseGroupLimit parses and validates the limit query parameter for group listing.
-func parseGroupLimit(s string) (int, error) {
-	if s == "" {
-		return defaultGroupLimit, nil
-	}
-
-	l, err := strconv.Atoi(s)
-	if err != nil || l < minGroupLimit || l > maxGroupLimit {
-		return 0, domain.ErrBadParamInput
-	}
-
-	return l, nil
-}
-
-// parseGroupOffset parses and validates the offset query parameter for group listing.
-func parseGroupOffset(s string) (int, error) {
-	if s == "" {
-		return 0, nil
-	}
-
-	o, err := strconv.Atoi(s)
-	if err != nil || o < 0 {
-		return 0, domain.ErrBadParamInput
-	}
-
-	return o, nil
-}
-
-// parseMemberLimit parses and validates the limit query parameter for member listing.
-func parseMemberLimit(s string) (uint64, error) {
-	if s == "" {
-		return defaultMemberLimit, nil
-	}
-
-	l, err := strconv.Atoi(s)
-	if err != nil || l < minMemberLimit || l > maxMemberLimit {
-		return 0, domain.ErrBadParamInput
-	}
-
-	return uint64(l), nil
-}
-
-// parseMemberOffset parses and validates the offset query parameter for member listing.
-func parseMemberOffset(s string) (uint64, error) {
-	if s == "" {
-		return 0, nil
-	}
-
-	o, err := strconv.Atoi(s)
-	if err != nil || o < 0 {
-		return 0, domain.ErrBadParamInput
-	}
-
-	return uint64(o), nil
-}
-
-// parseNonMemberLimit parses and validates the limit query parameter for non-member listing.
-func parseNonMemberLimit(s string) (int, error) {
-	if s == "" {
-		return defaultMemberLimit, nil
-	}
-
-	l, err := strconv.Atoi(s)
-	if err != nil || l < minMemberLimit || l > maxMemberLimit {
-		return 0, domain.ErrBadParamInput
-	}
-
-	return l, nil
-}
-
-// parseNonMemberOffset parses and validates the offset query parameter for non-member listing.
-func parseNonMemberOffset(s string) (int, error) {
-	if s == "" {
-		return 0, nil
-	}
-
-	o, err := strconv.Atoi(s)
-	if err != nil || o < 0 {
-		return 0, domain.ErrBadParamInput
-	}
-
-	return o, nil
 }

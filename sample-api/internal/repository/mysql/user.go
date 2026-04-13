@@ -5,14 +5,14 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
+	"strings"
 
 	"github.com/hrk-m/spec-to-dev-workflow/sample-api/domain"
 )
 
 const (
-	selectUserByIDQuery     = "SELECT id, first_name, last_name FROM users WHERE id = ? AND deleted_at IS NULL"
-	searchKeyLikeClause     = " AND search_key LIKE ?"
-	orderByIDPaginationClause = " ORDER BY id ASC LIMIT ? OFFSET ?"
+	selectUserByIDQuery = "SELECT id, first_name, last_name FROM users WHERE id = ? AND deleted_at IS NULL"
 )
 
 // UserRepository is a MySQL implementation of user.UserRepository and group.UserRepository.
@@ -27,7 +27,7 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 
 // ListUsers returns paginated active users with optional name search.
 func (r *UserRepository) ListUsers(ctx context.Context, q string, limit, offset int) ([]domain.User, int, error) {
-	total, err := r.countUsers(ctx)
+	total, err := r.countFilteredUsers(ctx, q)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -42,6 +42,34 @@ func (r *UserRepository) ListUsers(ctx context.Context, q string, limit, offset 
 	}
 
 	return users, total, nil
+}
+
+// CountByIDs returns the count of existing active users matching the given IDs.
+// COUNT(DISTINCT id) is used so that duplicate IDs in the input do not inflate the result.
+func (r *UserRepository) CountByIDs(ctx context.Context, ids []uint64) (int, error) {
+	if len(ids) == 0 {
+		return 0, nil
+	}
+
+	placeholders := make([]string, len(ids))
+	args := make([]interface{}, len(ids))
+
+	for i, id := range ids {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	query := fmt.Sprintf( //nolint:gosec
+		"SELECT COUNT(DISTINCT id) FROM users WHERE id IN (%s) AND deleted_at IS NULL",
+		strings.Join(placeholders, ","),
+	)
+
+	var count int
+	if err := r.db.QueryRowContext(ctx, query, args...).Scan(&count); err != nil {
+		return 0, domain.ErrInternalServerError
+	}
+
+	return count, nil
 }
 
 // GetByID returns a single active user by ID.
@@ -62,11 +90,18 @@ func (r *UserRepository) GetByID(ctx context.Context, id uint64) (domain.User, e
 	return u, nil
 }
 
-func (r *UserRepository) countUsers(ctx context.Context) (int, error) {
+func (r *UserRepository) countFilteredUsers(ctx context.Context, q string) (int, error) {
 	query := "SELECT COUNT(*) FROM users WHERE deleted_at IS NULL"
 
+	var args []interface{}
+
+	if q != "" {
+		query += " AND search_key LIKE ?"
+		args = append(args, "%"+q+"%")
+	}
+
 	var total int
-	if err := r.db.QueryRowContext(ctx, query).Scan(&total); err != nil {
+	if err := r.db.QueryRowContext(ctx, query, args...).Scan(&total); err != nil {
 		return 0, domain.ErrInternalServerError
 	}
 
@@ -78,11 +113,11 @@ func (r *UserRepository) selectUsers(ctx context.Context, q string, limit, offse
 	args := make([]interface{}, 0, 3)
 
 	if q != "" {
-		query += searchKeyLikeClause
+		query += " AND search_key LIKE ?"
 		args = append(args, "%"+q+"%")
 	}
 
-	query += orderByIDPaginationClause
+	query += " ORDER BY id ASC LIMIT ? OFFSET ?"
 	args = append(args, limit, offset)
 
 	rows, err := r.db.QueryContext(ctx, query, args...)

@@ -78,7 +78,7 @@ func TestService_ListGroupMembers_OK(t *testing.T) {
 		{ID: 1, FirstName: "Taro", LastName: "Yamada"},
 		{ID: 2, FirstName: "Hanako", LastName: "Suzuki"},
 	}
-	repo.On("ListGroupMembers", mock.Anything, uint64(1), uint64(500), uint64(0), "").
+	repo.On("ListGroupMembers", mock.Anything, uint64(1), 500, 0, "").
 		Return(members, 2, nil)
 
 	result, total, err := svc.ListGroupMembers(context.Background(), 1, 500, 0, "")
@@ -100,7 +100,7 @@ func TestService_ListGroupMembers_WithSearch(t *testing.T) {
 	members := []domain.User{
 		{ID: 1, FirstName: "Taro", LastName: "Yamada"},
 	}
-	repo.On("ListGroupMembers", mock.Anything, uint64(1), uint64(500), uint64(0), "Yamada").
+	repo.On("ListGroupMembers", mock.Anything, uint64(1), 500, 0, "Yamada").
 		Return(members, 2, nil)
 
 	result, total, err := svc.ListGroupMembers(context.Background(), 1, 500, 0, "Yamada")
@@ -166,7 +166,7 @@ func TestService_ListGroupMembers_RepositoryError(t *testing.T) {
 
 	groupResp := domain.Group{ID: 1, Name: "dev-team", Description: "developers", MemberCount: 2}
 	repo.On("GetByID", mock.Anything, uint64(1)).Return(groupResp, nil)
-	repo.On("ListGroupMembers", mock.Anything, uint64(1), uint64(500), uint64(0), "").
+	repo.On("ListGroupMembers", mock.Anything, uint64(1), 500, 0, "").
 		Return([]domain.User(nil), 0, domain.ErrInternalServerError)
 
 	_, _, err := svc.ListGroupMembers(context.Background(), 1, 500, 0, "")
@@ -182,7 +182,7 @@ func TestService_ListGroupMembers_EmptyResult(t *testing.T) {
 
 	groupResp := domain.Group{ID: 1, Name: "dev-team", Description: "developers", MemberCount: 0}
 	repo.On("GetByID", mock.Anything, uint64(1)).Return(groupResp, nil)
-	repo.On("ListGroupMembers", mock.Anything, uint64(1), uint64(500), uint64(0), "").
+	repo.On("ListGroupMembers", mock.Anything, uint64(1), 500, 0, "").
 		Return([]domain.User(nil), 0, nil)
 
 	result, total, err := svc.ListGroupMembers(context.Background(), 1, 500, 0, "")
@@ -535,13 +535,13 @@ func TestService_ListNonGroupMembers_OK(t *testing.T) {
 		{ID: 3, FirstName: "Jiro", LastName: "Tanaka"},
 	}
 	repo.On("ListNonGroupMembers", mock.Anything, uint64(1), 500, 0, "").
-		Return(users, int64(2), nil)
+		Return(users, 2, nil)
 
-	result, total, err := svc.ListNonGroupMembers(context.Background(), 1, 500, 0, "")
+	result, total, err := svc.ListNonGroupMembers(context.Background(), uint64(1), 500, 0, "")
 
 	assert.NoError(t, err)
 	assert.Len(t, result, 2)
-	assert.Equal(t, int64(2), total)
+	assert.Equal(t, 2, total)
 	repo.AssertExpectations(t)
 }
 
@@ -557,13 +557,13 @@ func TestService_ListNonGroupMembers_WithSearch(t *testing.T) {
 		{ID: 3, FirstName: "Jiro", LastName: "Tanaka"},
 	}
 	repo.On("ListNonGroupMembers", mock.Anything, uint64(1), 500, 0, "Tanaka").
-		Return(users, int64(5), nil)
+		Return(users, 5, nil)
 
-	result, total, err := svc.ListNonGroupMembers(context.Background(), 1, 500, 0, "Tanaka")
+	result, total, err := svc.ListNonGroupMembers(context.Background(), uint64(1), 500, 0, "Tanaka")
 
 	assert.NoError(t, err)
 	assert.Len(t, result, 1)
-	assert.Equal(t, int64(5), total)
+	assert.Equal(t, 5, total)
 	repo.AssertExpectations(t)
 }
 
@@ -576,14 +576,14 @@ func TestService_ListNonGroupMembers_EmptyResult(t *testing.T) {
 	repo.On("GetByID", mock.Anything, uint64(1)).Return(groupResp, nil)
 
 	repo.On("ListNonGroupMembers", mock.Anything, uint64(1), 500, 0, "").
-		Return([]domain.User(nil), int64(0), nil)
+		Return([]domain.User(nil), 0, nil)
 
-	result, total, err := svc.ListNonGroupMembers(context.Background(), 1, 500, 0, "")
+	result, total, err := svc.ListNonGroupMembers(context.Background(), uint64(1), 500, 0, "")
 
 	assert.NoError(t, err)
 	assert.Empty(t, result)
 	assert.NotNil(t, result)
-	assert.Equal(t, int64(0), total)
+	assert.Equal(t, 0, total)
 	repo.AssertExpectations(t)
 }
 
@@ -595,7 +595,7 @@ func TestService_ListNonGroupMembers_GroupNotFound(t *testing.T) {
 	repo.On("GetByID", mock.Anything, uint64(9999)).
 		Return(domain.Group{}, domain.ErrNotFound)
 
-	_, _, err := svc.ListNonGroupMembers(context.Background(), 9999, 500, 0, "")
+	_, _, err := svc.ListNonGroupMembers(context.Background(), uint64(9999), 500, 0, "")
 
 	assert.ErrorIs(t, err, domain.ErrNotFound)
 	repo.AssertNotCalled(t, "ListNonGroupMembers")
@@ -606,7 +606,7 @@ func TestService_ListNonGroupMembers_InvalidID(t *testing.T) {
 	userRepo := new(mocks.MockUserRepository)
 	svc := group.NewService(repo, userRepo)
 
-	_, _, err := svc.ListNonGroupMembers(context.Background(), 0, 500, 0, "")
+	_, _, err := svc.ListNonGroupMembers(context.Background(), uint64(0), 500, 0, "")
 
 	assert.ErrorIs(t, err, domain.ErrBadParamInput)
 	repo.AssertNotCalled(t, "GetByID")
@@ -618,7 +618,7 @@ func TestService_ListNonGroupMembers_InvalidLimitTooLow(t *testing.T) {
 	userRepo := new(mocks.MockUserRepository)
 	svc := group.NewService(repo, userRepo)
 
-	_, _, err := svc.ListNonGroupMembers(context.Background(), 1, 0, 0, "")
+	_, _, err := svc.ListNonGroupMembers(context.Background(), uint64(1), 0, 0, "")
 
 	assert.ErrorIs(t, err, domain.ErrBadParamInput)
 	repo.AssertNotCalled(t, "GetByID")
@@ -629,7 +629,7 @@ func TestService_ListNonGroupMembers_InvalidLimitTooHigh(t *testing.T) {
 	userRepo := new(mocks.MockUserRepository)
 	svc := group.NewService(repo, userRepo)
 
-	_, _, err := svc.ListNonGroupMembers(context.Background(), 1, 501, 0, "")
+	_, _, err := svc.ListNonGroupMembers(context.Background(), uint64(1), 501, 0, "")
 
 	assert.ErrorIs(t, err, domain.ErrBadParamInput)
 	repo.AssertNotCalled(t, "GetByID")
@@ -644,9 +644,9 @@ func TestService_ListNonGroupMembers_RepositoryError(t *testing.T) {
 	repo.On("GetByID", mock.Anything, uint64(1)).Return(groupResp, nil)
 
 	repo.On("ListNonGroupMembers", mock.Anything, uint64(1), 500, 0, "").
-		Return([]domain.User(nil), int64(0), domain.ErrInternalServerError)
+		Return([]domain.User(nil), 0, domain.ErrInternalServerError)
 
-	_, _, err := svc.ListNonGroupMembers(context.Background(), 1, 500, 0, "")
+	_, _, err := svc.ListNonGroupMembers(context.Background(), uint64(1), 500, 0, "")
 
 	assert.ErrorIs(t, err, domain.ErrInternalServerError)
 	repo.AssertExpectations(t)
@@ -660,11 +660,10 @@ func TestService_AddGroupMembers_OK(t *testing.T) {
 	groupResp := domain.Group{ID: 1, Name: "dev-team", Description: "developers", MemberCount: 1}
 	repo.On("GetByID", mock.Anything, uint64(1)).Return(groupResp, nil)
 
+	userRepo.On("CountByIDs", mock.Anything, []uint64{2, 3}).Return(2, nil)
+
 	user2 := domain.User{ID: 2, FirstName: "Hanako", LastName: "Suzuki"}
 	user3 := domain.User{ID: 3, FirstName: "Jiro", LastName: "Tanaka"}
-	userRepo.On("GetByID", mock.Anything, uint64(2)).Return(user2, nil)
-	userRepo.On("GetByID", mock.Anything, uint64(3)).Return(user3, nil)
-
 	added := []domain.User{user2, user3}
 	repo.On("AddGroupMembers", mock.Anything, uint64(1), []uint64{2, 3}).Return(added, nil)
 
@@ -687,7 +686,7 @@ func TestService_AddGroupMembers_GroupNotFound(t *testing.T) {
 	_, err := svc.AddGroupMembers(context.Background(), 9999, []uint64{1})
 
 	assert.ErrorIs(t, err, domain.ErrNotFound)
-	userRepo.AssertNotCalled(t, "GetByID")
+	userRepo.AssertNotCalled(t, "CountByIDs")
 	repo.AssertNotCalled(t, "AddGroupMembers")
 }
 
@@ -699,12 +698,14 @@ func TestService_AddGroupMembers_UserNotFound(t *testing.T) {
 	groupResp := domain.Group{ID: 1, Name: "dev-team", Description: "developers", MemberCount: 0}
 	repo.On("GetByID", mock.Anything, uint64(1)).Return(groupResp, nil)
 
-	userRepo.On("GetByID", mock.Anything, uint64(9999)).Return(domain.User{}, domain.ErrNotFound)
+	// CountByIDs returns fewer than requested — at least one user does not exist.
+	userRepo.On("CountByIDs", mock.Anything, []uint64{9999}).Return(0, nil)
 
 	_, err := svc.AddGroupMembers(context.Background(), 1, []uint64{9999})
 
 	assert.ErrorIs(t, err, domain.ErrNotFound)
 	repo.AssertNotCalled(t, "AddGroupMembers")
+	userRepo.AssertExpectations(t)
 }
 
 func TestService_AddGroupMembers_AlreadyMember(t *testing.T) {
@@ -715,8 +716,7 @@ func TestService_AddGroupMembers_AlreadyMember(t *testing.T) {
 	groupResp := domain.Group{ID: 1, Name: "dev-team", Description: "developers", MemberCount: 1}
 	repo.On("GetByID", mock.Anything, uint64(1)).Return(groupResp, nil)
 
-	user1 := domain.User{ID: 1, FirstName: "Taro", LastName: "Yamada"}
-	userRepo.On("GetByID", mock.Anything, uint64(1)).Return(user1, nil)
+	userRepo.On("CountByIDs", mock.Anything, []uint64{1}).Return(1, nil)
 
 	repo.On("AddGroupMembers", mock.Anything, uint64(1), []uint64{1}).Return([]domain.User(nil), domain.ErrConflict)
 
@@ -724,6 +724,23 @@ func TestService_AddGroupMembers_AlreadyMember(t *testing.T) {
 
 	assert.ErrorIs(t, err, domain.ErrConflict)
 	repo.AssertExpectations(t)
+	userRepo.AssertExpectations(t)
+}
+
+func TestService_AddGroupMembers_CountByIDsError(t *testing.T) {
+	repo := new(mocks.MockGroupRepository)
+	userRepo := new(mocks.MockUserRepository)
+	svc := group.NewService(repo, userRepo)
+
+	groupResp := domain.Group{ID: 1, Name: "dev-team", Description: "developers", MemberCount: 0}
+	repo.On("GetByID", mock.Anything, uint64(1)).Return(groupResp, nil)
+
+	userRepo.On("CountByIDs", mock.Anything, []uint64{2}).Return(0, domain.ErrInternalServerError)
+
+	_, err := svc.AddGroupMembers(context.Background(), 1, []uint64{2})
+
+	assert.ErrorIs(t, err, domain.ErrInternalServerError)
+	repo.AssertNotCalled(t, "AddGroupMembers")
 	userRepo.AssertExpectations(t)
 }
 
@@ -735,14 +752,35 @@ func TestService_AddGroupMembers_RepositoryError(t *testing.T) {
 	groupResp := domain.Group{ID: 1, Name: "dev-team", Description: "developers", MemberCount: 0}
 	repo.On("GetByID", mock.Anything, uint64(1)).Return(groupResp, nil)
 
-	user2 := domain.User{ID: 2, FirstName: "Hanako", LastName: "Suzuki"}
-	userRepo.On("GetByID", mock.Anything, uint64(2)).Return(user2, nil)
+	userRepo.On("CountByIDs", mock.Anything, []uint64{2}).Return(1, nil)
 
 	repo.On("AddGroupMembers", mock.Anything, uint64(1), []uint64{2}).Return([]domain.User(nil), domain.ErrInternalServerError)
 
 	_, err := svc.AddGroupMembers(context.Background(), 1, []uint64{2})
 
 	assert.ErrorIs(t, err, domain.ErrInternalServerError)
+	repo.AssertExpectations(t)
+	userRepo.AssertExpectations(t)
+}
+
+func TestService_AddGroupMembers_DuplicateUserIDs(t *testing.T) {
+	repo := new(mocks.MockGroupRepository)
+	userRepo := new(mocks.MockUserRepository)
+	svc := group.NewService(repo, userRepo)
+
+	groupResp := domain.Group{ID: 1, Name: "dev-team", Description: "developers", MemberCount: 0}
+	repo.On("GetByID", mock.Anything, uint64(1)).Return(groupResp, nil)
+
+	// After deduplication [2, 2] becomes [2], so CountByIDs is called with [2] and returns 1.
+	userRepo.On("CountByIDs", mock.Anything, []uint64{2}).Return(1, nil)
+
+	user2 := domain.User{ID: 2, FirstName: "Hanako", LastName: "Suzuki"}
+	repo.On("AddGroupMembers", mock.Anything, uint64(1), []uint64{2}).Return([]domain.User{user2}, nil)
+
+	result, err := svc.AddGroupMembers(context.Background(), 1, []uint64{2, 2})
+
+	assert.NoError(t, err)
+	assert.Len(t, result, 1)
 	repo.AssertExpectations(t)
 	userRepo.AssertExpectations(t)
 }

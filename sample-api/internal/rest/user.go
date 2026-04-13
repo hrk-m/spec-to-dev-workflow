@@ -10,6 +10,7 @@ import (
 	"github.com/hrk-m/spec-to-dev-workflow/sample-api/domain"
 )
 
+
 // UserService defines the interface for the user use case.
 type UserService interface {
 	ListUsers(ctx context.Context, q string, limit, offset int) ([]domain.User, int, error)
@@ -35,12 +36,12 @@ type userListResponse struct {
 func (h *UserHandler) ListUsers(c echo.Context) error {
 	ctx := c.Request().Context()
 
-	limit, limitErr := parseGroupLimit(c.QueryParam("limit"))
+	limit, limitErr := parseLimit(c.QueryParam("limit"))
 	if limitErr != nil {
 		return c.JSON(http.StatusBadRequest, ResponseError{Message: domain.ErrBadParamInput.Error()})
 	}
 
-	offset, offsetErr := parseGroupOffset(c.QueryParam("offset"))
+	offset, offsetErr := parseOffset(c.QueryParam("offset"))
 	if offsetErr != nil {
 		return c.JSON(http.StatusBadRequest, ResponseError{Message: domain.ErrBadParamInput.Error()})
 	}

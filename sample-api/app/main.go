@@ -25,10 +25,6 @@ const (
 	dbRetryInterval  = time.Second
 )
 
-type dbPinger interface {
-	PingContext(ctx context.Context) error
-}
-
 func getEnv(key, fallback string) string {
 	if v := os.Getenv(key); v != "" {
 		return v
@@ -37,7 +33,7 @@ func getEnv(key, fallback string) string {
 	return fallback
 }
 
-func waitForMySQL(ctx context.Context, db dbPinger, retryInterval time.Duration, logger *log.Logger) error {
+func waitForMySQL(ctx context.Context, db rest.DBPinger, retryInterval time.Duration, logger *log.Logger) error {
 	if logger == nil {
 		logger = log.Default()
 	}
@@ -45,11 +41,11 @@ func waitForMySQL(ctx context.Context, db dbPinger, retryInterval time.Duration,
 	var lastErr error
 
 	for {
-		if err := db.PingContext(ctx); err == nil {
+		err := db.PingContext(ctx)
+		if err == nil {
 			return nil
-		} else {
-			lastErr = err
 		}
+		lastErr = err
 
 		timer := time.NewTimer(retryInterval)
 		select {

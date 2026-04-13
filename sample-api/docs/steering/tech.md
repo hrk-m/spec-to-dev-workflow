@@ -86,7 +86,7 @@ type UserService interface {
 
 `ListNonGroupMembers` は `groupID` の存在確認を service 層で行い（`GetByID` 経由）、存在しない場合は `ErrNotFound` を返す。
 
-`AddGroupMembers` は handler 層で `user_ids` の空チェック（`len == 0` → 400）を行い、service 層でグループ存在確認と各ユーザー存在確認（`userRepo.GetByID`）を行い、いずれかが存在しない場合は `ErrNotFound` を返す。重複チェック（既にメンバー）は repository 層で行い、`ErrConflict` を返す。
+`AddGroupMembers` は handler 層で `user_ids` の空チェック（`len == 0` → 400）を行い、service 層でグループ存在確認と全ユーザー存在確認（`userRepo.CountByIDs` による 1 回の COUNT クエリ）を行い、`count != len(userIDs)` の場合は `ErrNotFound` を返す。重複チェック（既にメンバー）は repository 層で行い、`ErrConflict` を返す。
 
 ## リポジトリインターフェース（`GroupRepository`、`group.UserRepository`、`user.UserRepository`）
 
@@ -108,6 +108,7 @@ type GroupRepository interface {
 // group.UserRepository はグループサービスが使うユーザーデータアクセスのインターフェース（group/service.go で宣言）
 type UserRepository interface {
     GetByID(ctx context.Context, id uint64) (domain.User, error)
+    CountByIDs(ctx context.Context, ids []uint64) (int, error)
 }
 
 // user.UserRepository はユーザー一覧取得のインターフェース（user/service.go で宣言）
@@ -120,7 +121,7 @@ type UserRepository interface {
 
 `ListNonGroupMembers` は `users` テーブルから `group_members` に存在しないユーザーを返す。total は `q` フィルタなしの全非メンバー数。名前検索は `users.search_key` カラムへの LIKE 検索で行う。`search_key` は `CONCAT(first_name, last_name, last_name, first_name)` を値とする VIRTUAL GENERATED カラムで、`db/migrate/20260411120000_add_search_key_to_users.up.sql` で追加された。
 
-`group.UserRepository.GetByID` は `mysql.UserRepository` が実装する。`users` テーブルから `deleted_at IS NULL` の条件で単一ユーザーを取得し、存在しない場合は `ErrNotFound` を返す。
+`group.UserRepository.GetByID` および `CountByIDs` は `mysql.UserRepository` が実装する。`GetByID` は `users` テーブルから `deleted_at IS NULL` の条件で単一ユーザーを取得し、存在しない場合は `ErrNotFound` を返す。`CountByIDs` は `SELECT COUNT(DISTINCT id) FROM users WHERE id IN (?) AND deleted_at IS NULL` で存在するユーザー数を 1 クエリで返す。
 
 `AddGroupMembers` はトランザクション内で `group_members` へ一括 INSERT する。INSERT 前に重複チェックを行い、既存メンバーが含まれる場合は `ErrConflict` を返す。成功後は追加したユーザーを `users` テーブルから SELECT して返す。
 

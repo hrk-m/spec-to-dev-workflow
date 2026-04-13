@@ -166,7 +166,7 @@ func TestGroupHandler_ListGroupMembers_OK(t *testing.T) {
 	members := []domain.User{
 		{ID: 1, FirstName: "Taro", LastName: "Yamada"},
 	}
-	svc.On("ListGroupMembers", mock.Anything, uint64(1), uint64(500), uint64(0), "").
+	svc.On("ListGroupMembers", mock.Anything, uint64(1), 500, 0, "").
 		Return(members, 1, nil)
 
 	h := &rest.GroupHandler{Service: svc}
@@ -195,7 +195,7 @@ func TestGroupHandler_ListGroupMembers_DefaultParams(t *testing.T) {
 	c.SetParamValues("1")
 
 	svc := new(mocks.MockGroupService)
-	svc.On("ListGroupMembers", mock.Anything, uint64(1), uint64(500), uint64(0), "").
+	svc.On("ListGroupMembers", mock.Anything, uint64(1), 500, 0, "").
 		Return([]domain.User{}, 0, nil)
 
 	h := &rest.GroupHandler{Service: svc}
@@ -219,7 +219,7 @@ func TestGroupHandler_ListGroupMembers_WithSearch(t *testing.T) {
 	members := []domain.User{
 		{ID: 1, FirstName: "Taro", LastName: "Yamada"},
 	}
-	svc.On("ListGroupMembers", mock.Anything, uint64(1), uint64(500), uint64(0), "Yamada").
+	svc.On("ListGroupMembers", mock.Anything, uint64(1), 500, 0, "Yamada").
 		Return(members, 2, nil)
 
 	h := &rest.GroupHandler{Service: svc}
@@ -320,7 +320,7 @@ func TestGroupHandler_ListGroupMembers_GroupNotFound(t *testing.T) {
 	c.SetParamValues("9999")
 
 	svc := new(mocks.MockGroupService)
-	svc.On("ListGroupMembers", mock.Anything, uint64(9999), uint64(500), uint64(0), "").
+	svc.On("ListGroupMembers", mock.Anything, uint64(9999), 500, 0, "").
 		Return([]domain.User(nil), 0, domain.ErrNotFound)
 
 	h := &rest.GroupHandler{Service: svc}
@@ -345,7 +345,7 @@ func TestGroupHandler_ListGroupMembers_InternalError(t *testing.T) {
 	c.SetParamValues("1")
 
 	svc := new(mocks.MockGroupService)
-	svc.On("ListGroupMembers", mock.Anything, uint64(1), uint64(500), uint64(0), "").
+	svc.On("ListGroupMembers", mock.Anything, uint64(1), 500, 0, "").
 		Return([]domain.User(nil), 0, domain.ErrInternalServerError)
 
 	h := &rest.GroupHandler{Service: svc}
@@ -370,7 +370,7 @@ func TestGroupHandler_ListGroupMembers_LimitUpperBound(t *testing.T) {
 	c.SetParamValues("1")
 
 	svc := new(mocks.MockGroupService)
-	svc.On("ListGroupMembers", mock.Anything, uint64(1), uint64(500), uint64(0), "").
+	svc.On("ListGroupMembers", mock.Anything, uint64(1), 500, 0, "").
 		Return([]domain.User{}, 0, nil)
 
 	h := &rest.GroupHandler{Service: svc}
@@ -391,7 +391,7 @@ func TestGroupHandler_ListGroupMembers_OffsetZero(t *testing.T) {
 	c.SetParamValues("1")
 
 	svc := new(mocks.MockGroupService)
-	svc.On("ListGroupMembers", mock.Anything, uint64(1), uint64(500), uint64(0), "").
+	svc.On("ListGroupMembers", mock.Anything, uint64(1), 500, 0, "").
 		Return([]domain.User{}, 0, nil)
 
 	h := &rest.GroupHandler{Service: svc}
@@ -990,7 +990,7 @@ func TestGroupHandler_ListNonGroupMembers_OK(t *testing.T) {
 	users := []domain.User{
 		{ID: 2, FirstName: "Hanako", LastName: "Suzuki"},
 	}
-	svc.On("ListNonGroupMembers", mock.Anything, 1, 500, 0, "").Return(users, int64(1), nil)
+	svc.On("ListNonGroupMembers", mock.Anything, uint64(1), 500, 0, "").Return(users, 1, nil)
 
 	h := &rest.GroupHandler{Service: svc}
 	err := h.ListNonGroupMembers(c)
@@ -1000,11 +1000,11 @@ func TestGroupHandler_ListNonGroupMembers_OK(t *testing.T) {
 
 	var result struct {
 		Users []domain.User `json:"users"`
-		Total int64         `json:"total"`
+		Total int           `json:"total"`
 	}
 	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
 	assert.Len(t, result.Users, 1)
-	assert.Equal(t, int64(1), result.Total)
+	assert.Equal(t, 1, result.Total)
 	svc.AssertExpectations(t)
 }
 
@@ -1021,7 +1021,7 @@ func TestGroupHandler_ListNonGroupMembers_WithQuery(t *testing.T) {
 	users := []domain.User{
 		{ID: 2, FirstName: "Hanako", LastName: "Suzuki"},
 	}
-	svc.On("ListNonGroupMembers", mock.Anything, 1, 500, 0, "Suzuki").Return(users, int64(5), nil)
+	svc.On("ListNonGroupMembers", mock.Anything, uint64(1), 500, 0, "Suzuki").Return(users, 5, nil)
 
 	h := &rest.GroupHandler{Service: svc}
 	err := h.ListNonGroupMembers(c)
@@ -1041,7 +1041,7 @@ func TestGroupHandler_ListNonGroupMembers_EmptyResult(t *testing.T) {
 	c.SetParamValues("1")
 
 	svc := new(mocks.MockGroupService)
-	svc.On("ListNonGroupMembers", mock.Anything, 1, 500, 0, "").Return([]domain.User{}, int64(0), nil)
+	svc.On("ListNonGroupMembers", mock.Anything, uint64(1), 500, 0, "").Return([]domain.User{}, 0, nil)
 
 	h := &rest.GroupHandler{Service: svc}
 	err := h.ListNonGroupMembers(c)
@@ -1051,11 +1051,11 @@ func TestGroupHandler_ListNonGroupMembers_EmptyResult(t *testing.T) {
 
 	var result struct {
 		Users []domain.User `json:"users"`
-		Total int64         `json:"total"`
+		Total int           `json:"total"`
 	}
 	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
 	assert.Empty(t, result.Users)
-	assert.Equal(t, int64(0), result.Total)
+	assert.Equal(t, 0, result.Total)
 	svc.AssertExpectations(t)
 }
 
@@ -1149,8 +1149,8 @@ func TestGroupHandler_ListNonGroupMembers_GroupNotFound(t *testing.T) {
 	c.SetParamValues("9999")
 
 	svc := new(mocks.MockGroupService)
-	svc.On("ListNonGroupMembers", mock.Anything, 9999, 500, 0, "").
-		Return([]domain.User(nil), int64(0), domain.ErrNotFound)
+	svc.On("ListNonGroupMembers", mock.Anything, uint64(9999), 500, 0, "").
+		Return([]domain.User(nil), 0, domain.ErrNotFound)
 
 	h := &rest.GroupHandler{Service: svc}
 	err := h.ListNonGroupMembers(c)
@@ -1174,8 +1174,8 @@ func TestGroupHandler_ListNonGroupMembers_InternalError(t *testing.T) {
 	c.SetParamValues("1")
 
 	svc := new(mocks.MockGroupService)
-	svc.On("ListNonGroupMembers", mock.Anything, 1, 500, 0, "").
-		Return([]domain.User(nil), int64(0), domain.ErrInternalServerError)
+	svc.On("ListNonGroupMembers", mock.Anything, uint64(1), 500, 0, "").
+		Return([]domain.User(nil), 0, domain.ErrInternalServerError)
 
 	h := &rest.GroupHandler{Service: svc}
 	err := h.ListNonGroupMembers(c)

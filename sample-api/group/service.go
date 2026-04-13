@@ -18,7 +18,6 @@ const (
 	minMemberLimit     = 1
 	maxMemberLimit     = 500
 	defaultMemberLimit = 500
-	minMemberOffset    = 0
 
 	maxNameLength = 100
 )
@@ -27,17 +26,18 @@ const (
 type GroupRepository interface {
 	ListGroups(ctx context.Context, q string, limit, offset int) ([]domain.Group, int, error)
 	GetByID(ctx context.Context, id uint64) (domain.Group, error)
-	ListGroupMembers(ctx context.Context, id, limit, offset uint64, q string) ([]domain.User, int, error)
+	ListGroupMembers(ctx context.Context, id uint64, limit, offset int, q string) ([]domain.User, int, error)
 	Store(ctx context.Context, name, description string) (domain.Group, error)
 	Update(ctx context.Context, id int64, name, description string) (*domain.Group, error)
 	Delete(ctx context.Context, id int64) error
-	ListNonGroupMembers(ctx context.Context, groupID uint64, limit, offset int, q string) ([]domain.User, int64, error)
+	ListNonGroupMembers(ctx context.Context, groupID uint64, limit, offset int, q string) ([]domain.User, int, error)
 	AddGroupMembers(ctx context.Context, groupID uint64, userIDs []uint64) ([]domain.User, error)
 }
 
 // UserRepository defines the interface for user data access used by the group service.
 type UserRepository interface {
 	GetByID(ctx context.Context, id uint64) (domain.User, error)
+	CountByIDs(ctx context.Context, ids []uint64) (int, error)
 }
 
 // Service handles group business logic.
@@ -61,7 +61,7 @@ func (s *Service) GetByID(ctx context.Context, id uint64) (domain.Group, error) 
 }
 
 // ListGroupMembers returns a paginated list of members for a group.
-func (s *Service) ListGroupMembers(ctx context.Context, id, limit, offset uint64, q string) ([]domain.User, int, error) {
+func (s *Service) ListGroupMembers(ctx context.Context, id uint64, limit, offset int, q string) ([]domain.User, int, error) {
 	if id < minID {
 		return nil, 0, domain.ErrBadParamInput
 	}
@@ -132,7 +132,7 @@ func (s *Service) ListGroups(ctx context.Context, q string, limit, offset int) (
 }
 
 // ListNonGroupMembers returns a paginated list of users not in the given group.
-func (s *Service) ListNonGroupMembers(ctx context.Context, groupID, limit, offset int, q string) ([]domain.User, int64, error) {
+func (s *Service) ListNonGroupMembers(ctx context.Context, groupID uint64, limit, offset int, q string) ([]domain.User, int, error) {
 	if groupID < minID {
 		return nil, 0, domain.ErrBadParamInput
 	}
@@ -140,14 +140,12 @@ func (s *Service) ListNonGroupMembers(ctx context.Context, groupID, limit, offse
 		return nil, 0, domain.ErrBadParamInput
 	}
 
-	gid := uint64(groupID) //nolint:gosec
-
 	// Check group existence first.
-	if _, err := s.repo.GetByID(ctx, gid); err != nil {
+	if _, err := s.repo.GetByID(ctx, groupID); err != nil {
 		return nil, 0, err
 	}
 
-	users, total, err := s.repo.ListNonGroupMembers(ctx, gid, limit, offset, q)
+	users, total, err := s.repo.ListNonGroupMembers(ctx, groupID, limit, offset, q)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -161,17 +159,38 @@ func (s *Service) ListNonGroupMembers(ctx context.Context, groupID, limit, offse
 
 // AddGroupMembers adds users to a group and returns the added members.
 func (s *Service) AddGroupMembers(ctx context.Context, groupID uint64, userIDs []uint64) ([]domain.User, error) {
+	// Deduplicate userIDs so that COUNT(DISTINCT id) comparison is accurate.
+	userIDs = deduplicateUint64(userIDs)
+
 	// Check group existence.
 	if _, err := s.repo.GetByID(ctx, groupID); err != nil {
 		return nil, err
 	}
 
-	// Check each user exists.
-	for _, userID := range userIDs {
-		if _, err := s.userRepo.GetByID(ctx, userID); err != nil {
-			return nil, err
-		}
+	// Check all users exist with a single COUNT query.
+	count, err := s.userRepo.CountByIDs(ctx, userIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	if count != len(userIDs) {
+		return nil, domain.ErrNotFound
 	}
 
 	return s.repo.AddGroupMembers(ctx, groupID, userIDs)
+}
+
+// deduplicateUint64 returns a new slice with duplicate values removed, preserving order.
+func deduplicateUint64(ids []uint64) []uint64 {
+	seen := make(map[uint64]struct{}, len(ids))
+	result := make([]uint64, 0, len(ids))
+
+	for _, id := range ids {
+		if _, ok := seen[id]; !ok {
+			seen[id] = struct{}{}
+			result = append(result, id)
+		}
+	}
+
+	return result
 }

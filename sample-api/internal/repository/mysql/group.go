@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/go-sql-driver/mysql"
+
 	"github.com/hrk-m/spec-to-dev-workflow/sample-api/domain"
 )
 
@@ -25,9 +27,9 @@ func NewGroupRepository(db *sql.DB) *GroupRepository {
 	return &GroupRepository{db: db}
 }
 
-// ListGroups returns a filtered list of groups with unfiltered total count.
+// ListGroups returns a filtered list of groups with filtered total count.
 func (r *GroupRepository) ListGroups(ctx context.Context, q string, limit, offset int) ([]domain.Group, int, error) {
-	total, err := r.countGroups(ctx)
+	total, err := r.countFilteredGroups(ctx, q)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -44,12 +46,15 @@ func (r *GroupRepository) ListGroups(ctx context.Context, q string, limit, offse
 	return groups, total, nil
 }
 
-// countGroups returns the total number of non-deleted groups (unfiltered).
-func (r *GroupRepository) countGroups(ctx context.Context) (int, error) {
+// countFilteredGroups returns the number of non-deleted groups matching the optional search filter.
+func (r *GroupRepository) countFilteredGroups(ctx context.Context, q string) (int, error) {
 	query := "SELECT COUNT(*) FROM `groups` g WHERE g.deleted_at IS NULL"
 
+	searchCondition, args := buildSearchCondition(q)
+	query += searchCondition
+
 	var total int
-	if err := r.db.QueryRowContext(ctx, query).Scan(&total); err != nil {
+	if err := r.db.QueryRowContext(ctx, query, args...).Scan(&total); err != nil {
 		return 0, domain.ErrInternalServerError
 	}
 
@@ -188,12 +193,19 @@ func (r *GroupRepository) GetByID(ctx context.Context, id uint64) (domain.Group,
 }
 
 // ListGroupMembers returns paginated members for a group with optional name search.
-func (r *GroupRepository) ListGroupMembers(ctx context.Context, id, limit, offset uint64, q string) ([]domain.User, int, error) {
-	// Count total members for the group (without q filter).
-	countQuery := "SELECT COUNT(*) FROM group_members WHERE group_id = ?"
+func (r *GroupRepository) ListGroupMembers(ctx context.Context, id uint64, limit, offset int, q string) ([]domain.User, int, error) {
+	// Count members for the group with optional q filter.
+	countQuery := "SELECT COUNT(*) FROM group_members gm JOIN users u ON gm.user_id = u.id WHERE gm.group_id = ?"
+	countArgs := []interface{}{id}
+
+	if q != "" {
+		countQuery += " AND u.search_key LIKE ?"
+		countArgs = append(countArgs, "%"+q+"%")
+	}
+
 	var total int
 
-	if err := r.db.QueryRowContext(ctx, countQuery, id).Scan(&total); err != nil {
+	if err := r.db.QueryRowContext(ctx, countQuery, countArgs...).Scan(&total); err != nil {
 		return nil, 0, domain.ErrInternalServerError
 	}
 
@@ -208,7 +220,7 @@ func (r *GroupRepository) ListGroupMembers(ctx context.Context, id, limit, offse
 	args := []interface{}{id}
 
 	if q != "" {
-		query += searchKeyLikeClause
+		query += " AND u.search_key LIKE ?"
 		args = append(args, "%"+q+"%")
 	}
 
@@ -244,15 +256,21 @@ func (r *GroupRepository) ListGroupMembers(ctx context.Context, id, limit, offse
 }
 
 // ListNonGroupMembers returns paginated users not in the given group.
-func (r *GroupRepository) ListNonGroupMembers(ctx context.Context, groupID uint64, limit, offset int, q string) ([]domain.User, int64, error) {
-	// Count total non-members (without q filter, deleted_at IS NULL).
+func (r *GroupRepository) ListNonGroupMembers(ctx context.Context, groupID uint64, limit, offset int, q string) ([]domain.User, int, error) {
+	// Count non-members with optional q filter.
 	countQuery := "SELECT COUNT(*) FROM users WHERE id NOT IN" +
 		" (SELECT user_id FROM group_members WHERE group_id = ?)" +
 		" AND deleted_at IS NULL"
+	countArgs := []interface{}{groupID}
 
-	var total int64
+	if q != "" {
+		countQuery += " AND search_key LIKE ?"
+		countArgs = append(countArgs, "%"+q+"%")
+	}
 
-	if err := r.db.QueryRowContext(ctx, countQuery, groupID).Scan(&total); err != nil {
+	var total int
+
+	if err := r.db.QueryRowContext(ctx, countQuery, countArgs...).Scan(&total); err != nil {
 		return nil, 0, domain.ErrInternalServerError
 	}
 
@@ -267,11 +285,11 @@ func (r *GroupRepository) ListNonGroupMembers(ctx context.Context, groupID uint6
 	args := []interface{}{groupID}
 
 	if q != "" {
-		query += searchKeyLikeClause
+		query += " AND search_key LIKE ?"
 		args = append(args, "%"+q+"%")
 	}
 
-	query += orderByIDPaginationClause
+	query += " ORDER BY id ASC LIMIT ? OFFSET ?"
 	args = append(args, limit, offset)
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
@@ -304,18 +322,28 @@ func (r *GroupRepository) ListNonGroupMembers(ctx context.Context, groupID uint6
 
 // AddGroupMembers inserts all userIDs into group_members within a transaction and returns added users.
 func (r *GroupRepository) AddGroupMembers(ctx context.Context, groupID uint64, userIDs []uint64) ([]domain.User, error) {
-	// Check for existing members before starting the transaction.
-	for _, userID := range userIDs {
-		checkQuery := "SELECT COUNT(*) FROM group_members WHERE group_id = ? AND user_id = ?"
+	// Check for existing members in one query before starting the transaction.
+	placeholders := make([]string, len(userIDs))
+	checkArgs := make([]interface{}, 0, len(userIDs)+1)
+	checkArgs = append(checkArgs, groupID)
 
-		var count int
-		if err := r.db.QueryRowContext(ctx, checkQuery, groupID, userID).Scan(&count); err != nil {
-			return nil, domain.ErrInternalServerError
-		}
+	for i, uid := range userIDs {
+		placeholders[i] = "?"
+		checkArgs = append(checkArgs, uid)
+	}
 
-		if count > 0 {
-			return nil, domain.ErrConflict
-		}
+	checkQuery := fmt.Sprintf( //nolint:gosec
+		"SELECT COUNT(*) FROM group_members WHERE group_id = ? AND user_id IN (%s)",
+		strings.Join(placeholders, ","),
+	)
+
+	var existingCount int
+	if err := r.db.QueryRowContext(ctx, checkQuery, checkArgs...).Scan(&existingCount); err != nil {
+		return nil, domain.ErrInternalServerError
+	}
+
+	if existingCount > 0 {
+		return nil, domain.ErrConflict
 	}
 
 	tx, err := r.db.BeginTx(ctx, nil)
@@ -342,19 +370,17 @@ func (r *GroupRepository) AddGroupMembers(ctx context.Context, groupID uint64, u
 		return nil, domain.ErrInternalServerError
 	}
 
-	// Fetch the added users.
-	placeholders := make([]string, len(userIDs))
-	args := make([]interface{}, len(userIDs))
+	// Fetch the added users. Reuse the same placeholders slice built above.
+	selectArgs := make([]interface{}, len(userIDs))
 
 	for i, id := range userIDs {
-		placeholders[i] = "?"
-		args[i] = id
+		selectArgs[i] = id
 	}
 
 	selectQuery := fmt.Sprintf("SELECT id, first_name, last_name FROM users WHERE id IN (%s) ORDER BY id ASC", //nolint:gosec
 		strings.Join(placeholders, ","))
 
-	rows, err := r.db.QueryContext(ctx, selectQuery, args...)
+	rows, err := r.db.QueryContext(ctx, selectQuery, selectArgs...)
 	if err != nil {
 		return nil, domain.ErrInternalServerError
 	}
@@ -384,11 +410,8 @@ func (r *GroupRepository) AddGroupMembers(ctx context.Context, groupID uint64, u
 
 // isUniqueConstraintError reports whether err is a MySQL duplicate entry error (error 1062).
 func isUniqueConstraintError(err error) bool {
-	if err == nil {
-		return false
-	}
-
-	return strings.Contains(err.Error(), "Error 1062") || strings.Contains(err.Error(), "Duplicate entry")
+	var mysqlErr *mysql.MySQLError
+	return errors.As(err, &mysqlErr) && mysqlErr.Number == 1062
 }
 
 // buildSearchCondition returns an AND search condition for each whitespace-delimited token.

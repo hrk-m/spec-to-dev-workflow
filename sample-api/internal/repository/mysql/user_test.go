@@ -62,7 +62,7 @@ func TestListUsers_Search(t *testing.T) {
 	users, total, err := repo.ListUsers(context.Background(), "Suzuki", 10, 0)
 
 	assert.NoError(t, err)
-	assert.Equal(t, activeUsersCount(t, db), total)
+	assert.Equal(t, 1, total)
 	assert.Len(t, users, 1)
 	assert.Equal(t, "Hanako", users[0].FirstName)
 	assert.Equal(t, "Suzuki", users[0].LastName)
@@ -76,7 +76,7 @@ func TestListUsers_SearchKeyLike(t *testing.T) {
 	users, total, err := repo.ListUsers(context.Background(), "HanakoSuz", 10, 0)
 
 	assert.NoError(t, err)
-	assert.Equal(t, activeUsersCount(t, db), total)
+	assert.Equal(t, 1, total)
 	assert.Len(t, users, 1)
 	assert.Equal(t, "Hanako", users[0].FirstName)
 	assert.Equal(t, "Suzuki", users[0].LastName)
