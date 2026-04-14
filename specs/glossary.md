@@ -30,3 +30,4 @@
 | 一括追加 | チェックボックスで選択した複数ユーザーを一度のリクエストでグループメンバーに追加する操作 | AddMemberSheet の「一括追加」ボタンで実行 |
 | ユーザー | システムに登録されたユーザー。id・first_name・last_name を持つ | API では `user`。グループメンバー（`member`）の上位概念 |
 | ユーザー一覧 | `/users` 画面に表示する全ユーザーのリスト。`search_key LIKE '%q%'` で検索できる | API では `GET /api/v1/users` |
+| 一括削除 | チェックボックスで選択した複数メンバーを一度のリクエストでグループから除名する操作 | MemberList の「削除」ボタンで実行。API: `DELETE /api/v1/groups/:id/members` |

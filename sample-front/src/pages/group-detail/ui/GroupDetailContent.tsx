@@ -138,7 +138,7 @@ export function GroupDetailContent({ groupId, onMemberClick }: GroupDetailConten
             </Flex>
           </Box>
 
-          <MemberList groupId={groupId} onMemberClick={onMemberClick} />
+          <MemberList groupId={groupId} onMemberClick={onMemberClick} onRefetch={refetch} />
         </>
       )}
     </>

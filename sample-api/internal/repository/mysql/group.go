@@ -404,6 +404,57 @@ func (r *GroupRepository) AddGroupMembers(ctx context.Context, groupID uint64, u
 	return users, nil
 }
 
+// RemoveGroupMembers removes the given users from a group within a transaction.
+// Returns ErrNotFound if any userID is not currently a member of the group.
+func (r *GroupRepository) RemoveGroupMembers(ctx context.Context, groupID uint64, userIDs []uint64) error {
+	placeholders := make([]string, len(userIDs))
+	deleteArgs := make([]interface{}, 0, len(userIDs)+1)
+	deleteArgs = append(deleteArgs, groupID)
+
+	for i, uid := range userIDs {
+		placeholders[i] = "?"
+		deleteArgs = append(deleteArgs, uid)
+	}
+
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return domain.ErrInternalServerError
+	}
+
+	deleteQuery := fmt.Sprintf( //nolint:gosec
+		"DELETE FROM group_members WHERE group_id = ? AND user_id IN (%s)",
+		strings.Join(placeholders, ","),
+	)
+
+	result, execErr := tx.ExecContext(ctx, deleteQuery, deleteArgs...)
+	if execErr != nil {
+		_ = tx.Rollback()
+
+		return domain.ErrInternalServerError
+	}
+
+	affected, raErr := result.RowsAffected()
+	if raErr != nil {
+		_ = tx.Rollback()
+
+		return domain.ErrInternalServerError
+	}
+
+	if int(affected) != len(userIDs) {
+		_ = tx.Rollback()
+
+		return domain.ErrNotFound
+	}
+
+	if commitErr := tx.Commit(); commitErr != nil {
+		_ = tx.Rollback()
+
+		return domain.ErrInternalServerError
+	}
+
+	return nil
+}
+
 // isUniqueConstraintError reports whether err is a MySQL duplicate entry error (error 1062).
 func isUniqueConstraintError(err error) bool {
 	var mysqlErr *mysql.MySQLError

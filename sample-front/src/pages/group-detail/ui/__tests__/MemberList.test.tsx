@@ -1,14 +1,20 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import * as deleteGroupMembersModule from "@/pages/group-detail/api/delete-group-members";
 import { fetchGroupMembers } from "@/pages/group-detail/api/fetch-group-members";
 import type { MembersResponse } from "@/pages/group-detail/model/group-detail";
 import { clearMemberListCache } from "@/pages/group-detail/model/member-list";
+import * as memberList from "@/pages/group-detail/model/member-list";
 import { MemberList } from "@/pages/group-detail/ui/MemberList";
 
 vi.mock("@/pages/group-detail/api/fetch-group-members", () => ({
   fetchGroupMembers: vi.fn(),
+}));
+
+vi.mock("@/pages/group-detail/api/delete-group-members", () => ({
+  deleteGroupMembers: vi.fn(),
 }));
 
 const mockMembersResponse: MembersResponse = {
@@ -367,5 +373,149 @@ describe("MemberList", () => {
     expect(vi.mocked(fetchGroupMembers)).toHaveBeenLastCalledWith(
       expect.objectContaining({ q: "Yamada" }),
     );
+  });
+});
+
+describe("MemberList - メンバー削除", () => {
+  let clearCacheSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    clearMemberListCache();
+    clearCacheSpy = vi.spyOn(memberList, "clearMemberListCache");
+  });
+
+  afterEach(() => {
+    clearCacheSpy.mockRestore();
+  });
+
+  it("0 件チェック時は削除ボタンが disabled、1 件以上で enabled になる", async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchGroupMembers).mockResolvedValueOnce(mockMembersResponse);
+
+    render(<MemberList groupId={1} onRefetch={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Yamada Taro")).toBeInTheDocument();
+    });
+
+    const deleteButton = screen.getByRole("button", { name: "削除" });
+    expect(deleteButton).toBeDisabled();
+
+    const firstCheckbox = screen.getAllByRole("checkbox")[0] as Element;
+    await user.click(firstCheckbox);
+
+    expect(deleteButton).not.toBeDisabled();
+  });
+
+  it("削除ボタン押下で確認ダイアログが開く", async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchGroupMembers).mockResolvedValueOnce(mockMembersResponse);
+
+    render(<MemberList groupId={1} onRefetch={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Yamada Taro")).toBeInTheDocument();
+    });
+
+    const firstCheckbox = screen.getAllByRole("checkbox")[0] as Element;
+    await user.click(firstCheckbox);
+
+    const deleteButton = screen.getByRole("button", { name: "削除" });
+    await user.click(deleteButton);
+
+    await waitFor(() => {
+      expect(screen.getByText(/選択した.*名をグループから削除しますか/)).toBeInTheDocument();
+    });
+  });
+
+  it("削除成功後に clearMemberListCache と onRefetch が呼ばれ、チェック状態がリセットされる", async () => {
+    const user = userEvent.setup();
+    const onRefetch = vi.fn();
+    vi.mocked(fetchGroupMembers).mockResolvedValueOnce(mockMembersResponse);
+    vi.mocked(deleteGroupMembersModule.deleteGroupMembers).mockResolvedValueOnce(undefined);
+
+    render(<MemberList groupId={1} onRefetch={onRefetch} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Yamada Taro")).toBeInTheDocument();
+    });
+
+    const firstCheckbox = screen.getAllByRole("checkbox")[0] as Element;
+    await user.click(firstCheckbox);
+
+    const deleteButton = screen.getByRole("button", { name: "削除" });
+    await user.click(deleteButton);
+
+    const confirmButton = screen.getByRole("button", { name: "削除する" });
+    await user.click(confirmButton);
+
+    await waitFor(() => {
+      expect(clearCacheSpy).toHaveBeenCalled();
+      expect(onRefetch).toHaveBeenCalled();
+    });
+
+    // チェック状態がリセットされ削除ボタンが再び disabled になる
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "削除" })).toBeDisabled();
+    });
+  });
+
+  it("キャンセルでダイアログが閉じ、チェック状態が維持される", async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchGroupMembers).mockResolvedValueOnce(mockMembersResponse);
+
+    render(<MemberList groupId={1} onRefetch={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Yamada Taro")).toBeInTheDocument();
+    });
+
+    const firstCheckbox = screen.getAllByRole("checkbox")[0] as Element;
+    await user.click(firstCheckbox);
+
+    const deleteButton = screen.getByRole("button", { name: "削除" });
+    await user.click(deleteButton);
+
+    await waitFor(() => {
+      expect(screen.getByText(/選択した.*名をグループから削除しますか/)).toBeInTheDocument();
+    });
+
+    const cancelButton = screen.getByRole("button", { name: "キャンセル" });
+    await user.click(cancelButton);
+
+    await waitFor(() => {
+      expect(screen.queryByText(/選択した.*名をグループから削除しますか/)).not.toBeInTheDocument();
+    });
+
+    // 削除ボタンはまだ enabled（チェック状態が維持されている）
+    expect(screen.getByRole("button", { name: "削除" })).not.toBeDisabled();
+  });
+
+  it("4xx/5xx エラー時にエラーメッセージを表示する", async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchGroupMembers).mockResolvedValueOnce(mockMembersResponse);
+    vi.mocked(deleteGroupMembersModule.deleteGroupMembers).mockRejectedValueOnce(
+      new Error("500 Internal Server Error"),
+    );
+
+    render(<MemberList groupId={1} onRefetch={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Yamada Taro")).toBeInTheDocument();
+    });
+
+    const firstCheckbox = screen.getAllByRole("checkbox")[0] as Element;
+    await user.click(firstCheckbox);
+
+    const deleteButton = screen.getByRole("button", { name: "削除" });
+    await user.click(deleteButton);
+
+    const confirmButton = screen.getByRole("button", { name: "削除する" });
+    await user.click(confirmButton);
+
+    await waitFor(() => {
+      expect(screen.getByText("Error: 500 Internal Server Error")).toBeInTheDocument();
+    });
   });
 });

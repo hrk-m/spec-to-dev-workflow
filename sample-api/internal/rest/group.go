@@ -20,6 +20,7 @@ type GroupService interface {
 	Delete(ctx context.Context, id int64) error
 	ListNonGroupMembers(ctx context.Context, groupID uint64, limit, offset int, q string) ([]domain.User, int, error)
 	AddGroupMembers(ctx context.Context, groupID uint64, userIDs []uint64) ([]domain.User, error)
+	RemoveGroupMembers(ctx context.Context, groupID uint64, userIDs []uint64) error
 }
 
 // GroupHandler handles HTTP requests for the group endpoints.
@@ -38,6 +39,7 @@ func NewGroupHandler(e *echo.Echo, svc GroupService) {
 	e.POST("/api/v1/groups/:id/members", h.AddGroupMembers)
 	e.PUT("/api/v1/groups/:id", h.Update)
 	e.DELETE("/api/v1/groups/:id", h.Delete)
+	e.DELETE("/api/v1/groups/:id/members", h.DeleteGroupMembers)
 }
 
 type groupListResponse struct {
@@ -66,6 +68,10 @@ type nonMemberListResponse struct {
 }
 
 type addGroupMembersRequest struct {
+	UserIDs []uint64 `json:"user_ids"`
+}
+
+type removeGroupMembersRequest struct {
 	UserIDs []uint64 `json:"user_ids"`
 }
 
@@ -225,6 +231,31 @@ func (h *GroupHandler) ListNonGroupMembers(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, nonMemberListResponse{Users: users, Total: total})
+}
+
+// DeleteGroupMembers handles DELETE /api/v1/groups/:id/members.
+func (h *GroupHandler) DeleteGroupMembers(c echo.Context) error {
+	ctx := c.Request().Context()
+
+	id, err := parsePathID(c.Param("id"))
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, ResponseError{Message: domain.ErrBadParamInput.Error()})
+	}
+
+	var req removeGroupMembersRequest
+	if bindErr := c.Bind(&req); bindErr != nil {
+		return c.JSON(http.StatusBadRequest, ResponseError{Message: domain.ErrBadParamInput.Error()})
+	}
+
+	if len(req.UserIDs) == 0 {
+		return c.JSON(http.StatusBadRequest, ResponseError{Message: domain.ErrBadParamInput.Error()})
+	}
+
+	if err := h.Service.RemoveGroupMembers(ctx, id, req.UserIDs); err != nil {
+		return c.JSON(getStatusCode(err), ResponseError{Message: err.Error()})
+	}
+
+	return c.NoContent(http.StatusNoContent)
 }
 
 // AddGroupMembers handles POST /api/v1/groups/:id/members.

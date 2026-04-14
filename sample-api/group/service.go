@@ -32,6 +32,7 @@ type GroupRepository interface {
 	Delete(ctx context.Context, id int64) error
 	ListNonGroupMembers(ctx context.Context, groupID uint64, limit, offset int, q string) ([]domain.User, int, error)
 	AddGroupMembers(ctx context.Context, groupID uint64, userIDs []uint64) ([]domain.User, error)
+	RemoveGroupMembers(ctx context.Context, groupID uint64, userIDs []uint64) error
 }
 
 // UserRepository defines the interface for user data access used by the group service.
@@ -178,6 +179,19 @@ func (s *Service) AddGroupMembers(ctx context.Context, groupID uint64, userIDs [
 	}
 
 	return s.repo.AddGroupMembers(ctx, groupID, userIDs)
+}
+
+// RemoveGroupMembers removes the given users from a group.
+func (s *Service) RemoveGroupMembers(ctx context.Context, groupID uint64, userIDs []uint64) error {
+	// Deduplicate userIDs so that COUNT comparison is accurate.
+	userIDs = deduplicateUint64(userIDs)
+
+	// Check group existence.
+	if _, err := s.repo.GetByID(ctx, groupID); err != nil {
+		return err
+	}
+
+	return s.repo.RemoveGroupMembers(ctx, groupID, userIDs)
 }
 
 // deduplicateUint64 returns a new slice with duplicate values removed, preserving order.

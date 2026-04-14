@@ -784,3 +784,127 @@ func TestService_AddGroupMembers_DuplicateUserIDs(t *testing.T) {
 	repo.AssertExpectations(t)
 	userRepo.AssertExpectations(t)
 }
+
+func TestService_RemoveGroupMembers_SingleMember(t *testing.T) {
+	repo := new(mocks.MockGroupRepository)
+	userRepo := new(mocks.MockUserRepository)
+	svc := group.NewService(repo, userRepo)
+
+	groupResp := domain.Group{ID: 1, Name: "dev-team", Description: "developers", MemberCount: 1}
+	repo.On("GetByID", mock.Anything, uint64(1)).Return(groupResp, nil)
+	repo.On("RemoveGroupMembers", mock.Anything, uint64(1), []uint64{2}).Return(nil)
+
+	err := svc.RemoveGroupMembers(context.Background(), 1, []uint64{2})
+
+	assert.NoError(t, err)
+	repo.AssertExpectations(t)
+}
+
+func TestService_RemoveGroupMembers_BulkDelete(t *testing.T) {
+	repo := new(mocks.MockGroupRepository)
+	userRepo := new(mocks.MockUserRepository)
+	svc := group.NewService(repo, userRepo)
+
+	groupResp := domain.Group{ID: 1, Name: "dev-team", Description: "developers", MemberCount: 3}
+	repo.On("GetByID", mock.Anything, uint64(1)).Return(groupResp, nil)
+	repo.On("RemoveGroupMembers", mock.Anything, uint64(1), []uint64{2, 3, 4}).Return(nil)
+
+	err := svc.RemoveGroupMembers(context.Background(), 1, []uint64{2, 3, 4})
+
+	assert.NoError(t, err)
+	repo.AssertExpectations(t)
+}
+
+func TestService_RemoveGroupMembers_GroupNotFound(t *testing.T) {
+	repo := new(mocks.MockGroupRepository)
+	userRepo := new(mocks.MockUserRepository)
+	svc := group.NewService(repo, userRepo)
+
+	repo.On("GetByID", mock.Anything, uint64(9999)).
+		Return(domain.Group{}, domain.ErrNotFound)
+
+	err := svc.RemoveGroupMembers(context.Background(), 9999, []uint64{1})
+
+	assert.ErrorIs(t, err, domain.ErrNotFound)
+	repo.AssertNotCalled(t, "RemoveGroupMembers")
+}
+
+func TestService_RemoveGroupMembers_NonMemberIncluded(t *testing.T) {
+	repo := new(mocks.MockGroupRepository)
+	userRepo := new(mocks.MockUserRepository)
+	svc := group.NewService(repo, userRepo)
+
+	groupResp := domain.Group{ID: 1, Name: "dev-team", Description: "developers", MemberCount: 1}
+	repo.On("GetByID", mock.Anything, uint64(1)).Return(groupResp, nil)
+	repo.On("RemoveGroupMembers", mock.Anything, uint64(1), []uint64{9999}).Return(domain.ErrNotFound)
+
+	err := svc.RemoveGroupMembers(context.Background(), 1, []uint64{9999})
+
+	assert.ErrorIs(t, err, domain.ErrNotFound)
+	repo.AssertExpectations(t)
+}
+
+func TestService_RemoveGroupMembers_DBError(t *testing.T) {
+	repo := new(mocks.MockGroupRepository)
+	userRepo := new(mocks.MockUserRepository)
+	svc := group.NewService(repo, userRepo)
+
+	groupResp := domain.Group{ID: 1, Name: "dev-team", Description: "developers", MemberCount: 1}
+	repo.On("GetByID", mock.Anything, uint64(1)).Return(groupResp, nil)
+	repo.On("RemoveGroupMembers", mock.Anything, uint64(1), []uint64{2}).Return(domain.ErrInternalServerError)
+
+	err := svc.RemoveGroupMembers(context.Background(), 1, []uint64{2})
+
+	assert.ErrorIs(t, err, domain.ErrInternalServerError)
+	repo.AssertExpectations(t)
+}
+
+func TestService_RemoveGroupMembers_SingleItemUserIDs(t *testing.T) {
+	repo := new(mocks.MockGroupRepository)
+	userRepo := new(mocks.MockUserRepository)
+	svc := group.NewService(repo, userRepo)
+
+	groupResp := domain.Group{ID: 1, Name: "dev-team", Description: "developers", MemberCount: 1}
+	repo.On("GetByID", mock.Anything, uint64(1)).Return(groupResp, nil)
+	repo.On("RemoveGroupMembers", mock.Anything, uint64(1), []uint64{5}).Return(nil)
+
+	err := svc.RemoveGroupMembers(context.Background(), 1, []uint64{5})
+
+	assert.NoError(t, err)
+	repo.AssertExpectations(t)
+}
+
+func TestService_RemoveGroupMembers_DuplicateUserIDs(t *testing.T) {
+	repo := new(mocks.MockGroupRepository)
+	userRepo := new(mocks.MockUserRepository)
+	svc := group.NewService(repo, userRepo)
+
+	groupResp := domain.Group{ID: 1, Name: "dev-team", Description: "developers", MemberCount: 1}
+	repo.On("GetByID", mock.Anything, uint64(1)).Return(groupResp, nil)
+	// After deduplication [2, 2] becomes [2], so RemoveGroupMembers is called with [2].
+	repo.On("RemoveGroupMembers", mock.Anything, uint64(1), []uint64{2}).Return(nil)
+
+	err := svc.RemoveGroupMembers(context.Background(), 1, []uint64{2, 2})
+
+	assert.NoError(t, err)
+	repo.AssertExpectations(t)
+}
+
+func TestService_RemoveGroupMembers_IsolatedViaInterface(t *testing.T) {
+	// Verify that Service is isolated from real DB via the GroupRepository interface.
+	repo := new(mocks.MockGroupRepository)
+	userRepo := new(mocks.MockUserRepository)
+	svc := group.NewService(repo, userRepo)
+
+	groupResp := domain.Group{ID: 1, Name: "dev-team", Description: "developers", MemberCount: 2}
+	repo.On("GetByID", mock.Anything, uint64(1)).Return(groupResp, nil)
+	repo.On("RemoveGroupMembers", mock.Anything, uint64(1), []uint64{2, 3}).Return(nil)
+
+	err := svc.RemoveGroupMembers(context.Background(), 1, []uint64{2, 3})
+
+	assert.NoError(t, err)
+	// Verify only the mock was called, not a real DB.
+	repo.AssertExpectations(t)
+	userRepo.AssertNotCalled(t, "GetByID")
+	userRepo.AssertNotCalled(t, "CountByIDs")
+}

@@ -1,8 +1,19 @@
-import { Box, Button, Flex, Skeleton, Text, TextField } from "@radix-ui/themes";
+import { useState } from "react";
+import {
+  AlertDialog,
+  Box,
+  Button,
+  Checkbox,
+  Flex,
+  Skeleton,
+  Text,
+  TextField,
+} from "@radix-ui/themes";
 import { FaChevronLeft, FaChevronRight, FaMagnifyingGlass } from "react-icons/fa6";
 
+import { deleteGroupMembers } from "@/pages/group-detail/api/delete-group-members";
 import type { UserSummary } from "@/pages/group-detail/model/group-detail";
-import { useMemberList } from "@/pages/group-detail/model/member-list";
+import { clearMemberListCache, useMemberList } from "@/pages/group-detail/model/member-list";
 import { styles } from "./MemberList.styles";
 
 const PER_PAGE_OPTIONS = [20, 50, 100] as const;
@@ -21,10 +32,14 @@ function MemberAvatar({ member }: { member: UserSummary }) {
 function MemberRow({
   member,
   isLast,
+  isSelected,
+  onToggle,
   onClick,
 }: {
   member: UserSummary;
   isLast: boolean;
+  isSelected: boolean;
+  onToggle: (id: number) => void;
   onClick?: () => void;
 }) {
   return (
@@ -33,26 +48,40 @@ function MemberRow({
       style={{
         ...styles.memberRow,
         ...(isLast ? {} : styles.memberRowBorder),
-        ...(onClick ? { cursor: "pointer" } : {}),
       }}
-      onClick={onClick}
-      role={onClick ? "button" : undefined}
-      tabIndex={onClick ? 0 : undefined}
-      onKeyDown={
-        onClick
-          ? (e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                onClick();
-              }
-            }
-          : undefined
-      }
     >
-      <MemberAvatar member={member} />
-      <Text as="p" style={styles.memberName}>
-        {member.last_name} {member.first_name}
-      </Text>
+      <Checkbox
+        checked={isSelected}
+        onCheckedChange={() => onToggle(member.id)}
+        aria-label={`Select ${member.last_name} ${member.first_name}`}
+        style={{ flexShrink: 0 }}
+      />
+      <Flex
+        style={{
+          flex: 1,
+          alignItems: "center",
+          gap: 12,
+          cursor: onClick ? "pointer" : undefined,
+        }}
+        onClick={onClick}
+        role={onClick ? "button" : undefined}
+        tabIndex={onClick ? 0 : undefined}
+        onKeyDown={
+          onClick
+            ? (e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onClick();
+                }
+              }
+            : undefined
+        }
+      >
+        <MemberAvatar member={member} />
+        <Text as="p" style={styles.memberName}>
+          {member.last_name} {member.first_name}
+        </Text>
+      </Flex>
     </Flex>
   );
 }
@@ -69,9 +98,10 @@ function SkeletonMemberRow({ isLast }: { isLast: boolean }) {
 type MemberListProps = {
   groupId: number;
   onMemberClick?: (member: UserSummary) => void;
+  onRefetch?: () => void;
 };
 
-export function MemberList({ groupId, onMemberClick }: MemberListProps) {
+export function MemberList({ groupId, onMemberClick, onRefetch }: MemberListProps) {
   const {
     members,
     currentPage,
@@ -85,7 +115,49 @@ export function MemberList({ groupId, onMemberClick }: MemberListProps) {
     setSearchQuery,
   } = useMemberList(groupId);
 
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const isInitialLoading = isLoading && members.length === 0;
+
+  function handleToggle(id: number) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
+  function handleDeleteClick() {
+    setDeleteError(null);
+    setDeleteDialogOpen(true);
+  }
+
+  function handleCancelDelete() {
+    setDeleteDialogOpen(false);
+  }
+
+  async function handleConfirmDelete() {
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
+      await deleteGroupMembers({ groupId, userIds: [...selectedIds] });
+      setSelectedIds(new Set());
+      setDeleteDialogOpen(false);
+      clearMemberListCache();
+      onRefetch?.();
+    } catch (err) {
+      setDeleteError(String(err));
+    } finally {
+      setIsDeleting(false);
+    }
+  }
 
   return (
     <Box>
@@ -121,6 +193,22 @@ export function MemberList({ groupId, onMemberClick }: MemberListProps) {
         ))}
       </Flex>
 
+      {onRefetch !== undefined && (
+        <Flex justify="end" style={{ marginTop: 12 }}>
+          <Button
+            type="button"
+            size="2"
+            radius="full"
+            variant="soft"
+            color="red"
+            disabled={selectedIds.size === 0}
+            onClick={handleDeleteClick}
+          >
+            削除
+          </Button>
+        </Flex>
+      )}
+
       {error && (
         <Text as="p" style={styles.errorText}>
           {error}
@@ -151,6 +239,8 @@ export function MemberList({ groupId, onMemberClick }: MemberListProps) {
               key={member.id}
               member={member}
               isLast={index === members.length - 1}
+              isSelected={selectedIds.has(member.id)}
+              onToggle={handleToggle}
               onClick={onMemberClick ? () => onMemberClick(member) : undefined}
             />
           ))}
@@ -188,6 +278,37 @@ export function MemberList({ groupId, onMemberClick }: MemberListProps) {
           </Flex>
         </Flex>
       )}
+
+      <AlertDialog.Root open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialog.Content maxWidth="480px">
+          <AlertDialog.Title>メンバー削除</AlertDialog.Title>
+          <AlertDialog.Description>
+            選択した {selectedIds.size} 名をグループから削除しますか？
+          </AlertDialog.Description>
+
+          {deleteError && (
+            <Text size="2" color="red" mt="2" as="p">
+              {deleteError}
+            </Text>
+          )}
+
+          <Flex gap="3" mt="4" justify="end">
+            <AlertDialog.Cancel>
+              <Button variant="soft" color="gray" radius="full" onClick={handleCancelDelete}>
+                キャンセル
+              </Button>
+            </AlertDialog.Cancel>
+            <Button
+              color="red"
+              radius="full"
+              disabled={isDeleting}
+              onClick={() => void handleConfirmDelete()}
+            >
+              削除する
+            </Button>
+          </Flex>
+        </AlertDialog.Content>
+      </AlertDialog.Root>
     </Box>
   );
 }

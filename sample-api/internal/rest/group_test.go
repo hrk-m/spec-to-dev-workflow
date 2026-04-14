@@ -1363,3 +1363,194 @@ func TestGroupHandler_AddGroupMembers_InternalError(t *testing.T) {
 	assert.Equal(t, "internal server error", result["message"])
 	svc.AssertExpectations(t)
 }
+
+func TestGroupHandler_DeleteGroupMembers_OK(t *testing.T) {
+	e := echo.New()
+	body := strings.NewReader(`{"user_ids":[2,3]}`)
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/groups/1/members", body)
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/groups/:id/members")
+	c.SetParamNames("id")
+	c.SetParamValues("1")
+
+	svc := new(mocks.MockGroupService)
+	svc.On("RemoveGroupMembers", mock.Anything, uint64(1), []uint64{2, 3}).Return(nil)
+
+	h := &rest.GroupHandler{Service: svc}
+	err := h.DeleteGroupMembers(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusNoContent, rec.Code)
+	svc.AssertExpectations(t)
+}
+
+func TestGroupHandler_DeleteGroupMembers_InvalidID_NotInteger(t *testing.T) {
+	e := echo.New()
+	body := strings.NewReader(`{"user_ids":[1]}`)
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/groups/abc/members", body)
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/groups/:id/members")
+	c.SetParamNames("id")
+	c.SetParamValues("abc")
+
+	h := &rest.GroupHandler{Service: new(mocks.MockGroupService)}
+	err := h.DeleteGroupMembers(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+
+	var result map[string]string
+	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
+	assert.Equal(t, "given param is not valid", result["message"])
+}
+
+func TestGroupHandler_DeleteGroupMembers_InvalidID_Zero(t *testing.T) {
+	e := echo.New()
+	body := strings.NewReader(`{"user_ids":[1]}`)
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/groups/0/members", body)
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/groups/:id/members")
+	c.SetParamNames("id")
+	c.SetParamValues("0")
+
+	h := &rest.GroupHandler{Service: new(mocks.MockGroupService)}
+	err := h.DeleteGroupMembers(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+
+	var result map[string]string
+	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
+	assert.Equal(t, "given param is not valid", result["message"])
+}
+
+func TestGroupHandler_DeleteGroupMembers_InvalidID_Negative(t *testing.T) {
+	e := echo.New()
+	body := strings.NewReader(`{"user_ids":[1]}`)
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/groups/-1/members", body)
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/groups/:id/members")
+	c.SetParamNames("id")
+	c.SetParamValues("-1")
+
+	h := &rest.GroupHandler{Service: new(mocks.MockGroupService)}
+	err := h.DeleteGroupMembers(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+
+	var result map[string]string
+	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
+	assert.Equal(t, "given param is not valid", result["message"])
+}
+
+func TestGroupHandler_DeleteGroupMembers_EmptyUserIDs(t *testing.T) {
+	e := echo.New()
+	body := strings.NewReader(`{"user_ids":[]}`)
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/groups/1/members", body)
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/groups/:id/members")
+	c.SetParamNames("id")
+	c.SetParamValues("1")
+
+	h := &rest.GroupHandler{Service: new(mocks.MockGroupService)}
+	err := h.DeleteGroupMembers(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+
+	var result map[string]string
+	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
+	assert.Equal(t, "given param is not valid", result["message"])
+}
+
+func TestGroupHandler_DeleteGroupMembers_GroupNotFound(t *testing.T) {
+	e := echo.New()
+	body := strings.NewReader(`{"user_ids":[1]}`)
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/groups/9999/members", body)
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/groups/:id/members")
+	c.SetParamNames("id")
+	c.SetParamValues("9999")
+
+	svc := new(mocks.MockGroupService)
+	svc.On("RemoveGroupMembers", mock.Anything, uint64(9999), []uint64{1}).
+		Return(domain.ErrNotFound)
+
+	h := &rest.GroupHandler{Service: svc}
+	err := h.DeleteGroupMembers(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusNotFound, rec.Code)
+
+	var result map[string]string
+	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
+	assert.Equal(t, "your requested item is not found", result["message"])
+	svc.AssertExpectations(t)
+}
+
+func TestGroupHandler_DeleteGroupMembers_NonMemberUserID(t *testing.T) {
+	e := echo.New()
+	body := strings.NewReader(`{"user_ids":[9999]}`)
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/groups/1/members", body)
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/groups/:id/members")
+	c.SetParamNames("id")
+	c.SetParamValues("1")
+
+	svc := new(mocks.MockGroupService)
+	svc.On("RemoveGroupMembers", mock.Anything, uint64(1), []uint64{9999}).
+		Return(domain.ErrNotFound)
+
+	h := &rest.GroupHandler{Service: svc}
+	err := h.DeleteGroupMembers(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusNotFound, rec.Code)
+
+	var result map[string]string
+	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
+	assert.Equal(t, "your requested item is not found", result["message"])
+	svc.AssertExpectations(t)
+}
+
+func TestGroupHandler_DeleteGroupMembers_InternalError(t *testing.T) {
+	e := echo.New()
+	body := strings.NewReader(`{"user_ids":[2]}`)
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/groups/1/members", body)
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/groups/:id/members")
+	c.SetParamNames("id")
+	c.SetParamValues("1")
+
+	svc := new(mocks.MockGroupService)
+	svc.On("RemoveGroupMembers", mock.Anything, uint64(1), []uint64{2}).
+		Return(domain.ErrInternalServerError)
+
+	h := &rest.GroupHandler{Service: svc}
+	err := h.DeleteGroupMembers(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusInternalServerError, rec.Code)
+
+	var result map[string]string
+	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
+	assert.Equal(t, "internal server error", result["message"])
+	svc.AssertExpectations(t)
+}

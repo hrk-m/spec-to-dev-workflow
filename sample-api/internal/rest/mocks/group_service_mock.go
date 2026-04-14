@@ -54,3 +54,8 @@ func (m *MockGroupService) AddGroupMembers(ctx context.Context, groupID uint64, 
 	args := m.Called(ctx, groupID, userIDs)
 	return args.Get(0).([]domain.User), args.Error(1)
 }
+
+func (m *MockGroupService) RemoveGroupMembers(ctx context.Context, groupID uint64, userIDs []uint64) error {
+	args := m.Called(ctx, groupID, userIDs)
+	return args.Error(0)
+}

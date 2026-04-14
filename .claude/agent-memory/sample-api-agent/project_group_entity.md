@@ -35,6 +35,7 @@ type: project
 | POST | /api/v1/groups/:id/members | AddGroupMembers（201 + members） |
 | PUT | /api/v1/groups/:id | Update |
 | DELETE | /api/v1/groups/:id | Delete (soft delete, 204 No Content) |
+| DELETE | /api/v1/groups/:id/members | DeleteGroupMembers（204 No Content） |
 
 ## GroupService インターフェース（internal/rest/group.go）
 
@@ -42,37 +43,40 @@ type: project
 type GroupService interface {
     ListGroups(ctx context.Context, q string, limit, offset int) ([]domain.Group, int, error)
     GetByID(ctx context.Context, id uint64) (domain.Group, error)
-    ListGroupMembers(ctx context.Context, id, limit, offset uint64, q string) ([]domain.User, int, error)
+    ListGroupMembers(ctx context.Context, id uint64, limit, offset int, q string) ([]domain.User, int, error)
     Store(ctx context.Context, name, description string) (domain.Group, error)
     Update(ctx context.Context, id int64, name, description string) (*domain.Group, error)
     Delete(ctx context.Context, id int64) error
-    ListNonGroupMembers(ctx context.Context, groupID, limit, offset int, q string) ([]domain.User, int64, error)
+    ListNonGroupMembers(ctx context.Context, groupID uint64, limit, offset int, q string) ([]domain.User, int, error)
     AddGroupMembers(ctx context.Context, groupID uint64, userIDs []uint64) ([]domain.User, error)
+    RemoveGroupMembers(ctx context.Context, groupID uint64, userIDs []uint64) error
 }
 ```
 
 ## GroupRepository インターフェース（group/service.go）
 
-ListNonGroupMembers, AddGroupMembers が追加されている（GetUserByID は削除済み）。
+`ListGroupMembers`, `ListNonGroupMembers`, `AddGroupMembers`, `RemoveGroupMembers` が追加されている。
 
-注意: `ListNonGroupMembers` のシグネチャは Service 側が `(groupID, limit, offset int, ...)` で受け取り、
-内部で `uint64` に変換して Repository の `(groupID uint64, limit, offset int, ...)` を呼ぶ。
+シグネチャは全レイヤーで統一：
+- `ListGroupMembers(ctx, id uint64, limit, offset int, q string) ([]domain.User, int, error)`
+- `ListNonGroupMembers(ctx, groupID uint64, limit, offset int, q string) ([]domain.User, int, error)`
+- `RemoveGroupMembers(ctx, groupID uint64, userIDs []uint64) error`
 
 ## UserRepository インターフェース（group/service.go）
 
-`GetUserByID` を分離して独立させた `UserRepository` インターフェース（2026-04-11 のリファクタリングで追加）：
+`group.UserRepository` は `GetByID` と `CountByIDs` を持つ：
 
 ```go
 type UserRepository interface {
     GetByID(ctx context.Context, id uint64) (domain.User, error)
+    CountByIDs(ctx context.Context, ids []uint64) (int, error)
 }
 ```
 
 - `NewService(repo GroupRepository, userRepo UserRepository) *Service` — 2 引数シグネチャ
-- MySQL 実装: `internal/repository/mysql/user.go` の `UserRepository` 型
-- `main.go` では `groupRepo` と `userRepo` を分けて生成して渡す
-- `AddGroupMembers` 内の各ユーザー存在確認は `s.userRepo.GetByID` で行う
-
-`group.go` と `user.go` で共通クエリ文字列 `SELECT id, first_name, last_name FROM users WHERE id = ? AND deleted_at IS NULL` を `selectUserByIDQuery` 定数で共有している（goconst lint 対策）。
+- MySQL 実装: `internal/repository/mysql/user.go` の `UserRepository` 型が `group.UserRepository` と `user.UserRepository` の両方を実装
+- `main.go` では `groupRepo` と `userRepo` を分けて生成して両方のサービスに渡す
+- `AddGroupMembers` のユーザー存在確認は `userRepo.CountByIDs` で 1 クエリ
+- `RemoveGroupMembers` は service 層でグループ存在確認 → repository 層でトランザクション DELETE
 
 **How to apply:** 新機能追加時は GroupService と GroupRepository / UserRepository の両 IF を同時に更新し、mock も同じ変更セットで追随させる。
