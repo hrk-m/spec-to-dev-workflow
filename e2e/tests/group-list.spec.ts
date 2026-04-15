@@ -172,4 +172,82 @@ test.describe("グループ一覧ページ", () => {
     // The GroupList component shows "Couldn't load groups" when error occurs with no cached groups
     await expect(page.getByText("Couldn't load groups")).toBeVisible();
   });
+
+  test("グループ一覧リクエストに limit=100 が含まれる", async ({ page }) => {
+    const capturedUrls: string[] = [];
+
+    // Intercept and capture all groups API requests
+    await page.route("**/api/v1/groups*", async (route) => {
+      capturedUrls.push(route.request().url());
+      await route.continue();
+    });
+
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+
+    // At least one request should have been made
+    expect(capturedUrls.length).toBeGreaterThanOrEqual(1);
+
+    // All requests should include limit=100
+    for (const url of capturedUrls) {
+      expect(url).toContain("limit=100");
+    }
+  });
+
+  test("グループ一覧: 追加フェッチ失敗時にインラインエラーが表示され既存グループが維持される", async ({
+    page,
+  }) => {
+    let requestCount = 0;
+
+    // Generate 100 mock groups (makes lastBatchSize === 100 → triggers fetch more)
+    const mockGroups = Array.from({ length: 100 }, (_, i) => ({
+      id: i + 1,
+      name: `Mock Group ${String(i + 1).padStart(3, "0")}`,
+      description: `Description ${i + 1}`,
+      member_count: 0,
+    }));
+
+    await page.route("**/api/v1/groups*", async (route) => {
+      requestCount++;
+      if (requestCount === 1) {
+        // First fetch: return 100 groups → sets lastBatchSize === 100
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ groups: mockGroups, total: 100 }),
+        });
+      } else {
+        // Additional fetch: return 500 → sets fetchMoreError
+        await route.fulfill({
+          status: 500,
+          contentType: "application/json",
+          body: JSON.stringify({ message: "internal server error" }),
+        });
+      }
+    });
+
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+
+    // Verify initial groups are displayed
+    await expect(
+      page.getByRole("button", { name: /Mock Group 001/ }).first(),
+    ).toBeVisible();
+
+    // Scroll to bottom to trigger IntersectionObserver sentinel
+    await page.evaluate(() =>
+      window.scrollTo(0, document.body.scrollHeight),
+    );
+
+    // Wait for the second request to fail and fetchMoreError to appear
+    // fetchMoreError is rendered inside a Callout.Root
+    await expect(
+      page.getByText(/500|internal server error/i),
+    ).toBeVisible({ timeout: 5000 });
+
+    // Existing groups must still be visible after fetch more error
+    await expect(
+      page.getByRole("button", { name: /Mock Group 001/ }).first(),
+    ).toBeVisible();
+  });
 });
