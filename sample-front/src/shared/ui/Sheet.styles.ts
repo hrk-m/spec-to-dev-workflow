@@ -45,7 +45,7 @@ export const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    padding: "12px 16px",
+    padding: "12px 42px",
     flexShrink: 0,
   },
   titleText: {
@@ -57,9 +57,8 @@ export const styles = {
   closeButton: {
     width: 32,
     height: 32,
-    borderRadius: "50%",
     border: "none",
-    background: appColors.searchBackground,
+    background: "none",
     cursor: "pointer",
     display: "flex",
     alignItems: "center",

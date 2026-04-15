@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { TbArrowsHorizontal } from "react-icons/tb";
 import { useLocation, useMatch, useNavigate } from "react-router";
 
 import {
@@ -45,6 +46,23 @@ function GroupDetailRouteSheet({ groupId }: { groupId: number }) {
       zIndex={GROUP_DETAIL_SHEET_Z_INDEX}
       width={
         sheets.some((s) => !s.closing) ? sheetConstants.fullWidth : sheetConstants.defaultWidth
+      }
+      headerActions={
+        <button
+          type="button"
+          aria-label="Open full page"
+          onClick={() => navigate(`/groups/${String(groupId)}`, { replace: true })}
+          style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            padding: "4px",
+            display: "flex",
+            alignItems: "center",
+          }}
+        >
+          <TbArrowsHorizontal size={16} />
+        </button>
       }
     >
       <GroupDetailSheet

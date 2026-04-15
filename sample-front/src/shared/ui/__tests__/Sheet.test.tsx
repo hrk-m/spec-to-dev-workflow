@@ -237,4 +237,26 @@ describe("Sheet", () => {
 
     expect(overlay.style.opacity).toBe("0");
   });
+
+  it("headerActions prop が渡されたとき × ボタンの左隣にレンダリングされる", () => {
+    render(
+      <Sheet
+        onClose={vi.fn()}
+        onRemove={vi.fn()}
+        headerActions={<button aria-label="test-action">action</button>}
+      >
+        <p>Sheet content</p>
+      </Sheet>,
+    );
+
+    const actionButton = screen.getByLabelText("test-action");
+    const closeButton = screen.getByLabelText("Close");
+
+    expect(actionButton).toBeInTheDocument();
+
+    // headerActions ボタンが Close ボタンより前に DOM に現れることを確認
+    const position =
+      actionButton.compareDocumentPosition(closeButton) & Node.DOCUMENT_POSITION_FOLLOWING;
+    expect(position).toBeTruthy();
+  });
 });

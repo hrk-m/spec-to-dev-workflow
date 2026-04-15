@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { FaChevronRight } from "react-icons/fa6";
 
 import { sheetConstants, styles } from "./Sheet.styles";
 
@@ -12,6 +13,7 @@ type SheetProps = {
   zIndex?: number;
   width?: CSSProperties["width"];
   title?: string;
+  headerActions?: ReactNode;
 };
 
 export function Sheet({
@@ -23,6 +25,7 @@ export function Sheet({
   zIndex = sheetConstants.baseZIndex,
   width = sheetConstants.defaultWidth,
   title,
+  headerActions,
 }: SheetProps) {
   const [mounted, setMounted] = useState(false);
 
@@ -90,9 +93,12 @@ export function Sheet({
       >
         <div style={styles.header}>
           {title ? <span style={styles.titleText}>{title}</span> : <span />}
-          <button type="button" style={styles.closeButton} onClick={onClose} aria-label="Close">
-            &times;
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            {headerActions}
+            <button type="button" style={styles.closeButton} onClick={onClose} aria-label="Close">
+              <FaChevronRight size={14} />
+            </button>
+          </div>
         </div>
         <div style={styles.content}>{children}</div>
       </div>

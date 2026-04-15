@@ -26,7 +26,18 @@ vi.mock("@/shared/lib/sheet-stack", () => ({
 }));
 
 vi.mock("@/shared/ui", () => ({
-  Sheet: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  Sheet: ({
+    children,
+    headerActions,
+  }: {
+    children: React.ReactNode;
+    headerActions?: React.ReactNode;
+  }) => (
+    <div>
+      {headerActions}
+      {children}
+    </div>
+  ),
   sheetConstants: { baseZIndex: 100, fullWidth: "100%", defaultWidth: "600px" },
 }));
 
@@ -95,5 +106,23 @@ describe("GroupNavigationLayout", () => {
     await user.click(screen.getByRole("button", { name: "Go Home" }));
 
     expect(closeAll).toHaveBeenCalledTimes(1);
+  });
+
+  it("GroupDetailRouteSheet の Sheet ヘッダーに ↗ ボタンがレンダリングされる", () => {
+    renderWithRouter("/groups/1", { presentation: "sheet" });
+
+    expect(screen.getByLabelText("Open full page")).toBeInTheDocument();
+  });
+
+  it("↗ ボタンクリックで navigate('/groups/1', { replace: true }) が呼ばれる", async () => {
+    const user = userEvent.setup();
+
+    renderWithRouter("/groups/1", { presentation: "sheet" });
+
+    await user.click(screen.getByLabelText("Open full page"));
+
+    // navigate は MemoryRouter 内の実 navigate が呼ばれる
+    // /groups/1 へ replace: true で遷移すると state が消え sheet が非表示になる
+    expect(screen.queryByLabelText("Open full page")).not.toBeInTheDocument();
   });
 });

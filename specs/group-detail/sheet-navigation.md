@@ -2,7 +2,7 @@
 
 ## 概要
 
-グループ一覧でグループをクリックすると、画面遷移せずに右からシートがスライドインしてグループ詳細を表示できる。シートが開いた状態のまま背後に一覧が見え、コンテキストを失わずに詳細を確認できる。さらにメンバー行をクリックすると MemberDetailSheet がシートの上に重なって表示される。
+グループ一覧でグループをクリックすると、画面遷移せずに右からシートがスライドインしてグループ詳細を表示できる。シートが開いた状態のまま背後に一覧が見え、コンテキストを失わずに詳細を確認できる。さらにメンバー行をクリックすると MemberDetailSheet がシートの上に重なって表示される。シートヘッダーの ↔ ボタンをクリックするとフルページ（`/groups/:id`）へ展開できる。
 
 ---
 
@@ -31,10 +31,20 @@
 ### シートを閉じる
 
 ```
-ユーザーが × ボタン / ESC キー / シート外エリアをクリックする
+ユーザーが > ボタン（FaChevronRight）/ ESC キー / シート外エリアをクリックする
   │
   ├─ closing ステートが true になる → translateX(100%) でスライドアウト開始（500ms）
   └─ transitionend 後に DOM から削除される。URL が前の状態に戻る（navigate(-1)）
+```
+
+### フルページへ展開する
+
+```
+ユーザーがシートヘッダーの ↔ ボタン（TbArrowsHorizontal）をクリックする
+  │
+  ├─ navigate('/groups/:id', { replace: true }) を呼び出す
+  ├─ シートが消えて GroupDetailPage がフルページで表示される
+  └─ ブラウザの戻るボタンで /groups 一覧に戻る（replace のため履歴はシート前の状態）
 ```
 
 ---
@@ -54,8 +64,8 @@
 | 要素                                   | 種別                                     | 役割                                                                                                                                                                                        |
 | -------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `GroupNavigationLayout`                | コンポーネント（app/routes）             | URL と state を見てシートかフルページかを振り分ける                                                                                                                                         |
-| `Sheet`                                | コンポーネント（shared/ui）              | スライドインシートの汎用コンポーネント。ESC・overlay クローズを内蔵。overlay の `onWheel` + container の `overscrollBehavior: contain` でスクロール制御（body.style.overflow は変更しない） |
-| `GroupDetailRouteSheet`                | コンポーネント（app/routes）             | Sheet の closing state と幅制御を担う。groupId が変わると closing をリセット                                                                                                                |
+| `Sheet`                                | コンポーネント（shared/ui）              | スライドインシートの汎用コンポーネント。ESC・overlay クローズを内蔵。overlay の `onWheel` + container の `overscrollBehavior: contain` でスクロール制御（body.style.overflow は変更しない）。`headerActions?: ReactNode` で閉じるボタン左隣にカスタムアクションを描画できる |
+| `GroupDetailRouteSheet`                | コンポーネント（app/routes）             | Sheet の closing state と幅制御を担う。groupId が変わると closing をリセット。`headerActions` として ↔ ボタン（`TbArrowsHorizontal`）を渡し、クリックで `navigate('/groups/:id', { replace: true })` を呼び出す |
 | `GroupDetailSheet`                     | コンポーネント（pages/group-detail）     | GroupDetailView のシートコンテンツ版。groupId と onMemberClick を props で受取                                                                                                              |
 | `MemberDetailSheet`                    | コンポーネント（pages/group-detail）     | メンバー名とプレースホルダーメッセージを表示する                                                                                                                                            |
 | `SheetStackProvider` / `useSheetStack` | Context / Hook（shared/lib/sheet-stack） | MemberDetailSheet のスタック管理。sheets 配列を共有する                                                                                                                                     |
@@ -68,7 +78,7 @@
 ```
 - [ ] グループ行クリックでシートが右からスライドインして表示される
 - [ ] シート内にグループ名・説明・メンバー一覧が表示される
-- [ ] × ボタンクリックでシートが閉じる
+- [ ] > ボタン（FaChevronRight）クリックでシートが閉じる
 - [ ] ESC キーでシートが閉じる
 - [ ] シート外エリア（オーバーレイ）クリックでシートが閉じる
 - [ ] シートが開いている間 body のスクロールバーが維持される（body.style.overflow は変更されない）
@@ -81,6 +91,10 @@
 - [ ] GroupDetailSheet 内でメンバー検索 0 件時に「No members found.」が表示され、ページネーションが非表示になる
 - [ ] GroupDetailSheet 内で検索キーワードをクリアすると全メンバーが再表示される
 - [ ] シートを閉じた後にグループ一覧の検索が引き続き機能する
+- [ ] GroupDetailSheet ヘッダーに ↔ ボタン（TbArrowsHorizontal）が表示される
+- [ ] ↔ ボタンクリックでシートが消えてフルページ（/groups/:id）に遷移する
+- [ ] ↔ クリック後のフルページで同じグループ名・説明が表示される
+- [ ] ↔ クリック後のブラウザ戻るボタンで /groups 一覧に戻る
 ```
 
 ---

@@ -384,4 +384,99 @@ test.describe("シートナビゲーション", () => {
     await expect(page.getByRole("button").filter({ hasText: "Group 002" }).first()).toBeVisible();
     expect(await page.getByRole("button").filter({ hasText: "Group 001" }).count()).toBe(0);
   });
+
+  test("GroupDetailSheet ヘッダーに ↔ ボタンが表示される", async ({ page }) => {
+    await goToHomeAndShowGroup001(page);
+
+    await page
+      .getByRole("button")
+      .filter({ hasText: "Group 001" })
+      .first()
+      .click();
+    await page.waitForSelector('[role="dialog"]');
+
+    const dialog = page.getByRole("dialog");
+    await expect(
+      dialog.getByRole("button", { name: "Open full page" }),
+    ).toBeVisible();
+  });
+
+  test("↔ ボタンクリックでシートが消えフルページ /groups/:id に遷移する", async ({ page }) => {
+    await goToHomeAndShowGroup001(page);
+
+    await page
+      .getByRole("button")
+      .filter({ hasText: "Group 001" })
+      .first()
+      .click();
+    await page.waitForSelector('[role="dialog"]');
+    await expect(page.getByRole("dialog")).toBeVisible();
+
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: "Open full page" })
+      .click();
+
+    // シートが消える
+    await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 3000 });
+
+    // URL が /groups/1 になる
+    await expect(page).toHaveURL(/\/groups\/1/);
+  });
+
+  test("↔ クリック後のフルページで同じグループ名・説明が表示される", async ({ page }) => {
+    await goToHomeAndShowGroup001(page);
+
+    await page
+      .getByRole("button")
+      .filter({ hasText: "Group 001" })
+      .first()
+      .click();
+    await page.waitForSelector('[role="dialog"]');
+
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: "Open full page" })
+      .click();
+
+    // フルページに遷移後（dialog なし）
+    await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 3000 });
+    await page.waitForLoadState("networkidle");
+
+    // 同じグループのコンテンツがフルページで表示される
+    await expect(page.getByText("Group 001", { exact: true })).toBeVisible();
+    await expect(page.getByText("Description for Group 001")).toBeVisible();
+  });
+
+  test("↔ クリック後のブラウザ戻るボタンで /groups 一覧に戻る", async ({ page }) => {
+    await page.goto("/groups");
+    await page.waitForLoadState("networkidle");
+
+    // グループ行をクリックしてシートを開く
+    const searchBox = page.getByPlaceholder("Search by name or description");
+    await searchBox.fill("Group 001");
+    await page.waitForTimeout(500);
+    await page
+      .getByRole("button")
+      .filter({ hasText: "Group 001" })
+      .first()
+      .click();
+    await page.waitForSelector('[role="dialog"]');
+
+    // ↔ ボタンでフルページへ
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: "Open full page" })
+      .click();
+    await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 3000 });
+    await expect(page).toHaveURL(/\/groups\/1/);
+
+    // ブラウザ戻る
+    await page.goBack();
+    await page.waitForLoadState("networkidle");
+
+    // /groups 一覧に戻る
+    await expect(page).toHaveURL(/\/groups(\/?)($|\?)/);
+    await expect(page.getByPlaceholder("Search by name or description")).toBeVisible();
+  });
 });

@@ -78,6 +78,10 @@ import { apiFetch } from "../../shared/api/client";
   へスライドアウトし、`transitionend` イベントで `onRemove` を呼んで DOM から除去
 - **タイトル表示**: `title` prop（省略可能）を渡すと、ヘッダー左側に fontSize 40 / fontWeight
   700 のタイトルを表示。省略時はヘッダー左側は空のスペースとなり、閉じるボタンが右端に配置される
+- **ヘッダーアクション**: `headerActions?: ReactNode`
+  prop（省略可能）を渡すと、閉じるボタン（`FaChevronRight`
+  アイコン）の左隣に描画される。`GroupDetailRouteSheet` では ↔ ボタン（`TbArrowsHorizontal`
+  アイコン）を渡してフルページ展開を実現する
 
 ### z-index 階層
 
@@ -145,12 +149,14 @@ Prettier +
 
 - `vitest.config.ts` で React plugin と jsdom を設定済み
 - `globals: true` により `describe`, `it`, `expect` 等をインポート不要で使用可能
-- セットアップファイル: `src/test/setup.ts`（`@testing-library/jest-dom` のインポート + `MockIntersectionObserver` のグローバル登録）
+- セットアップファイル: `src/test/setup.ts`（`@testing-library/jest-dom` のインポート +
+  `MockIntersectionObserver` のグローバル登録）
 - カバレッジ: `vitest run --coverage`（v8 プロバイダー、レポーター: `text` + `lcov`）
 
 **MockIntersectionObserver パターン**:
 
-jsdom は `IntersectionObserver` を実装しないため、`src/test/setup.ts` で `MockIntersectionObserver` クラスをグローバルに設定している。テストから利用する際は以下のパターンを使う:
+jsdom は `IntersectionObserver` を実装しないため、`src/test/setup.ts` で `MockIntersectionObserver`
+クラスをグローバルに設定している。テストから利用する際は以下のパターンを使う:
 
 ```ts
 import { MockIntersectionObserver } from "@/test/setup";
@@ -161,7 +167,9 @@ beforeEach(() => MockIntersectionObserver.reset());
 MockIntersectionObserver.triggerAll([{ isIntersecting: true }]);
 ```
 
-`MockIntersectionObserver.triggerAll` はすべての登録済み observer に対してコールバックを発火する。個別の observer だけ発火させたい場合は `MockIntersectionObserver.instances[n].triggerIntersect(entries)` を使う。
+`MockIntersectionObserver.triggerAll`
+はすべての登録済み observer に対してコールバックを発火する。個別の observer だけ発火させたい場合は
+`MockIntersectionObserver.instances[n].triggerIntersect(entries)` を使う。
 
 ## コマンド
 
