@@ -1,3 +1,4 @@
+import { MockIntersectionObserver } from "@/test/setup";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -8,7 +9,6 @@ import { AddMemberSheet } from "@/pages/group-detail/ui/AddMemberSheet";
 
 vi.mock("@/pages/group-detail/model/useNonMemberList", () => ({
   useNonMemberList: vi.fn(),
-  PER_PAGE_OPTIONS: [20, 50, 100],
 }));
 
 vi.mock("@/pages/group-detail/api/add-group-members", () => ({
@@ -37,17 +37,16 @@ const defaultHookReturn = {
   error: null,
   searchQuery: "",
   setSearchQuery: vi.fn(),
-  currentPage: 1,
-  totalPages: 1,
-  perPage: 20 as const,
-  setCurrentPage: vi.fn(),
-  setPerPage: vi.fn(),
-  lastBatchSize: 500,
+  sentinelRef: { current: null },
+  isFetchingMore: false,
+  fetchMoreError: null,
+  lastBatchSize: 100,
 };
 
 describe("AddMemberSheet", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    MockIntersectionObserver.reset();
     vi.mocked(useNonMemberList).mockReturnValue(defaultHookReturn);
   });
 
@@ -87,7 +86,6 @@ describe("AddMemberSheet", () => {
 
     render(<AddMemberSheet groupId={1} onClose={mockOnClose} />);
 
-    // ユーザー名テキストをクリックして選択状態にする（行全体が clickable）
     const userName = screen.getByText("山田 太郎");
     await user.click(userName);
 
@@ -111,7 +109,6 @@ describe("AddMemberSheet", () => {
 
     render(<AddMemberSheet groupId={1} onClose={mockOnClose} />);
 
-    // ユーザー名テキストをクリックして選択状態にする（行全体が clickable）
     const userName = screen.getByText("山田 太郎");
     await user.click(userName);
 
@@ -133,7 +130,6 @@ describe("AddMemberSheet", () => {
 
     render(<AddMemberSheet groupId={1} onClose={mockOnClose} />);
 
-    // ユーザー名テキストをクリックして選択状態にする（行全体が clickable）
     const userName = screen.getByText("山田 太郎");
     await user.click(userName);
 
@@ -157,7 +153,6 @@ describe("AddMemberSheet", () => {
 
     render(<AddMemberSheet groupId={1} onClose={mockOnClose} />);
 
-    // ユーザー名テキストをクリックして選択状態にする（行全体が clickable）
     const userName = screen.getByText("山田 太郎");
     await user.click(userName);
 
@@ -196,97 +191,63 @@ describe("AddMemberSheet", () => {
     expect(screen.getByText("山田 太郎")).toBeInTheDocument();
   });
 
-  describe("ページネーション UI", () => {
-    it("perPage セレクターボタンが表示される", () => {
+  describe("ページネーション UI が存在しない", () => {
+    it("perPage セレクターボタン（20/50/100）が存在しない", () => {
       render(<AddMemberSheet groupId={1} onClose={mockOnClose} />);
 
-      expect(screen.getByRole("button", { name: "20" })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "50" })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "100" })).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "20" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "50" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "100" })).not.toBeInTheDocument();
     });
 
-    it("ユーザーが存在する場合にページネーションコントロールが表示される", () => {
+    it("Previous/Next ボタンが存在しない", () => {
       vi.mocked(useNonMemberList).mockReturnValue({
         ...defaultHookReturn,
         users: [{ id: 1, first_name: "太郎", last_name: "山田" }],
         total: 1,
-        currentPage: 1,
-        totalPages: 2,
       });
 
       render(<AddMemberSheet groupId={1} onClose={mockOnClose} />);
 
-      expect(screen.getByText("Page 1 of 2")).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /Previous/i })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: /Next/i })).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /Previous/i })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /Next/i })).not.toBeInTheDocument();
     });
 
-    it("ユーザーが存在しない場合はページネーションコントロールが表示されない", () => {
+    it("Page X of Y テキストが存在しない", () => {
+      vi.mocked(useNonMemberList).mockReturnValue({
+        ...defaultHookReturn,
+        users: [{ id: 1, first_name: "太郎", last_name: "山田" }],
+        total: 1,
+      });
+
       render(<AddMemberSheet groupId={1} onClose={mockOnClose} />);
 
       expect(screen.queryByText(/Page \d+ of \d+/)).not.toBeInTheDocument();
     });
+  });
 
-    it("currentPage=1 のとき Previous ボタンが disabled になる", () => {
-      vi.mocked(useNonMemberList).mockReturnValue({
-        ...defaultHookReturn,
-        users: [{ id: 1, first_name: "太郎", last_name: "山田" }],
-        total: 1,
-        currentPage: 1,
-        totalPages: 2,
-      });
+  it("sentinel 要素が DOM に存在する", () => {
+    render(<AddMemberSheet groupId={1} onClose={mockOnClose} />);
 
-      render(<AddMemberSheet groupId={1} onClose={mockOnClose} />);
+    expect(screen.getByTestId("non-member-sentinel")).toBeInTheDocument();
+  });
 
-      expect(screen.getByRole("button", { name: /Previous/i })).toBeDisabled();
+  it("追加フェッチ失敗時にエラーメッセージが表示される", () => {
+    vi.mocked(useNonMemberList).mockReturnValue({
+      ...defaultHookReturn,
+      users: [
+        { id: 1, first_name: "太郎", last_name: "山田" },
+        { id: 2, first_name: "花子", last_name: "鈴木" },
+      ],
+      total: 2,
+      fetchMoreError: "Failed to fetch",
     });
 
-    it("currentPage=totalPages のとき Next ボタンが disabled になる", () => {
-      vi.mocked(useNonMemberList).mockReturnValue({
-        ...defaultHookReturn,
-        users: [{ id: 1, first_name: "太郎", last_name: "山田" }],
-        total: 1,
-        currentPage: 2,
-        totalPages: 2,
-      });
+    render(<AddMemberSheet groupId={1} onClose={mockOnClose} />);
 
-      render(<AddMemberSheet groupId={1} onClose={mockOnClose} />);
-
-      expect(screen.getByRole("button", { name: /Next/i })).toBeDisabled();
-    });
-
-    it("Next ボタンをクリックすると setCurrentPage が次のページで呼ばれる", async () => {
-      const user = userEvent.setup();
-      const setCurrentPage = vi.fn();
-      vi.mocked(useNonMemberList).mockReturnValue({
-        ...defaultHookReturn,
-        users: [{ id: 1, first_name: "太郎", last_name: "山田" }],
-        total: 1,
-        currentPage: 1,
-        totalPages: 2,
-        setCurrentPage,
-      });
-
-      render(<AddMemberSheet groupId={1} onClose={mockOnClose} />);
-
-      await user.click(screen.getByRole("button", { name: /Next/i }));
-
-      expect(setCurrentPage).toHaveBeenCalledWith(2);
-    });
-
-    it("perPage ボタンをクリックすると setPerPage が呼ばれる", async () => {
-      const user = userEvent.setup();
-      const setPerPage = vi.fn();
-      vi.mocked(useNonMemberList).mockReturnValue({
-        ...defaultHookReturn,
-        setPerPage,
-      });
-
-      render(<AddMemberSheet groupId={1} onClose={mockOnClose} />);
-
-      await user.click(screen.getByRole("button", { name: "50" }));
-
-      expect(setPerPage).toHaveBeenCalledWith(50);
-    });
+    expect(screen.getByText("Failed to fetch")).toBeInTheDocument();
+    // Existing items are still displayed
+    expect(screen.getByText("山田 太郎")).toBeInTheDocument();
+    expect(screen.getByText("鈴木 花子")).toBeInTheDocument();
   });
 });

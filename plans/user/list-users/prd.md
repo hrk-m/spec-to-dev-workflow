@@ -5,7 +5,7 @@
 | 項目         | 内容                                                                                                                             |
 | ------------ | -------------------------------------------------------------------------------------------------------------------------------- |
 | 機能名       | `list-users`                                                                                                                     |
-| 目的         | アクティブなユーザー一覧をページネーション・キーワード検索付きで取得・表示する                                                   |
+| 目的         | アクティブなユーザー一覧をキーワード検索付きで取得し、無限スクロールで表示する                                                   |
 | API          | `GET /api/v1/users`                                                                                                              |
 | 認証         | 不要                                                                                                                             |
 | データソース | MySQL (`sample-api/internal/repository/mysql`)                                                                                   |
@@ -48,27 +48,28 @@
 ```
 1. 開始
 2. UsersPage コンポーネントがマウントされる
-3. UsersPage → API クライアント: GET /api/v1/users?limit=500&offset=0 を送信
+3. UsersPage → API クライアント: GET /api/v1/users?limit=100&offset=0 を送信
 4. レスポンスは成功？
    - Yes（200）→
-      5. 取得したユーザー一覧（最大 500 件）と total を state にキャッシュ
-      6. 画面にデフォルト 20 件/ページで表示
-      7. ページネーション（20 / 50 / 100 件/ページ切り替え）を UI に表示
-         - ページネーション制御は effectiveTotal = cachedUsers.length（実際の取得件数）を使用
+      5. 取得したユーザー一覧（最大 100 件）と total を state にキャッシュ
+      6. 取得した全件をリストに表示
+      7. リスト末尾にセンチネル要素を追加（IntersectionObserver で監視）
       8. 終了
    - No（4xx・5xx）→
       5. エラーメッセージを画面に表示
       6. 終了
-9. ユーザーが表示ページを進め、キャッシュ済みの 500 件を超えるページに到達
-10. UsersPage → API クライアント: GET /api/v1/users?limit=500&offset=500 を送信
-11. 手順 4 と同様（取得データを既存 state に追加キャッシュ）
-12. ユーザーが検索キーワードを入力
-13. 300ms デバウンス後にキャッシュをクリアして
-    GET /api/v1/users?limit=500&offset=0&q={keyword} を送信
-14. 手順 4 と同様（キャッシュをクリアして再キャッシュ）
-15. 検索結果が 0 件の場合
+9. センチネル要素が viewport に入る
+10. lastBatchSize === 100 →
+        isFetchingMore = true（リスト末尾にスピナー表示）
+        GET /api/v1/users?limit=100&offset=N を送信
+        - 成功 → キャッシュに追加（全件表示）、isFetchingMore = false
+        - 失敗 → isFetchingMore = false、リスト末尾にエラーメッセージ表示
+11. ユーザーが検索キーワードを入力
+12. 300ms デバウンス後にキャッシュをクリアして
+    GET /api/v1/users?limit=100&offset=0&q={keyword} を送信
+13. 手順 4 と同様（キャッシュをクリアして再キャッシュ）
+14. 検索結果が 0 件の場合
     - ヘッダーサブタイトルに "No users found" を表示
-    - ページネーションを非表示にする
 ```
 
 #### バックエンド処理フロー
@@ -89,7 +90,8 @@
    - 範囲外の場合 → domain.ErrBadParamInput を返す（→ 400 Bad Request）
 9. Repository.ListUsers(ctx, q, limit, offset) を呼び出す
 10. DB: SELECT COUNT(*) FROM users WHERE deleted_at IS NULL で total を取得
-    - total は q フィルターなしの全ユーザー件数（検索ヒット件数ではない）
+    - q が指定されている場合: AND search_key LIKE '%q%' を付加
+    - total は q フィルターを適用したユーザー件数（q 未指定時は全ユーザー件数と等しい）
     - total = 0 の場合 → 空配列と 0 を返す
 11. DB: SELECT id, first_name, last_name FROM users WHERE deleted_at IS NULL
       - q が指定されている場合: AND search_key LIKE '%q%'
@@ -132,7 +134,7 @@
 }
 ```
 
-※ `total`: `q` フィルターなし（`deleted_at IS NULL`）の全ユーザー件数
+※ `total`: `q` フィルターを適用したユーザー件数（`q` 未指定時は全ユーザー件数と等しい）
 ※ `users`: 今回のフェッチで返ったユーザー一覧（最大 `limit` 件）
 
 ### エラーケース一覧（バックエンド）
@@ -149,7 +151,7 @@
 | ------------------------- | ----------------------- | ---------- | ------------------------------------ |
 | 4xx / 5xx レスポンス      | API クライアント層      | —          | エラーメッセージを画面に表示         |
 | ネットワークエラー        | API クライアント層      | —          | エラーメッセージを画面に表示         |
-| 検索結果 0 件             | フロントエンド表示制御  | —          | "No users found" 表示・ページネーション非表示 |
+| 検索結果 0 件             | フロントエンド表示制御  | —          | "No users found" 表示                         |
 
 ---
 
@@ -199,7 +201,7 @@
 | --- | ------------ | ---------------------------------------- | ------------------- | ------------------------------------ |
 | 20  | 正常系       | 初回ロードでユーザー一覧を取得・キャッシュ | マウント時          | users 配列と total が state に入る   |
 | 21  | 検索         | 300ms デバウンスで再取得する              | `query = "山田"`    | 300ms 後に fetchUsers が呼ばれる     |
-| 22  | ページネーション | ページ切り替えで visibleUserCountLabel が更新される | `page = 2` | 表示範囲ラベルが変わる               |
+| 22  | 無限スクロール   | センチネルが visible になったら追加フェッチが呼ばれる | lastBatchSize === FETCH_LIMIT | doFetchMore が呼ばれる |
 | 23  | 0 件時       | isEmptyResult が true になる             | users=[]            | `isEmptyResult === true`             |
 
 `UserList.test.tsx`:
@@ -238,10 +240,10 @@
 | `sample-front/src/widgets/sidebar/ui/Sidebar.tsx`           | Groups / Users ナビゲーションボタン                                                       |
 | `sample-front/src/pages/users/index.ts`                     | `UsersPage`・型定義の barrel export                                                       |
 | `sample-front/src/pages/users/ui/UsersPage.tsx`             | ユーザー一覧ページコンポーネント                                                          |
-| `sample-front/src/pages/users/ui/UserList.tsx`              | 検索・ページネーション・スケルトンローディング・空状態表示付きユーザー一覧コンポーネント  |
-| `sample-front/src/pages/users/api/fetch-users.ts`           | GET /api/v1/users 呼び出し（q, limit, offset 対応）                                      |
+| `sample-front/src/pages/users/ui/UserList.tsx`              | 検索・無限スクロール・スケルトンローディング・空状態表示付きユーザー一覧コンポーネント（ページネーション UI 削除・センチネル要素追加）|
+| `sample-front/src/pages/users/api/fetch-users.ts`           | GET /api/v1/users 呼び出し（limit=100 に変更）                                            |
 | `sample-front/src/pages/users/model/user.ts`                | User・UsersResponse・FetchUsersParams 型定義                                              |
-| `sample-front/src/pages/users/model/user-list.ts`           | `useUserList` フック（クライアントキャッシュ・ページネーション・300ms デバウンス）        |
+| `sample-front/src/pages/users/model/user-list.ts`           | `useUserList` フック（無限スクロール対応・`displayedCount`・`isFetchingMore` 追加・ページネーション状態削除）|
 
 ---
 
@@ -255,20 +257,24 @@
 4. `limit`（1〜500、デフォルト: 500）・`offset`（0 以上、デフォルト: 0）によるページネーションが動作する
 5. 範囲外の limit / offset は 400 を返す
 6. DB エラー時は 500 を返す
-7. `total` は `q` フィルターなしの全ユーザー件数を返す（検索ヒット件数ではない）
+7. `total` は `q` フィルターを適用したユーザー件数を返す（`q` 未指定時は全ユーザー件数と等しい）
 
 ### フロントエンド
 
 8. サイドバーに Groups / Users の 2 項目が表示され、Users クリックで `/users` へ遷移できる
 9. `/users` でユーザー一覧画面（UserList コンポーネント）が表示される
-10. マウント時に `GET /api/v1/users?limit=500&offset=0` を呼び出し、最大 500 件を一括取得してクライアントキャッシュする
-11. デフォルト 20 件/ページ表示、Previous/Next + 20/50/100 件/ページ切り替えを提供する
-12. ページネーション制御は `effectiveTotal`（実際の取得件数）を使用する。検索クエリがある場合は `cachedUsers.length`、ない場合は API の `total`（全件数）を使用し、Req 14 の追加フェッチを可能にする
-13. キーワード入力後 300ms デバウンスで `q={keyword}` を付けて再取得する（キャッシュクリアあり）
-14. 500 件超過時は offset を進めて追加取得し、既存キャッシュに追加する
-15. データ取得中はスケルトンローディングを表示する
-16. 検索 0 件時は "No users found" をヘッダーサブタイトルに表示し、ページネーションを非表示にする
-17. エラー時はエラーメッセージを表示する
+10. マウント時に `GET /api/v1/users?limit=100&offset=0` を呼び出し、最大 100 件を取得してクライアントキャッシュする
+11. 取得した全件をリストに即時表示する（`displayedCount` による分割表示なし）
+12. キャッシュが枯渇かつ `lastBatchSize === 100` のとき `offset+=100` で追加フェッチする
+13. 追加フェッチ中はリスト末尾にスピナーを表示する
+14. 追加フェッチ失敗時はリスト末尾にエラーメッセージを表示する（既存表示アイテムは維持）
+15. キーワード入力後 300ms デバウンスで `q={keyword}` を付けて再取得する（キャッシュクリア・`offset=0` リセットあり）
+16. データ取得中はスケルトンローディングを表示する
+17. 検索 0 件時は "No users found" をヘッダーサブタイトルに表示する
+18. エラー時はエラーメッセージを表示する
+19. UI から Previous/Next ボタンおよび件数セレクタ（20/50/100）を削除する
+20. `currentPage` / `totalPages` / `perPage` / `handlePerPageChange` の状態を削除する
+21. IntersectionObserver の jsdom mock を `setup.ts` に追加する（テスト環境対応）
 
 ---
 

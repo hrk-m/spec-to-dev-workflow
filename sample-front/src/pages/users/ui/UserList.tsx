@@ -1,8 +1,8 @@
-import { Box, Button, Flex, Heading, Skeleton, Text, TextField } from "@radix-ui/themes";
-import { FaChevronLeft, FaChevronRight, FaMagnifyingGlass } from "react-icons/fa6";
+import { Box, Flex, Heading, Skeleton, Spinner, Text, TextField } from "@radix-ui/themes";
+import { FaMagnifyingGlass } from "react-icons/fa6";
 
 import type { User } from "@/pages/users/model/user";
-import { PER_PAGE_OPTIONS, useUserList } from "@/pages/users/model/user-list";
+import { useUserList } from "@/pages/users/model/user-list";
 import { styles } from "./UserList.styles";
 
 const SKELETON_ROWS = 5;
@@ -60,17 +60,14 @@ function SkeletonUserRow({ isLast }: { isLast: boolean }) {
 export function UserList() {
   const {
     users,
-    currentPage,
-    totalPages,
-    perPage,
     searchQuery,
     error,
     isLoading,
-    setCurrentPage,
-    setPerPage,
+    isFetchingMore,
+    fetchMoreError,
+    sentinelRef,
     setSearchQuery,
     userCountLabel,
-    visibleUserCountLabel,
   } = useUserList();
 
   const isInitialLoading = isLoading && users.length === 0;
@@ -104,22 +101,6 @@ export function UserList() {
         </TextField.Root>
       </Box>
 
-      <Flex style={styles.perPageSection}>
-        {PER_PAGE_OPTIONS.map((option) => (
-          <button
-            key={option}
-            type="button"
-            style={{
-              ...styles.perPageButton,
-              ...(perPage === option ? styles.perPageButtonActive : styles.perPageButtonInactive),
-            }}
-            onClick={() => setPerPage(option)}
-          >
-            {option}
-          </button>
-        ))}
-      </Flex>
-
       {error && users.length === 0 && (
         <Box style={styles.errorCard}>
           <Text as="p" style={styles.errorTitle}>
@@ -151,9 +132,6 @@ export function UserList() {
               <Text as="p" style={styles.sectionTitle}>
                 All Users
               </Text>
-              <Text as="p" style={styles.sectionMeta}>
-                {visibleUserCountLabel}
-              </Text>
             </Box>
             <Box style={styles.listCard}>
               {users.map((user, index) => (
@@ -167,7 +145,7 @@ export function UserList() {
       {!isInitialLoading && !error && users.length === 0 && (
         <Box style={styles.emptyState}>
           <Text as="p" style={styles.emptyStateTitle}>
-            No users matched that search.
+            No users found
           </Text>
           <Text as="p" style={styles.emptyStateText}>
             Try a shorter phrase or search by part of a user name.
@@ -175,45 +153,22 @@ export function UserList() {
         </Box>
       )}
 
-      {error && users.length > 0 && (
+      {fetchMoreError && (
         <Box style={styles.inlineErrorCard}>
           <Text as="p" style={styles.errorText}>
-            {error}
+            {fetchMoreError}
           </Text>
         </Box>
       )}
 
-      {!isInitialLoading && users.length > 0 && (
-        <Flex style={styles.footerSection}>
-          <Text as="p" style={styles.footerMeta}>
-            Page {currentPage} of {totalPages}
-          </Text>
-          <Flex style={styles.paginationButtons}>
-            <Button
-              type="button"
-              size="2"
-              radius="full"
-              variant="soft"
-              disabled={currentPage <= 1}
-              onClick={() => setCurrentPage(currentPage - 1)}
-            >
-              <FaChevronLeft aria-hidden="true" />
-              Previous
-            </Button>
-            <Button
-              type="button"
-              size="2"
-              radius="full"
-              variant="soft"
-              disabled={currentPage >= totalPages}
-              onClick={() => setCurrentPage(currentPage + 1)}
-            >
-              Next
-              <FaChevronRight aria-hidden="true" />
-            </Button>
-          </Flex>
+      {isFetchingMore && (
+        <Flex justify="center" style={{ marginTop: 16 }}>
+          <Spinner aria-label="Loading more users" />
         </Flex>
       )}
+
+      {/* Sentinel element for IntersectionObserver */}
+      <div ref={sentinelRef} style={{ height: 1 }} aria-hidden="true" data-testid="sentinel" />
     </Box>
   );
 }

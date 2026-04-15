@@ -15,7 +15,7 @@ export type FetchNonMembersParams = {
 
 export function fetchNonMembers(params: FetchNonMembersParams): Promise<NonMembersResponse> {
   const query = new URLSearchParams({
-    limit: String(params.limit ?? 500),
+    limit: String(params.limit ?? 100),
     offset: String(params.offset ?? 0),
   });
 

@@ -87,7 +87,9 @@ type UserService interface {
 
 `ListNonGroupMembers` は `groupID` の存在確認を service 層で行い（`GetByID` 経由）、存在しない場合は `ErrNotFound` を返す。
 
-`AddGroupMembers` は handler 層で `user_ids` の空チェック（`len == 0` → 400）を行い、service 層でグループ存在確認と全ユーザー存在確認（`userRepo.CountByIDs` による 1 回の COUNT クエリ）を行い、`count != len(userIDs)` の場合は `ErrNotFound` を返す。重複チェック（既にメンバー）は repository 層で行い、`ErrConflict` を返す。
+`AddGroupMembers` は handler 層で `user_ids` の空チェック（`len == 0` → 400）を行い、service 層でまず `deduplicateUint64` によるユーザー ID 重複除去を行い、グループ存在確認と全ユーザー存在確認（`userRepo.CountByIDs` による 1 回の COUNT クエリ）を行い、`count != len(userIDs)` の場合は `ErrNotFound` を返す。重複チェック（既にメンバー）は repository 層で行い、`ErrConflict` を返す。
+
+`RemoveGroupMembers` は handler 層で `user_ids` の空チェック（`len == 0` → 400）を行い、service 層でまず `deduplicateUint64` によるユーザー ID 重複除去を行い、グループ存在確認後に repository へ委譲する。`deduplicateUint64` は `AddGroupMembers` / `RemoveGroupMembers` の両方で service 層に実装されており、COUNT 比較や `RowsAffected` 比較の正確性を保証する。
 
 ## リポジトリインターフェース（`GroupRepository`、`group.UserRepository`、`user.UserRepository`）
 
@@ -121,7 +123,7 @@ type UserRepository interface {
 
 `Update` は DB の `groups` テーブルを `WHERE id = ? AND deleted_at IS NULL` で更新し、`RowsAffected() == 0` なら `ErrNotFound` を返す。更新後に `GetByID` で最新状態を取得して返す。`Delete` は `UPDATE groups SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL` で soft delete し、`RowsAffected() == 0` なら `ErrNotFound` を返す。
 
-`ListNonGroupMembers` は `users` テーブルから `group_members` に存在しないユーザーを返す。total は `q` フィルタなしの全非メンバー数。名前検索は `users.search_key` カラムへの LIKE 検索で行う。`search_key` は `CONCAT(first_name, last_name, last_name, first_name)` を値とする VIRTUAL GENERATED カラムで、`db/migrate/20260411120000_add_search_key_to_users.up.sql` で追加された。
+`ListNonGroupMembers` は `users` テーブルから `group_members` に存在しないユーザーを返す。total は `q` フィルタ込みの非メンバー数（`q` が空の場合は全非メンバー数と一致する）。名前検索は `users.search_key` カラムへの LIKE 検索で行う。`search_key` は `CONCAT(first_name, last_name, last_name, first_name)` を値とする VIRTUAL GENERATED カラムで、`db/migrate/20260411120000_add_search_key_to_users.up.sql` で追加された。
 
 `group.UserRepository.GetByID` および `CountByIDs` は `mysql.UserRepository` が実装する。`GetByID` は `users` テーブルから `deleted_at IS NULL` の条件で単一ユーザーを取得し、存在しない場合は `ErrNotFound` を返す。`CountByIDs` は `SELECT COUNT(DISTINCT id) FROM users WHERE id IN (?) AND deleted_at IS NULL` で存在するユーザー数を 1 クエリで返す。
 

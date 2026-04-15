@@ -244,7 +244,7 @@ func (h *GroupHandler) DeleteGroupMembers(c echo.Context) error {
 
 	var req removeGroupMembersRequest
 	if bindErr := c.Bind(&req); bindErr != nil {
-		return c.JSON(http.StatusBadRequest, ResponseError{Message: domain.ErrBadParamInput.Error()})
+		return c.JSON(http.StatusBadRequest, ResponseError{Message: bindErr.Error()})
 	}
 
 	if len(req.UserIDs) == 0 {
@@ -269,7 +269,7 @@ func (h *GroupHandler) AddGroupMembers(c echo.Context) error {
 
 	var req addGroupMembersRequest
 	if bindErr := c.Bind(&req); bindErr != nil {
-		return c.JSON(http.StatusBadRequest, ResponseError{Message: domain.ErrBadParamInput.Error()})
+		return c.JSON(http.StatusBadRequest, ResponseError{Message: bindErr.Error()})
 	}
 
 	if len(req.UserIDs) == 0 {

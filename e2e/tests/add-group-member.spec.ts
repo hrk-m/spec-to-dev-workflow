@@ -273,38 +273,28 @@ test.describe("グループメンバー追加", () => {
     },
   );
 
-  // TC-11: ページサイズ切替（20/50/100）コントロールが AddMemberSheet 内に表示される
+  // TC-11: AddMemberSheet 内にページネーション UI（ページサイズセレクタ・Previous/Next）が存在しない
   test(
-    "[TC-11] ページサイズ切替（20/50/100）コントロールが AddMemberSheet 内に表示される",
+    "[TC-11] AddMemberSheet 内にページネーション UI（ページサイズセレクタ・Previous/Next）が DOM に存在しない",
     async ({ page }) => {
       await openAddMemberSheetOnFullPage(page);
       await page.waitForSelector('[role="dialog"]');
       const dialog = page.getByRole("dialog");
-      await expect(
-        dialog.locator("button[type='button']", { hasText: "20" }).first(),
-      ).toBeVisible();
-      await expect(
-        dialog.locator("button[type='button']", { hasText: "50" }).first(),
-      ).toBeVisible();
-      await expect(
-        dialog.locator("button[type='button']", { hasText: "100" }).first(),
-      ).toBeVisible();
-    },
-  );
 
-  // TC-12: AddMemberSheet 内に Previous/Next ページネーションが表示される
-  test(
-    "[TC-12] AddMemberSheet 内に Previous/Next ページネーションが表示される",
-    async ({ page }) => {
-      await openAddMemberSheetOnFullPage(page);
-      await page.waitForLoadState("networkidle");
-      const dialog = page.getByRole("dialog");
-      await expect(
-        dialog.getByRole("button", { name: /Previous/ }),
-      ).toBeVisible();
-      await expect(
-        dialog.getByRole("button", { name: /Next/ }),
-      ).toBeVisible();
+      // Previous/Next pagination buttons must be absent
+      expect(await dialog.getByRole("button", { name: /Previous/ }).count()).toBe(0);
+      expect(await dialog.getByRole("button", { name: /Next/ }).count()).toBe(0);
+
+      // Page-size selector buttons (20/50/100) must be absent
+      expect(
+        await dialog.locator("button[type='button']", { hasText: "20" }).count(),
+      ).toBe(0);
+      expect(
+        await dialog.locator("button[type='button']", { hasText: "50" }).count(),
+      ).toBe(0);
+      expect(
+        await dialog.locator("button[type='button']", { hasText: "100" }).count(),
+      ).toBe(0);
     },
   );
 

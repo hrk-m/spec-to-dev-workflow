@@ -113,7 +113,7 @@ test.describe("ユーザー一覧ページ", () => {
     await searchBox.fill("ZZZZNONEXISTENT");
     await page.waitForTimeout(500);
 
-    await expect(page.getByText("No users found")).toBeVisible();
+    await expect(page.getByText("No users found").first()).toBeVisible();
 
     // Pagination buttons should not be visible
     expect(

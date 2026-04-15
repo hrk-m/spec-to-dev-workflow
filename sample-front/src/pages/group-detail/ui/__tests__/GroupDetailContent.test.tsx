@@ -36,14 +36,12 @@ vi.mock("@/pages/group-detail/model/member-list", () => ({
   useMemberList: vi.fn(() => ({
     members: [],
     total: 0,
-    currentPage: 1,
-    totalPages: 1,
-    perPage: 20,
     searchQuery: "",
     error: null,
     isLoading: false,
-    setCurrentPage: vi.fn(),
-    setPerPage: vi.fn(),
+    isFetchingMore: false,
+    fetchMoreError: null,
+    sentinelRef: { current: null },
     setSearchQuery: vi.fn(),
   })),
 }));

@@ -48,56 +48,37 @@ test.describe("グループ一覧ページ", () => {
     expect(filteredCards).toBeGreaterThanOrEqual(1);
   });
 
-  test("デフォルト表示が 20 件以下であることを確認", async ({ page }) => {
+  test("全 30 グループが初期表示に含まれる", async ({ page }) => {
     await page.goto("/");
     await page.waitForLoadState("networkidle");
 
-    // Wait for groups to render
-    await expect(
-      page.getByRole("button").filter({ hasText: /Group \d+/ }).first(),
-    ).toBeVisible();
-
+    // DISPLAY_STEP=50 shows first 50 items; seed has 30 groups → all visible without scrolling
     const groupCards = page.getByRole("button").filter({ hasText: /Group \d+/ });
+    await expect(groupCards.first()).toBeVisible();
     const count = await groupCards.count();
-    expect(count).toBeLessThanOrEqual(20);
-    expect(count).toBeGreaterThanOrEqual(1);
+    expect(count).toBe(30);
   });
 
-  test("Next ボタンをクリックすると次ページに進む", async ({ page }) => {
-    await page.goto("/");
-    await page.waitForLoadState("networkidle");
-
-    // Verify we are on page 1
-    await expect(page.getByText("Page 1 of")).toBeVisible();
-
-    // Click Next button
-    const nextButton = page.getByRole("button", { name: /Next/ });
-    await expect(nextButton).toBeEnabled();
-    await nextButton.click();
-
-    // Verify we are on page 2
-    await expect(page.getByText("Page 2 of")).toBeVisible();
-  });
-
-  test("ページサイズを 50 に切り替えると全件が 1 ページに表示される", async ({
+  test("ページネーション UI（Previous/Next・ページサイズセレクタ）が DOM に存在しない", async ({
     page,
   }) => {
     await page.goto("/");
     await page.waitForLoadState("networkidle");
 
-    // Click the "50" per-page button
-    await page.getByRole("button", { name: "50", exact: true }).click();
+    // Previous/Next pagination buttons must be absent
+    expect(await page.getByRole("button", { name: /Previous/ }).count()).toBe(0);
+    expect(await page.getByRole("button", { name: /Next/ }).count()).toBe(0);
 
-    // Wait for re-render
-    await page.waitForTimeout(500);
-
-    // With 30 groups and page size 50, should show "Page 1 of 1"
-    await expect(page.getByText("Page 1 of 1")).toBeVisible();
-
-    // All 30 groups should be visible on the single page
-    const groupCards = page.getByRole("button").filter({ hasText: /Group \d+/ });
-    const count = await groupCards.count();
-    expect(count).toBe(30);
+    // Page-size selector buttons (20/50/100) must be absent
+    expect(
+      await page.getByRole("button", { name: "20", exact: true }).count(),
+    ).toBe(0);
+    expect(
+      await page.getByRole("button", { name: "50", exact: true }).count(),
+    ).toBe(0);
+    expect(
+      await page.getByRole("button", { name: "100", exact: true }).count(),
+    ).toBe(0);
   });
 
   test("検索入力をクリアすると全件が再表示される", async ({ page }) => {
@@ -164,49 +145,6 @@ test.describe("グループ一覧ページ", () => {
     expect(elapsed).toBeLessThan(5000);
   });
 
-  test("ページサイズを 100 に切り替えると全 30 件が 1 ページに表示される", async ({
-    page,
-  }) => {
-    await page.goto("/");
-    await page.waitForLoadState("networkidle");
-
-    // Click the "100" per-page button
-    await page.getByRole("button", { name: "100", exact: true }).click();
-
-    // Wait for re-render
-    await page.waitForTimeout(500);
-
-    // With 30 groups and page size 100, should show "Page 1 of 1"
-    await expect(page.getByText("Page 1 of 1")).toBeVisible();
-
-    // All 30 groups should be visible on the single page
-    const groupCards = page.getByRole("button").filter({ hasText: /Group \d+/ });
-    const count = await groupCards.count();
-    expect(count).toBe(30);
-  });
-
-  test("2 ページ目に進んだ後 Previous ボタンで 1 ページ目に戻る", async ({
-    page,
-  }) => {
-    await page.goto("/");
-    await page.waitForLoadState("networkidle");
-
-    // Verify initial state is page 1
-    await expect(page.getByText("Page 1 of")).toBeVisible();
-
-    // Navigate to page 2
-    const nextButton = page.getByRole("button", { name: /Next/ });
-    await expect(nextButton).toBeEnabled();
-    await nextButton.click();
-    await expect(page.getByText("Page 2 of")).toBeVisible();
-
-    // Navigate back to page 1
-    const previousButton = page.getByRole("button", { name: /Previous/ });
-    await expect(previousButton).toBeEnabled();
-    await previousButton.click();
-    await expect(page.getByText("Page 1 of")).toBeVisible();
-  });
-
   test("検索 0 件時にヘッダーラベルが「No groups found」に変わる", async ({ page }) => {
     await page.goto("/");
     await page.waitForLoadState("networkidle");
@@ -214,16 +152,6 @@ test.describe("グループ一覧ページ", () => {
     await searchBox.fill("ZZZZNONEXISTENT");
     await page.waitForTimeout(500);
     await expect(page.getByText("No groups found")).toBeVisible();
-  });
-
-  test("検索 0 件時にページネーションが非表示になる", async ({ page }) => {
-    await page.goto("/");
-    await page.waitForLoadState("networkidle");
-    const searchBox = page.getByPlaceholder("Search by name or description");
-    await searchBox.fill("ZZZZNONEXISTENT");
-    await page.waitForTimeout(500);
-    expect(await page.getByRole("button", { name: /Previous/ }).count()).toBe(0);
-    expect(await page.getByRole("button", { name: /Next/ }).count()).toBe(0);
   });
 
   test("API が 500 エラーを返した場合にエラー UI が表示される", async ({

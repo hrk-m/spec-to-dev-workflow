@@ -28,30 +28,6 @@ export const styles = {
     display: "block",
     color: colors.textSecondary,
   },
-  perPageSection: {
-    display: "flex",
-    alignItems: "center",
-    gap: 4,
-    marginTop: 16,
-  },
-  perPageButton: {
-    minWidth: 48,
-    fontSize: 13,
-    fontWeight: 500,
-    borderRadius: 999,
-    cursor: "pointer",
-    padding: "5px 12px",
-    border: "none",
-    transition: "background 0.15s ease",
-  },
-  perPageButtonActive: {
-    background: colors.accent,
-    color: "#FFFFFF",
-  },
-  perPageButtonInactive: {
-    background: colors.searchBackground,
-    color: colors.textSecondary,
-  },
   listCard: {
     marginTop: 12,
     background: colors.surfaceRaised,
@@ -87,24 +63,6 @@ export const styles = {
     fontSize: 15,
     fontWeight: 500,
     color: colors.textPrimary,
-  },
-  paginationSection: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 16,
-    flexWrap: "wrap" as const,
-    marginTop: 16,
-  },
-  paginationMeta: {
-    margin: 0,
-    fontSize: 13,
-    color: colors.textSecondary,
-  },
-  paginationButtons: {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
   },
   errorText: {
     margin: 0,

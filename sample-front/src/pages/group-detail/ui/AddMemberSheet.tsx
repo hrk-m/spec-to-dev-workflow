@@ -1,11 +1,11 @@
 import { useCallback, useState } from "react";
-import { Box, Button, Checkbox, Flex, Skeleton, Text, TextField } from "@radix-ui/themes";
-import { FaChevronLeft, FaChevronRight, FaMagnifyingGlass } from "react-icons/fa6";
+import { Box, Button, Checkbox, Flex, Skeleton, Spinner, Text, TextField } from "@radix-ui/themes";
+import { FaMagnifyingGlass } from "react-icons/fa6";
 
 import { addGroupMembers } from "@/pages/group-detail/api/add-group-members";
 import { useGroupDetail } from "@/pages/group-detail/model/group-detail-state";
 import { clearMemberListCache } from "@/pages/group-detail/model/member-list";
-import { PER_PAGE_OPTIONS, useNonMemberList } from "@/pages/group-detail/model/useNonMemberList";
+import { useNonMemberList } from "@/pages/group-detail/model/useNonMemberList";
 import { appColors } from "@/shared/ui";
 
 const SKELETON_ROWS = 5;
@@ -28,30 +28,6 @@ const styles = {
     width: 18,
     height: 18,
     display: "block",
-    color: appColors.textSecondary,
-  },
-  perPageSection: {
-    display: "flex",
-    alignItems: "center",
-    gap: 4,
-    marginTop: 16,
-  },
-  perPageButton: {
-    minWidth: 48,
-    fontSize: 13,
-    fontWeight: 500,
-    borderRadius: 999,
-    cursor: "pointer",
-    padding: "5px 12px",
-    border: "none",
-    transition: "background 0.15s ease",
-  },
-  perPageButtonActive: {
-    background: appColors.accent,
-    color: "#FFFFFF",
-  },
-  perPageButtonInactive: {
-    background: appColors.searchBackground,
     color: appColors.textSecondary,
   },
   listCard: {
@@ -110,24 +86,6 @@ const styles = {
     textAlign: "center" as const,
     padding: "28px 24px",
   },
-  paginationSection: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 16,
-    flexWrap: "wrap" as const,
-    marginTop: 16,
-  },
-  paginationMeta: {
-    margin: 0,
-    fontSize: 13,
-    color: appColors.textSecondary,
-  },
-  paginationButtons: {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-  },
   footer: {
     marginTop: 20,
   },
@@ -181,14 +139,12 @@ export function AddMemberSheet({ groupId, onClose }: AddMemberSheetProps) {
   const {
     users,
     isLoading,
+    isFetchingMore,
+    fetchMoreError,
     error: fetchError,
     searchQuery,
     setSearchQuery,
-    currentPage,
-    totalPages,
-    perPage,
-    setCurrentPage,
-    setPerPage,
+    sentinelRef,
   } = useNonMemberList(groupId);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -246,22 +202,6 @@ export function AddMemberSheet({ groupId, onClose }: AddMemberSheetProps) {
           </TextField.Slot>
         </TextField.Root>
       </Box>
-
-      <Flex style={styles.perPageSection}>
-        {PER_PAGE_OPTIONS.map((option) => (
-          <button
-            key={option}
-            type="button"
-            style={{
-              ...styles.perPageButton,
-              ...(perPage === option ? styles.perPageButtonActive : styles.perPageButtonInactive),
-            }}
-            onClick={() => setPerPage(option)}
-          >
-            {option}
-          </button>
-        ))}
-      </Flex>
 
       {fetchError && (
         <Text as="p" style={styles.errorText}>
@@ -336,37 +276,27 @@ export function AddMemberSheet({ groupId, onClose }: AddMemberSheetProps) {
         </Box>
       )}
 
-      {users.length > 0 && (
-        <Flex style={styles.paginationSection}>
-          <Text as="p" style={styles.paginationMeta}>
-            Page {currentPage} of {totalPages}
-          </Text>
-          <Flex style={styles.paginationButtons}>
-            <Button
-              type="button"
-              size="2"
-              radius="full"
-              variant="soft"
-              disabled={currentPage <= 1}
-              onClick={() => setCurrentPage(currentPage - 1)}
-            >
-              <FaChevronLeft aria-hidden="true" />
-              Previous
-            </Button>
-            <Button
-              type="button"
-              size="2"
-              radius="full"
-              variant="soft"
-              disabled={currentPage >= totalPages}
-              onClick={() => setCurrentPage(currentPage + 1)}
-            >
-              Next
-              <FaChevronRight aria-hidden="true" />
-            </Button>
-          </Flex>
+      {/* Inline error for additional fetch failures */}
+      {fetchMoreError && (
+        <Text as="p" style={styles.errorText}>
+          {fetchMoreError}
+        </Text>
+      )}
+
+      {/* Spinner for additional fetch */}
+      {isFetchingMore && (
+        <Flex justify="center" style={{ marginTop: 12 }}>
+          <Spinner aria-label="Loading more non-members" />
         </Flex>
       )}
+
+      {/* Sentinel element for IntersectionObserver */}
+      <div
+        ref={sentinelRef}
+        style={{ height: 1 }}
+        aria-hidden="true"
+        data-testid="non-member-sentinel"
+      />
 
       <Box style={styles.footer}>
         <Button

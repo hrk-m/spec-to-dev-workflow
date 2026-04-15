@@ -9,15 +9,13 @@ import (
 )
 
 const (
-	defaultLimit = 500
-	minLimit     = 1
-	maxLimit     = 500
-	minOffset    = 0
+	minLimit  = 1
+	maxLimit  = 500
+	minOffset = 0
 
-	minID              = 1
-	minMemberLimit     = 1
-	maxMemberLimit     = 500
-	defaultMemberLimit = 500
+	minID          = 1
+	minMemberLimit = 1
+	maxMemberLimit = 500
 
 	maxNameLength = 100
 )

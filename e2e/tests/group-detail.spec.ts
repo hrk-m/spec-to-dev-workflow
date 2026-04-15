@@ -46,24 +46,6 @@ test.describe("グループ詳細ページ", () => {
     await expect(memberItems.first()).toBeVisible();
   });
 
-  test("メンバー一覧にページサイズ切替（20/50/100）コントロールが表示される", async ({
-    page,
-  }) => {
-    await page.goto("/groups/1");
-    await page.waitForLoadState("networkidle");
-
-    // Per-page size buttons should be visible in the member list area
-    await expect(
-      page.getByRole("button", { name: "20", exact: true }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: "50", exact: true }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: "100", exact: true }),
-    ).toBeVisible();
-  });
-
   test("member_count 表示と実際のメンバー一覧件数が一致する（Group 001）", async ({
     page,
   }) => {
@@ -79,15 +61,26 @@ test.describe("グループ詳細ページ", () => {
     await expect(page.getByText("Suzuki Hanako")).toBeVisible();
   });
 
-  test("ページネーション Previous/Next コントロールが表示される", async ({
+  test("メンバー一覧・非メンバー一覧のページネーション UI（Previous/Next・ページサイズセレクタ）が DOM に存在しない", async ({
     page,
   }) => {
     await page.goto("/groups/1");
     await page.waitForLoadState("networkidle");
 
-    // Pagination controls should be present in the member list
-    await expect(page.getByRole("button", { name: /Previous/ })).toBeVisible();
-    await expect(page.getByRole("button", { name: /Next/ })).toBeVisible();
+    // Previous/Next pagination buttons must be absent
+    expect(await page.getByRole("button", { name: /Previous/ }).count()).toBe(0);
+    expect(await page.getByRole("button", { name: /Next/ }).count()).toBe(0);
+
+    // Page-size selector buttons (20/50/100) must be absent
+    expect(
+      await page.getByRole("button", { name: "20", exact: true }).count(),
+    ).toBe(0);
+    expect(
+      await page.getByRole("button", { name: "50", exact: true }).count(),
+    ).toBe(0);
+    expect(
+      await page.getByRole("button", { name: "100", exact: true }).count(),
+    ).toBe(0);
   });
 
   test("Group 001 の詳細ページでメンバー「Yamada Taro」が表示される", async ({
@@ -151,16 +144,6 @@ test.describe("グループ詳細ページ", () => {
     await expect(page.getByText("No members found.")).toBeVisible();
   });
 
-  test("メンバー検索 0 件時にページネーションが非表示になる", async ({ page }) => {
-    await page.goto("/groups/1");
-    await page.waitForLoadState("networkidle");
-    const searchBox = page.getByPlaceholder("Search members");
-    await searchBox.fill("ZZZZNONEXISTENT");
-    await page.waitForTimeout(500);
-    expect(await page.getByRole("button", { name: /Previous/ }).count()).toBe(0);
-    expect(await page.getByRole("button", { name: /Next/ }).count()).toBe(0);
-  });
-
   test("メンバー検索 0 件時にメンバー行が表示されない", async ({ page }) => {
     await page.goto("/groups/1");
     await page.waitForLoadState("networkidle");
@@ -191,5 +174,27 @@ test.describe("グループ詳細ページ", () => {
     // Both members should be visible again after clearing
     await expect(page.getByText("Yamada Taro")).toBeVisible();
     await expect(page.getByText("Suzuki Hanako")).toBeVisible();
+  });
+
+  test("GET /api/v1/groups/:id/members が 500 を返したときメンバー一覧エリアにエラーが表示される", async ({ page }) => {
+    // Intercept GET members API and return 500 (POST は通過させる)
+    await page.route("**/api/v1/groups/1/members**", async (route) => {
+      if (route.request().method() === "GET") {
+        await route.fulfill({
+          status: 500,
+          contentType: "application/json",
+          body: JSON.stringify({ message: "internal server error" }),
+        });
+      } else {
+        await route.continue();
+      }
+    });
+
+    await page.goto("/groups/1");
+    await page.waitForLoadState("networkidle");
+
+    // apiFetch throws "Error: 500 Internal Server Error"
+    // MemberList renders String(err) as error text → "500" が含まれる
+    await expect(page.getByText(/500/)).toBeVisible({ timeout: 5000 });
   });
 });

@@ -78,6 +78,8 @@ rest.NewUserHandler(e, uSvc)
 
 > **補足**: `mysql.UserRepository` は `group.UserRepository` と `user.UserRepository` の両インターフェースを実装している。複数のサービスから共有されるリポジトリ実装は 1 つのインスタンスを共有して DI する。
 
+> **handler メソッドと service IF の対応**: handler のメソッド名は必ずしも service IF と一致しない場合がある。例として `GroupHandler.DeleteGroupMembers` は `GroupService.RemoveGroupMembers` を呼ぶ。外部 HTTP 動詞（DELETE）と内部ユースケース名（Remove）の意味論的差異が命名に反映されている。
+
 ## 新規ドメイン追加時の手順
 
 1. `domain/{model}.go` にドメインモデルを定義

@@ -5,7 +5,7 @@
 | 項目         | 内容                                                                                           |
 | ------------ | ---------------------------------------------------------------------------------------------- |
 | 機能名       | `list-non-group-members`                                                                       |
-| 目的         | 指定グループに所属していないユーザー一覧を取得する。グループメンバー追加画面の候補一覧表示に使用 |
+| 目的         | 指定グループに所属していないユーザー一覧を取得し、グループメンバー追加画面で無限スクロール表示する |
 | API          | `GET /api/v1/groups/:id/non-members`                                                           |
 | 認証         | 不要                                                                                           |
 | データソース | MySQL (`sample-api/internal/repository/mysql`)                                                 |
@@ -65,7 +65,8 @@
        - 終了
 12. Repository.ListNonGroupMembers(ctx, groupID, limit, offset, q) を呼び出す
 13. DB: SELECT COUNT(*) FROM users WHERE id NOT IN (SELECT user_id FROM group_members WHERE group_id = ?) AND deleted_at IS NULL
-    - total: フィルターなしの未所属ユーザー全件数
+    - q が指定されている場合: AND search_key LIKE '%q%' を付加
+    - total: q フィルターを適用した未所属ユーザー件数（q 未指定時は全未所属ユーザー件数と等しい）
     - total = 0 の場合 → 空配列と 0 を返す
 14. DB: SELECT id, first_name, last_name FROM users WHERE id NOT IN (...) AND deleted_at IS NULL
     - q が指定されている場合: AND search_key LIKE '%q%'
@@ -108,7 +109,7 @@
 }
 ```
 
-※ `total`: フィルターなしの未所属ユーザー全件数（`q` 適用前の COUNT）
+※ `total`: `q` フィルターを適用した未所属ユーザー件数（`q` 未指定時は全未所属ユーザー件数と等しい）
 ※ `users`: 今回のフェッチで返ったユーザー一覧（最大 `limit` 件）
 
 #### エラーケース一覧
@@ -171,9 +172,19 @@
 | `sample-api/internal/repository/mysql/group.go`                 | MySQL 実装（ListNonGroupMembers）                                  |
 | `sample-api/db/migrate/20260411120000_add_search_key_to_users.up.sql` | `users` テーブルへの `search_key` VIRTUAL GENERATED COLUMN 追加マイグレーション |
 
+### sample-front
+
+| ファイル                                                                  | 役割                                                                                                                           |
+| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `sample-front/src/pages/group-detail/ui/NonMemberList.tsx`                | 非メンバー一覧コンポーネント（ページネーション UI 削除・センチネル要素追加・リスト末尾スピナー／エラー表示）                   |
+| `sample-front/src/pages/group-detail/api/fetch-non-group-members.ts`      | GET /api/v1/groups/:id/non-members 呼び出し（limit=100 に変更）                                                                |
+| `sample-front/src/pages/group-detail/model/useNonMemberList.ts`           | 非メンバー一覧取得・無限スクロールカスタムフック（`displayedCount`・`isFetchingMore` 追加・ページネーション状態削除）           |
+
 ---
 
 ## 最低要件
+
+### バックエンド
 
 1. `GET /api/v1/groups/:id/non-members` が実装されており、未所属ユーザー一覧（id, first_name, last_name）と total を返す
 2. `users` テーブルの `deleted_at IS NULL` のユーザーのみを対象とする
@@ -182,9 +193,20 @@
 5. `id` が整数でない / 0 以下の場合に 400 を返す
 6. `limit` が 1〜500 の範囲外の場合に 400 を返す
 7. 対象グループが存在しない場合に 404 を返す
-8. `total` はフィルターなしの未所属ユーザー全件数（`q` 適用前の COUNT）
+8. `total` は `q` フィルターを適用した未所属ユーザー件数（`q` 未指定時は全未所属ユーザー件数と等しい）
 9. 全員加入済みの場合は `users=[]` + `total=0` を返す
 10. レスポンスのキーは `users`（`domain.User` の配列）と `total`（int64）
+
+### フロントエンド
+
+11. マウント時に `GET /api/v1/groups/:id/non-members?limit=100&offset=0` を呼び出し、最大 100 件を取得してクライアントキャッシュする
+12. 取得した全件をリストに即時表示する（`displayedCount` による分割表示なし）
+13. キャッシュが枯渇かつ `lastBatchSize === 100` のとき `offset+=100` で追加フェッチする
+14. 追加フェッチ中はリスト末尾にスピナーを表示する
+15. 追加フェッチ失敗時はリスト末尾にエラーメッセージを表示する（既存表示アイテムは維持）
+16. キーワード入力後 300ms デバウンスで再取得する（キャッシュクリア・`offset=0` リセットあり）
+17. UI から Previous/Next ボタンおよび件数セレクタ（20/50/100）を削除する
+18. `currentPage` / `totalPages` / `perPage` / `handlePerPageChange` の状態を削除する
 
 ---
 

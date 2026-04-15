@@ -49,30 +49,6 @@ export const styles = {
     display: "block",
     color: colors.textSecondary,
   },
-  perPageSection: {
-    display: "flex",
-    alignItems: "center",
-    gap: 4,
-    marginTop: 16,
-  },
-  perPageButton: {
-    minWidth: 48,
-    fontSize: 13,
-    fontWeight: 500,
-    borderRadius: 999,
-    cursor: "pointer",
-    padding: "5px 12px",
-    border: "none",
-    transition: "background 0.15s ease",
-  },
-  perPageButtonActive: {
-    background: colors.accent,
-    color: "#FFFFFF",
-  },
-  perPageButtonInactive: {
-    background: colors.searchBackground,
-    color: colors.textSecondary,
-  },
   listSection: {
     marginTop: 26,
   },
@@ -171,24 +147,6 @@ export const styles = {
   },
   rowBorder: {
     borderBottom: `1px solid ${colors.separator}`,
-  },
-  footerSection: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 16,
-    flexWrap: "wrap" as const,
-    marginTop: 18,
-  },
-  footerMeta: {
-    margin: 0,
-    fontSize: 13,
-    color: colors.textSecondary,
-  },
-  paginationButtons: {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
   },
   emptyState: {
     marginTop: 26,

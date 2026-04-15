@@ -1,8 +1,13 @@
+import { MockIntersectionObserver } from "@/test/setup";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fetchNonMembers } from "@/pages/group-detail/api/fetch-non-members";
-import { PER_PAGE_OPTIONS, useNonMemberList } from "@/pages/group-detail/model/useNonMemberList";
+import {
+  clearNonMemberListCache,
+  FETCH_LIMIT,
+  useNonMemberList,
+} from "@/pages/group-detail/model/useNonMemberList";
 
 vi.mock("@/pages/group-detail/api/fetch-non-members", () => ({
   fetchNonMembers: vi.fn(),
@@ -11,6 +16,8 @@ vi.mock("@/pages/group-detail/api/fetch-non-members", () => ({
 describe("useNonMemberList", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    clearNonMemberListCache();
+    MockIntersectionObserver.reset();
   });
 
   it("マウント時に API を呼び出し users と total をセットする", async () => {
@@ -29,7 +36,7 @@ describe("useNonMemberList", () => {
     expect(result.current.total).toBe(1);
     expect(fetchNonMembers).toHaveBeenCalledWith({
       groupId: 1,
-      limit: 500,
+      limit: FETCH_LIMIT,
       offset: 0,
     });
   });
@@ -78,6 +85,28 @@ describe("useNonMemberList", () => {
     vi.useRealTimers();
   });
 
+  it("同一 groupId で 2 回マウントしたとき 2 回目はキャッシュから読みロード不要になる", async () => {
+    const mockUsers = [{ id: 1, first_name: "太郎", last_name: "山田" }];
+    vi.mocked(fetchNonMembers).mockResolvedValueOnce({ users: mockUsers, total: 1 });
+
+    // 1 回目マウント → API が呼ばれる
+    const { unmount } = renderHook(() => useNonMemberList(1));
+
+    await waitFor(() => {
+      expect(vi.mocked(fetchNonMembers)).toHaveBeenCalledTimes(1);
+    });
+
+    unmount();
+    vi.clearAllMocks();
+
+    // 2 回目マウント → キャッシュから読むので isLoading が false のまま、API 呼ばれない
+    const { result } = renderHook(() => useNonMemberList(1));
+
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.users).toEqual(mockUsers);
+    expect(vi.mocked(fetchNonMembers)).not.toHaveBeenCalled();
+  });
+
   it("初期ローディング状態が true である", () => {
     vi.mocked(fetchNonMembers).mockReturnValue(new Promise(() => {}));
 
@@ -88,32 +117,14 @@ describe("useNonMemberList", () => {
     expect(result.current.error).toBeNull();
   });
 
-  describe("ページネーション", () => {
-    it("初期状態で currentPage=1, perPage=20, totalPages=1 を返す", async () => {
-      vi.mocked(fetchNonMembers).mockResolvedValueOnce({ users: [], total: 0 });
-
-      const { result } = renderHook(() => useNonMemberList(1));
-
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false);
-      });
-
-      expect(result.current.currentPage).toBe(1);
-      expect(result.current.perPage).toBe(20);
-      expect(result.current.totalPages).toBe(1);
-    });
-
-    it("PER_PAGE_OPTIONS が [20, 50, 100] である", () => {
-      expect(PER_PAGE_OPTIONS).toEqual([20, 50, 100]);
-    });
-
-    it("users は cachedUsers のスライス（currentPage=1, perPage=20）を返す", async () => {
-      const mockUsers = Array.from({ length: 25 }, (_, i) => ({
+  describe("無限スクロール", () => {
+    it("users は cachedUsers の全件を返す", async () => {
+      const mockUsers = Array.from({ length: 55 }, (_, i) => ({
         id: i + 1,
         first_name: `名${i + 1}`,
         last_name: `姓${i + 1}`,
       }));
-      vi.mocked(fetchNonMembers).mockResolvedValueOnce({ users: mockUsers, total: 25 });
+      vi.mocked(fetchNonMembers).mockResolvedValueOnce({ users: mockUsers, total: 55 });
 
       const { result } = renderHook(() => useNonMemberList(1));
 
@@ -121,18 +132,25 @@ describe("useNonMemberList", () => {
         expect(result.current.isLoading).toBe(false);
       });
 
-      expect(result.current.users).toHaveLength(20);
+      expect(result.current.users).toHaveLength(55);
       expect(result.current.users[0]?.id).toBe(1);
-      expect(result.current.totalPages).toBe(2);
     });
 
-    it("setCurrentPage で 2 ページ目に切り替えると残りのユーザーが表示される", async () => {
-      const mockUsers = Array.from({ length: 25 }, (_, i) => ({
+    it("sentinel が visible になったら doFetchMore を呼ぶ（lastBatchSize === FETCH_LIMIT のとき）", async () => {
+      const initialUsers = Array.from({ length: FETCH_LIMIT }, (_, i) => ({
         id: i + 1,
         first_name: `名${i + 1}`,
         last_name: `姓${i + 1}`,
       }));
-      vi.mocked(fetchNonMembers).mockResolvedValueOnce({ users: mockUsers, total: 25 });
+      const additionalUsers = Array.from({ length: 10 }, (_, i) => ({
+        id: FETCH_LIMIT + i + 1,
+        first_name: `名${FETCH_LIMIT + i + 1}`,
+        last_name: `姓${FETCH_LIMIT + i + 1}`,
+      }));
+
+      vi.mocked(fetchNonMembers)
+        .mockResolvedValueOnce({ users: initialUsers, total: FETCH_LIMIT + 10 })
+        .mockResolvedValueOnce({ users: additionalUsers, total: FETCH_LIMIT + 10 });
 
       const { result } = renderHook(() => useNonMemberList(1));
 
@@ -140,21 +158,61 @@ describe("useNonMemberList", () => {
         expect(result.current.isLoading).toBe(false);
       });
 
+      // Trigger sentinel: lastBatchSize === FETCH_LIMIT → doFetchMore fires
       act(() => {
-        result.current.setCurrentPage(2);
+        MockIntersectionObserver.triggerAll([
+          { isIntersecting: true, target: document.createElement("div") },
+        ]);
       });
 
-      expect(result.current.users).toHaveLength(5);
-      expect(result.current.users[0]?.id).toBe(21);
+      await waitFor(() => {
+        expect(vi.mocked(fetchNonMembers)).toHaveBeenCalledWith(
+          expect.objectContaining({ offset: FETCH_LIMIT }),
+        );
+      });
     });
 
-    it("setPerPage で perPage を変更すると currentPage が 1 にリセットされる", async () => {
-      const mockUsers = Array.from({ length: 25 }, (_, i) => ({
+    it("sentinel が visible になった後に追加データが表示される", async () => {
+      const initialUsers = Array.from({ length: FETCH_LIMIT }, (_, i) => ({
         id: i + 1,
         first_name: `名${i + 1}`,
         last_name: `姓${i + 1}`,
       }));
-      vi.mocked(fetchNonMembers).mockResolvedValueOnce({ users: mockUsers, total: 25 });
+      const additionalUsers = Array.from({ length: 10 }, (_, i) => ({
+        id: FETCH_LIMIT + i + 1,
+        first_name: `名${FETCH_LIMIT + i + 1}`,
+        last_name: `姓${FETCH_LIMIT + i + 1}`,
+      }));
+
+      vi.mocked(fetchNonMembers)
+        .mockResolvedValueOnce({ users: initialUsers, total: FETCH_LIMIT + 10 })
+        .mockResolvedValueOnce({ users: additionalUsers, total: FETCH_LIMIT + 10 });
+
+      const { result } = renderHook(() => useNonMemberList(1));
+
+      await waitFor(() => {
+        expect(result.current.users).toHaveLength(FETCH_LIMIT);
+      });
+
+      act(() => {
+        MockIntersectionObserver.triggerAll([
+          { isIntersecting: true, target: document.createElement("div") },
+        ]);
+      });
+
+      await waitFor(() => {
+        expect(result.current.users).toHaveLength(FETCH_LIMIT + 10);
+      });
+    });
+
+    it("追加フェッチ失敗時に fetchMoreError がセットされ既存ユーザーは維持される", async () => {
+      const initialUsers = Array.from({ length: FETCH_LIMIT }, (_, i) => ({
+        id: i + 1,
+        first_name: `名${i + 1}`,
+        last_name: `姓${i + 1}`,
+      }));
+
+      vi.mocked(fetchNonMembers).mockResolvedValueOnce({ users: initialUsers, total: FETCH_LIMIT });
 
       const { result } = renderHook(() => useNonMemberList(1));
 
@@ -162,46 +220,27 @@ describe("useNonMemberList", () => {
         expect(result.current.isLoading).toBe(false);
       });
 
+      // 2 回目のトリガー前に fetchNonMembers をエラーに設定する
+      vi.mocked(fetchNonMembers).mockRejectedValueOnce(new Error("fetch failed"));
+
+      // Trigger sentinel: lastBatchSize === FETCH_LIMIT → doFetchMore fires and fails
       act(() => {
-        result.current.setCurrentPage(2);
-      });
-      expect(result.current.currentPage).toBe(2);
-
-      act(() => {
-        result.current.setPerPage(50);
+        MockIntersectionObserver.triggerAll([
+          { isIntersecting: true, target: document.createElement("div") },
+        ]);
       });
 
-      expect(result.current.currentPage).toBe(1);
-      expect(result.current.perPage).toBe(50);
-    });
-
-    it("検索クエリ変更時に currentPage が 1 にリセットされる", async () => {
-      vi.useFakeTimers({ shouldAdvanceTime: true });
-      const mockUsers = Array.from({ length: 25 }, (_, i) => ({
-        id: i + 1,
-        first_name: `名${i + 1}`,
-        last_name: `姓${i + 1}`,
-      }));
-      vi.mocked(fetchNonMembers).mockResolvedValue({ users: mockUsers, total: 25 });
-
-      const { result } = renderHook(() => useNonMemberList(1));
-
-      await act(() => {
-        vi.runAllTimers();
+      await waitFor(() => {
+        expect(result.current.fetchMoreError).toContain("fetch failed");
       });
 
-      act(() => {
-        result.current.setCurrentPage(2);
-      });
-      expect(result.current.currentPage).toBe(2);
+      // 既存ユーザーが維持されていること
+      expect(result.current.users).toHaveLength(100);
+      expect(result.current.users[0]?.id).toBe(1);
+      expect(result.current.users[99]?.id).toBe(100);
 
-      act(() => {
-        result.current.setSearchQuery("テスト");
-      });
-
-      expect(result.current.currentPage).toBe(1);
-
-      vi.useRealTimers();
+      // フェッチ中フラグが false に戻っていること
+      expect(result.current.isFetchingMore).toBe(false);
     });
   });
 });

@@ -1,11 +1,12 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { MockIntersectionObserver } from "@/test/setup";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { fetchGroups } from "@/pages/home/api/fetch-groups";
 import type { Group, GroupsResponse } from "@/pages/home/model/group";
-import { clearGroupListCache } from "@/pages/home/model/group-list";
+import { clearGroupListCache, FETCH_LIMIT } from "@/pages/home/model/group-list";
 import { GroupList } from "@/pages/home/ui/GroupList";
 
 const mockNavigate = vi.fn();
@@ -49,20 +50,11 @@ const mockGroupsResponse: GroupsResponse = {
   total: 2,
 };
 
-function createManyGroups(count: number): GroupsResponse {
-  const groups = Array.from({ length: Math.min(count, 500) }, (_, i) => ({
-    id: i + 1,
-    name: `Group${String(i + 1)}`,
-    description: `Description ${String(i + 1)}`,
-    member_count: i + 1,
-  }));
-  return { groups, total: count };
-}
-
 describe("GroupList", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     clearGroupListCache();
+    MockIntersectionObserver.reset();
   });
 
   it("初期表示で loading を表示する", () => {
@@ -96,17 +88,6 @@ describe("GroupList", () => {
       expect(screen.getByText("2 members")).toBeInTheDocument();
     });
     expect(screen.getByText("1 member")).toBeInTheDocument();
-  });
-
-  it("ページネーション情報を表示する", async () => {
-    vi.mocked(fetchGroups).mockResolvedValueOnce(mockGroupsResponse);
-
-    renderWithRouter();
-
-    await waitFor(() => {
-      expect(screen.getByText("Page 1 of 1")).toBeInTheDocument();
-    });
-    expect(screen.getByText("Showing 2 of 2 groups")).toBeInTheDocument();
   });
 
   it("API がエラーの場合はエラーメッセージを表示する", async () => {
@@ -174,34 +155,6 @@ describe("GroupList", () => {
     expect(screen.queryByText("loading...")).not.toBeInTheDocument();
   });
 
-  it("2ページ目でも再表示時はキャッシュを使って loading を出さない", async () => {
-    const user = userEvent.setup();
-    const manyGroups = createManyGroups(50);
-    vi.mocked(fetchGroups)
-      .mockResolvedValueOnce(manyGroups)
-      .mockReturnValueOnce(new Promise(() => {}));
-
-    const { unmount } = renderWithRouter();
-
-    await waitFor(() => {
-      expect(screen.getByText("Group1")).toBeInTheDocument();
-    });
-
-    await user.click(screen.getByRole("button", { name: "Next" }));
-
-    await waitFor(() => {
-      expect(screen.getByText("Group21")).toBeInTheDocument();
-    });
-
-    unmount();
-
-    renderWithRouter();
-
-    expect(screen.getByText("Group21")).toBeInTheDocument();
-    expect(screen.getByText("Group40")).toBeInTheDocument();
-    expect(screen.queryByText("loading...")).not.toBeInTheDocument();
-  });
-
   it("セクションヘッダーを表示する", async () => {
     vi.mocked(fetchGroups).mockResolvedValueOnce(mockGroupsResponse);
 
@@ -212,148 +165,6 @@ describe("GroupList", () => {
     });
 
     expect(screen.getByText("All Groups")).toBeInTheDocument();
-  });
-
-  it("perPage 切り替えボタンを表示する", async () => {
-    vi.mocked(fetchGroups).mockResolvedValueOnce(mockGroupsResponse);
-
-    renderWithRouter();
-
-    await waitFor(() => {
-      expect(screen.getByText("Engineering")).toBeInTheDocument();
-    });
-
-    expect(screen.getByRole("button", { name: "20" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "50" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "100" })).toBeInTheDocument();
-  });
-
-  it("デフォルトで 20 件/ページ表示する", async () => {
-    const manyGroups = createManyGroups(50);
-    vi.mocked(fetchGroups).mockResolvedValueOnce(manyGroups);
-
-    renderWithRouter();
-
-    await waitFor(() => {
-      expect(screen.getByText("Group1")).toBeInTheDocument();
-    });
-
-    expect(screen.getByText("Group20")).toBeInTheDocument();
-    expect(screen.queryByText("Group21")).not.toBeInTheDocument();
-    expect(screen.getByText("Page 1 of 3")).toBeInTheDocument();
-  });
-
-  it("perPage を 50 に切り替えられる", async () => {
-    const user = userEvent.setup();
-    const manyGroups = createManyGroups(100);
-    vi.mocked(fetchGroups).mockResolvedValueOnce(manyGroups);
-
-    renderWithRouter();
-
-    await waitFor(() => {
-      expect(screen.getByText("Group1")).toBeInTheDocument();
-    });
-
-    const button50 = screen.getByRole("button", { name: "50" });
-    await user.click(button50);
-
-    await waitFor(() => {
-      expect(screen.getByText("Group50")).toBeInTheDocument();
-    });
-    expect(screen.queryByText("Group51")).not.toBeInTheDocument();
-  });
-
-  it("Next / Previous ボタンでページを切り替えられる", async () => {
-    const user = userEvent.setup();
-    const manyGroups = createManyGroups(50);
-    vi.mocked(fetchGroups).mockResolvedValueOnce(manyGroups);
-
-    renderWithRouter();
-
-    await waitFor(() => {
-      expect(screen.getByText("Page 1 of 3")).toBeInTheDocument();
-    });
-
-    const nextButton = screen.getByRole("button", { name: "Next" });
-    await user.click(nextButton);
-
-    await waitFor(() => {
-      expect(screen.getByText("Page 2 of 3")).toBeInTheDocument();
-    });
-    expect(screen.getByText("Group21")).toBeInTheDocument();
-
-    const prevButton = screen.getByRole("button", { name: "Previous" });
-    await user.click(prevButton);
-
-    await waitFor(() => {
-      expect(screen.getByText("Page 1 of 3")).toBeInTheDocument();
-    });
-  });
-
-  it("500 件キャッシュを超えるページに遷移すると offset=500 で追加フェッチする", async () => {
-    const user = userEvent.setup();
-
-    const initialResponse = createManyGroups(520);
-    vi.mocked(fetchGroups).mockResolvedValueOnce(initialResponse);
-
-    const additionalGroups = Array.from({ length: 20 }, (_, i) => ({
-      id: 501 + i,
-      name: `Group${String(501 + i)}`,
-      description: `Description ${String(501 + i)}`,
-      member_count: 501 + i,
-    }));
-    vi.mocked(fetchGroups).mockResolvedValueOnce({
-      groups: additionalGroups,
-      total: 520,
-    });
-
-    renderWithRouter();
-
-    await waitFor(() => {
-      expect(screen.getByText("Group1")).toBeInTheDocument();
-    });
-
-    const button100 = screen.getByRole("button", { name: "100" });
-    await user.click(button100);
-
-    const nextButton = screen.getByRole("button", { name: "Next" });
-    await user.click(nextButton);
-    await user.click(nextButton);
-    await user.click(nextButton);
-    await user.click(nextButton);
-    await user.click(nextButton);
-
-    await waitFor(() => {
-      expect(vi.mocked(fetchGroups)).toHaveBeenCalledWith(
-        expect.objectContaining({ offset: 500, limit: 500 }),
-      );
-    });
-  });
-
-  it("最終ページでは Next ボタンが無効になる", async () => {
-    vi.mocked(fetchGroups).mockResolvedValueOnce(mockGroupsResponse);
-
-    renderWithRouter();
-
-    await waitFor(() => {
-      expect(screen.getByText("Engineering")).toBeInTheDocument();
-    });
-
-    const nextButton = screen.getByRole("button", { name: "Next" });
-    expect(nextButton).toBeDisabled();
-  });
-
-  it("最初のページでは Previous ボタンが無効になる", async () => {
-    vi.mocked(fetchGroups).mockResolvedValueOnce(mockGroupsResponse);
-
-    renderWithRouter();
-
-    await waitFor(() => {
-      expect(screen.getByText("Engineering")).toBeInTheDocument();
-    });
-
-    const prevButton = screen.getByRole("button", { name: "Previous" });
-    expect(prevButton).toBeDisabled();
   });
 
   it("行クリックで onGroupClick が呼ばれる（navigate は呼ばれない）", async () => {
@@ -389,12 +200,8 @@ describe("GroupList", () => {
     expect(screen.queryByText("Loading groups...")).not.toBeInTheDocument();
   });
 
-  it("検索で 0 件のとき API の total が全件数でもページネーションを非表示にする", async () => {
-    const user = userEvent.setup();
-    vi.mocked(fetchGroups).mockResolvedValueOnce(mockGroupsResponse).mockResolvedValueOnce({
-      groups: [],
-      total: 31,
-    });
+  it("ページネーション UI（Previous/Next ボタン・件数セレクタ）が存在しない", async () => {
+    vi.mocked(fetchGroups).mockResolvedValueOnce(mockGroupsResponse);
 
     renderWithRouter();
 
@@ -402,18 +209,81 @@ describe("GroupList", () => {
       expect(screen.getByText("Engineering")).toBeInTheDocument();
     });
 
-    const searchInput = screen.getByPlaceholderText("Search by name or description");
-    await user.clear(searchInput);
-    await user.type(searchInput, "nonexistent");
+    expect(screen.queryByRole("button", { name: "Previous" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Next" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "20" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "50" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "100" })).not.toBeInTheDocument();
+  });
+
+  it("sentinel 要素が DOM に存在する", async () => {
+    vi.mocked(fetchGroups).mockResolvedValueOnce(mockGroupsResponse);
+
+    renderWithRouter();
 
     await waitFor(() => {
-      expect(screen.getByText("No groups matched that search.")).toBeInTheDocument();
+      expect(screen.getByTestId("sentinel")).toBeInTheDocument();
+    });
+  });
+
+  it("fetch 後に cachedGroups の全件が表示される", async () => {
+    const manyGroups = Array.from({ length: 55 }, (_, i) => ({
+      id: i + 1,
+      name: `Group${String(i + 1)}`,
+      description: `Description ${String(i + 1)}`,
+      member_count: i + 1,
+    }));
+    vi.mocked(fetchGroups).mockResolvedValueOnce({ groups: manyGroups, total: 55 });
+
+    renderWithRouter();
+
+    await waitFor(() => {
+      expect(screen.getByText("Group1")).toBeInTheDocument();
     });
 
-    expect(screen.getByText("No groups found")).toBeInTheDocument();
-    expect(screen.queryByText(/Page \d+ of \d+/)).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Next" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Previous" })).not.toBeInTheDocument();
+    // DISPLAY_STEP 廃止後は全件即時表示される
+    expect(screen.getByText("Group51")).toBeInTheDocument();
+    expect(screen.getByText("Group55")).toBeInTheDocument();
+  });
+
+  it("キャッシュ枯渇かつ lastBatchSize === FETCH_LIMIT のとき次 offset でフェッチする", async () => {
+    const initialGroups = Array.from({ length: FETCH_LIMIT }, (_, i) => ({
+      id: i + 1,
+      name: `Group${String(i + 1)}`,
+      description: `Description ${String(i + 1)}`,
+      member_count: i + 1,
+    }));
+    const additionalGroups = [
+      {
+        id: FETCH_LIMIT + 1,
+        name: `Group${String(FETCH_LIMIT + 1)}`,
+        description: "Extra",
+        member_count: 0,
+      },
+    ];
+
+    vi.mocked(fetchGroups)
+      .mockResolvedValueOnce({ groups: initialGroups, total: FETCH_LIMIT + 1 })
+      .mockResolvedValueOnce({ groups: additionalGroups, total: FETCH_LIMIT + 1 });
+
+    renderWithRouter();
+
+    await waitFor(() => {
+      expect(screen.getByText("Group1")).toBeInTheDocument();
+    });
+
+    // Trigger sentinel: lastBatchSize === FETCH_LIMIT → doFetchMore fires
+    act(() => {
+      MockIntersectionObserver.triggerAll([
+        { isIntersecting: true, target: document.createElement("div") },
+      ]);
+    });
+
+    await waitFor(() => {
+      expect(vi.mocked(fetchGroups)).toHaveBeenCalledWith(
+        expect.objectContaining({ offset: FETCH_LIMIT }),
+      );
+    });
   });
 
   it("検索結果の件数ラベルは cachedGroups の長さを使う（API の total ではない）", async () => {
@@ -470,5 +340,111 @@ describe("GroupList", () => {
     const searchCalls = vi.mocked(fetchGroups).mock.calls.slice(initialCallCount);
     expect(searchCalls).toHaveLength(1);
     expect(vi.mocked(fetchGroups)).toHaveBeenLastCalledWith(expect.objectContaining({ q: "Eng" }));
+  });
+
+  it("追加フェッチ失敗時にリスト末尾にエラーメッセージが表示され、既存アイテムは維持される", async () => {
+    const initialGroups = Array.from({ length: FETCH_LIMIT }, (_, i) => ({
+      id: i + 1,
+      name: `Group${String(i + 1)}`,
+      description: `Description ${String(i + 1)}`,
+      member_count: i + 1,
+    }));
+
+    vi.mocked(fetchGroups)
+      .mockResolvedValueOnce({ groups: initialGroups, total: FETCH_LIMIT + 10 })
+      .mockRejectedValueOnce(new Error("500 Internal Server Error"));
+
+    renderWithRouter();
+
+    await waitFor(() => {
+      expect(screen.getByText("Group1")).toBeInTheDocument();
+    });
+
+    // Trigger sentinel: lastBatchSize === FETCH_LIMIT → doFetchMore fires and fails
+    act(() => {
+      MockIntersectionObserver.triggerAll([
+        { isIntersecting: true, target: document.createElement("div") },
+      ]);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText(/500 Internal Server Error/)).toBeInTheDocument();
+    });
+
+    // Existing items are still in DOM
+    expect(screen.getByText("Group1")).toBeInTheDocument();
+  });
+
+  it("検索変更後に検索前のデータがリセットされ検索結果が表示される", async () => {
+    const user = userEvent.setup();
+
+    const manyGroups = Array.from({ length: 60 }, (_, i) => ({
+      id: i + 1,
+      name: `Group${String(i + 1)}`,
+      description: `Description ${String(i + 1)}`,
+      member_count: i + 1,
+    }));
+    const searchGroups = Array.from({ length: 5 }, (_, i) => ({
+      id: i + 100,
+      name: `SearchResult${String(i + 1)}`,
+      description: `Search description ${String(i + 1)}`,
+      member_count: i + 1,
+    }));
+
+    vi.mocked(fetchGroups)
+      .mockResolvedValueOnce({ groups: manyGroups, total: 60 })
+      .mockResolvedValueOnce({ groups: searchGroups, total: 5 });
+
+    renderWithRouter();
+
+    await waitFor(() => {
+      expect(screen.getByText("Group1")).toBeInTheDocument();
+    });
+
+    // DISPLAY_STEP 廃止後は全件表示されるため Group51 も初期表示に含まれる
+    expect(screen.getByText("Group51")).toBeInTheDocument();
+
+    // Change search keyword (debounce kicks in after 300ms)
+    const searchInput = screen.getByPlaceholderText("Search by name or description");
+    await user.clear(searchInput);
+    await user.type(searchInput, "x");
+
+    // Wait for debounce and search results
+    await waitFor(
+      () => {
+        expect(screen.getByText("SearchResult1")).toBeInTheDocument();
+      },
+      { timeout: 2000 },
+    );
+
+    // After search, previous groups are no longer shown
+    expect(screen.queryByText("Group1")).not.toBeInTheDocument();
+  });
+
+  it("検索で 0 件のとき API の total が全件数でもページネーションを非表示にする", async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchGroups).mockResolvedValueOnce(mockGroupsResponse).mockResolvedValueOnce({
+      groups: [],
+      total: 31,
+    });
+
+    renderWithRouter();
+
+    await waitFor(() => {
+      expect(screen.getByText("Engineering")).toBeInTheDocument();
+    });
+
+    const searchInput = screen.getByPlaceholderText("Search by name or description");
+    await user.clear(searchInput);
+    await user.type(searchInput, "nonexistent");
+
+    await waitFor(() => {
+      expect(screen.getByText("No groups matched that search.")).toBeInTheDocument();
+    });
+
+    expect(screen.getByText("No groups found")).toBeInTheDocument();
+    expect(screen.queryByText(/Page \d+ of \d+/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Next" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Previous" })).not.toBeInTheDocument();
   });
 });

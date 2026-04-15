@@ -1,9 +1,9 @@
-import { Box, Button, Callout, Flex, Heading, Skeleton, Text, TextField } from "@radix-ui/themes";
-import { FaChevronLeft, FaChevronRight, FaMagnifyingGlass } from "react-icons/fa6";
+import { Box, Callout, Flex, Heading, Skeleton, Spinner, Text, TextField } from "@radix-ui/themes";
+import { FaMagnifyingGlass } from "react-icons/fa6";
 import { useNavigate } from "react-router";
 
 import type { Group } from "@/pages/home/model/group";
-import { PER_PAGE_OPTIONS, useGroupList } from "@/pages/home/model/group-list";
+import { useGroupList } from "@/pages/home/model/group-list";
 import { PageContainer } from "@/shared/ui";
 import { CreateGroupDialog } from "./CreateGroupDialog";
 import { styles } from "./GroupList.styles";
@@ -98,18 +98,15 @@ export function GroupList({ onGroupClick }: GroupListProps) {
   const navigate = useNavigate();
   const {
     groups,
-    currentPage,
-    totalPages,
-    perPage,
     searchQuery,
     error,
     isLoading,
+    isFetchingMore,
+    fetchMoreError,
     isWideLayout,
-    setCurrentPage,
-    setPerPage,
+    sentinelRef,
     setSearchQuery,
     groupCountLabel,
-    visibleGroupCountLabel,
   } = useGroupList();
 
   const isInitialLoading = isLoading && groups.length === 0;
@@ -144,22 +141,6 @@ export function GroupList({ onGroupClick }: GroupListProps) {
         </TextField.Root>
       </Box>
 
-      <Flex style={styles.perPageSection}>
-        {PER_PAGE_OPTIONS.map((option) => (
-          <button
-            key={option}
-            type="button"
-            style={{
-              ...styles.perPageButton,
-              ...(perPage === option ? styles.perPageButtonActive : styles.perPageButtonInactive),
-            }}
-            onClick={() => setPerPage(option)}
-          >
-            {option}
-          </button>
-        ))}
-      </Flex>
-
       {error && groups.length === 0 && (
         <Callout.Root color="red" style={styles.errorCard}>
           <Flex direction="column" gap="1">
@@ -190,9 +171,6 @@ export function GroupList({ onGroupClick }: GroupListProps) {
             <Box style={styles.sectionHeader}>
               <Text as="p" style={styles.sectionTitle}>
                 All Groups
-              </Text>
-              <Text as="p" style={styles.sectionMeta}>
-                {visibleGroupCountLabel}
               </Text>
             </Box>
             <Box style={styles.listCard}>
@@ -227,43 +205,22 @@ export function GroupList({ onGroupClick }: GroupListProps) {
         </Box>
       )}
 
-      {error && groups.length > 0 && (
+      {/* Inline error for additional fetch failures */}
+      {fetchMoreError && (
         <Callout.Root color="red" style={styles.inlineErrorCard}>
-          <Callout.Text style={styles.errorText}>{error}</Callout.Text>
+          <Callout.Text style={styles.errorText}>{fetchMoreError}</Callout.Text>
         </Callout.Root>
       )}
 
-      {!isInitialLoading && groups.length > 0 && (
-        <Flex style={styles.footerSection}>
-          <Text as="p" style={styles.footerMeta}>
-            Page {currentPage} of {totalPages}
-          </Text>
-          <Flex style={styles.paginationButtons}>
-            <Button
-              type="button"
-              size="2"
-              radius="full"
-              variant="soft"
-              disabled={currentPage <= 1}
-              onClick={() => setCurrentPage(currentPage - 1)}
-            >
-              <FaChevronLeft aria-hidden="true" />
-              Previous
-            </Button>
-            <Button
-              type="button"
-              size="2"
-              radius="full"
-              variant="soft"
-              disabled={currentPage >= totalPages}
-              onClick={() => setCurrentPage(currentPage + 1)}
-            >
-              Next
-              <FaChevronRight aria-hidden="true" />
-            </Button>
-          </Flex>
+      {/* Spinner for additional fetch */}
+      {isFetchingMore && (
+        <Flex justify="center" style={{ marginTop: 16 }}>
+          <Spinner aria-label="Loading more groups" />
         </Flex>
       )}
+
+      {/* Sentinel element for IntersectionObserver */}
+      <div ref={sentinelRef} style={{ height: 1 }} aria-hidden="true" data-testid="sentinel" />
     </PageContainer>
   );
 }

@@ -3,19 +3,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchGroups } from "@/pages/home/api/fetch-groups";
 import type { Group } from "@/pages/home/model/group";
 
-const FETCH_LIMIT = 500;
-const DEFAULT_PER_PAGE = 20;
-const WIDE_LAYOUT_BREAKPOINT = 1024;
-
-type PerPage = 20 | 50 | 100;
-
-export const PER_PAGE_OPTIONS = [20, 50, 100] as const;
+export const FETCH_LIMIT = 100;
 
 type GroupListCacheEntry = {
   groups: Group[];
   total: number;
-  currentPage: number;
-  perPage: PerPage;
   fetchedOffset: number;
   lastBatchSize: number;
 };
@@ -28,14 +20,12 @@ export function clearGroupListCache() {
 }
 
 export function prependGroupToGroupListCache(group: Group) {
-  const cacheEntry = groupListCache.get(GROUP_LIST_CACHE_KEY);
+  const cacheEntry = groupListCache.get(GROUP_LIST_CACHE_KEY) ?? null;
 
   if (!cacheEntry) {
     groupListCache.set(GROUP_LIST_CACHE_KEY, {
       groups: [group],
       total: 1,
-      currentPage: 1,
-      perPage: DEFAULT_PER_PAGE,
       fetchedOffset: FETCH_LIMIT,
       lastBatchSize: 1,
     });
@@ -55,19 +45,21 @@ export function useGroupList() {
   const [cachedGroups, setCachedGroups] = useState<Group[]>(() => cachedEntry?.groups ?? []);
   const cachedGroupsRef = useRef(cachedGroups);
   const [total, setTotal] = useState(() => cachedEntry?.total ?? 0);
-  const [currentPage, setCurrentPage] = useState(() => cachedEntry?.currentPage ?? 1);
-  const [perPage, setPerPage] = useState<PerPage>(() => cachedEntry?.perPage ?? DEFAULT_PER_PAGE);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(() => !cachedEntry);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const [fetchMoreError, setFetchMoreError] = useState<string | null>(null);
   const [fetchedOffset, setFetchedOffset] = useState(() => cachedEntry?.fetchedOffset ?? 0);
   const [lastBatchSize, setLastBatchSize] = useState(
     () => cachedEntry?.lastBatchSize ?? FETCH_LIMIT,
   );
   const [isWideLayout, setIsWideLayout] = useState(
-    () => typeof window !== "undefined" && window.innerWidth >= WIDE_LAYOUT_BREAKPOINT,
+    () => typeof window !== "undefined" && window.innerWidth >= 1024,
   );
+
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     cachedGroupsRef.current = cachedGroups;
@@ -79,7 +71,7 @@ export function useGroupList() {
     }
 
     const handleResize = () => {
-      setIsWideLayout(window.innerWidth >= WIDE_LAYOUT_BREAKPOINT);
+      setIsWideLayout(window.innerWidth >= 1024);
     };
 
     handleResize();
@@ -134,6 +126,32 @@ export function useGroupList() {
       });
   }, []);
 
+  const doFetchMore = useCallback((offset: number, query: string) => {
+    setIsFetchingMore(true);
+    setFetchMoreError(null);
+
+    fetchGroups({ limit: FETCH_LIMIT, offset, q: query || undefined })
+      .then((data) => {
+        const nextGroups = [
+          ...cachedGroupsRef.current,
+          ...data.groups.filter(
+            (group) => !cachedGroupsRef.current.some((cachedGroup) => cachedGroup.id === group.id),
+          ),
+        ];
+        setCachedGroups(nextGroups);
+        setTotal(data.total);
+        setFetchedOffset(offset + FETCH_LIMIT);
+        setLastBatchSize(data.groups.length);
+      })
+      .catch((err: unknown) => {
+        setFetchMoreError(String(err));
+        setLastBatchSize(0);
+      })
+      .finally(() => {
+        setIsFetchingMore(false);
+      });
+  }, []);
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedQuery(searchQuery);
@@ -148,102 +166,105 @@ export function useGroupList() {
       if (cacheEntry) {
         setCachedGroups(cacheEntry.groups);
         setTotal(cacheEntry.total);
-        setCurrentPage(cacheEntry.currentPage);
-        setPerPage(cacheEntry.perPage);
         setFetchedOffset(cacheEntry.fetchedOffset);
         setLastBatchSize(cacheEntry.lastBatchSize);
       } else {
         setCachedGroups([]);
         setTotal(0);
-        setCurrentPage(1);
-        setPerPage(DEFAULT_PER_PAGE);
         setFetchedOffset(0);
         setLastBatchSize(FETCH_LIMIT);
       }
     } else {
       setCachedGroups([]);
       setTotal(0);
-      setCurrentPage(1);
       setFetchedOffset(0);
       setLastBatchSize(FETCH_LIMIT);
     }
+    setFetchMoreError(null);
     doFetch(0, debouncedQuery, false);
   }, [debouncedQuery, doFetch]);
 
-  const effectiveTotal = debouncedQuery ? cachedGroups.length : total;
-  const totalPages = Math.max(1, Math.ceil(effectiveTotal / perPage));
-
-  const startIndex = (currentPage - 1) * perPage;
-  const endIndex = startIndex + perPage;
-
-  const needsMoreData = endIndex > cachedGroups.length && lastBatchSize === FETCH_LIMIT;
+  // IntersectionObserver for sentinel element
+  const isFetchingMoreRef = useRef(isFetchingMore);
+  const isLoadingRef = useRef(isLoading);
+  const lastBatchSizeRef = useRef(lastBatchSize);
+  const fetchedOffsetRef = useRef(fetchedOffset);
+  const debouncedQueryRef = useRef(debouncedQuery);
 
   useEffect(() => {
-    if (needsMoreData && !isLoading) {
-      doFetch(fetchedOffset, debouncedQuery, true);
+    isFetchingMoreRef.current = isFetchingMore;
+  }, [isFetchingMore]);
+  useEffect(() => {
+    isLoadingRef.current = isLoading;
+  }, [isLoading]);
+  useEffect(() => {
+    lastBatchSizeRef.current = lastBatchSize;
+  }, [lastBatchSize]);
+  useEffect(() => {
+    fetchedOffsetRef.current = fetchedOffset;
+  }, [fetchedOffset]);
+  useEffect(() => {
+    debouncedQueryRef.current = debouncedQuery;
+  }, [debouncedQuery]);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (!entry?.isIntersecting) return;
+        if (isLoadingRef.current || isFetchingMoreRef.current) return;
+
+        if (lastBatchSizeRef.current === FETCH_LIMIT) {
+          doFetchMore(fetchedOffsetRef.current, debouncedQueryRef.current);
+        }
+      },
+      { threshold: 0.1 },
+    );
+
+    const sentinel = sentinelRef.current;
+    if (sentinel) {
+      observer.observe(sentinel);
     }
-  }, [needsMoreData, isLoading, fetchedOffset, debouncedQuery, doFetch]);
 
-  const visibleGroups = cachedGroups.slice(startIndex, endIndex);
+    return () => observer.disconnect();
+  }, [doFetchMore]);
 
-  const handleSearch = useCallback((query: string) => {
-    setSearchQuery(query);
-    setCurrentPage(1);
-  }, []);
-
-  const handlePerPageChange = useCallback((newPerPage: PerPage) => {
-    setPerPage(newPerPage);
-    setCurrentPage(1);
-  }, []);
+  const visibleGroups = cachedGroups;
+  const effectiveTotal = debouncedQuery ? cachedGroups.length : total;
 
   const hasCachedGroups = cachedGroups.length > 0;
   const shouldShowLoading = isLoading && !hasCachedGroups;
-
-  const visibleGroupCountLabel = shouldShowLoading
-    ? "Loading groups..."
-    : effectiveTotal > 0
-      ? `Showing ${String(visibleGroups.length)} of ${String(effectiveTotal)} groups`
-      : "";
 
   useEffect(() => {
     if (!debouncedQuery) {
       groupListCache.set(GROUP_LIST_CACHE_KEY, {
         groups: cachedGroups,
         total: effectiveTotal,
-        currentPage,
-        perPage,
         fetchedOffset,
         lastBatchSize,
       });
     }
-  }, [
-    cachedGroups,
-    effectiveTotal,
-    currentPage,
-    perPage,
-    fetchedOffset,
-    lastBatchSize,
-    debouncedQuery,
-  ]);
+  }, [cachedGroups, effectiveTotal, fetchedOffset, lastBatchSize, debouncedQuery]);
+
+  const handleSearch = useCallback((query: string) => {
+    setSearchQuery(query);
+  }, []);
 
   return {
     groups: visibleGroups,
     total: effectiveTotal,
-    currentPage,
-    totalPages,
-    perPage,
     searchQuery,
     error,
     isLoading: shouldShowLoading,
+    isFetchingMore,
+    fetchMoreError,
     isWideLayout,
-    setCurrentPage,
-    setPerPage: handlePerPageChange,
+    sentinelRef,
     setSearchQuery: handleSearch,
     groupCountLabel: shouldShowLoading
       ? "Loading groups..."
       : effectiveTotal > 0
         ? `${String(effectiveTotal)} groups`
         : "No groups found",
-    visibleGroupCountLabel,
   };
 }

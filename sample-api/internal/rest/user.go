@@ -10,7 +10,6 @@ import (
 	"github.com/hrk-m/spec-to-dev-workflow/sample-api/domain"
 )
 
-
 // UserService defines the interface for the user use case.
 type UserService interface {
 	ListUsers(ctx context.Context, q string, limit, offset int) ([]domain.User, int, error)

@@ -25,7 +25,12 @@ description: >
 
 1. 機能固有 PRD がある場合は `api-sync` を実行し、対象 PRD を同期する
 2. DB 変更がある場合は `schema-sync` を実行し、`plans/schema.md` を同期する
-3. つまり、`plans/` の最終同期と必要に応じた PRD / schema 更新は `/e2e-gen` の責務とする
+3. `git diff sample-front/src/` に差分がある場合、フロント UI 変更を plans に反映する
+   - `sample-front-agent` に変更されたコンポーネントの UI 変化（削除・追加された UI 要素・操作フロー）を報告させる
+   - 該当する `plans/{ドメイン名}/{verb-noun}/prd.md` の処理フロー・確認観点セクションを現在の実装に合わせて更新する
+     - 削除された UI 要素（ボタン・セレクタ等）の記述を取り除く
+     - 新しい UI パターンの記述を追加する
+4. つまり、`plans/` の最終同期と必要に応じた PRD / schema 更新は `/e2e-gen` の責務とする
 
 ### Step 1 の停止条件
 

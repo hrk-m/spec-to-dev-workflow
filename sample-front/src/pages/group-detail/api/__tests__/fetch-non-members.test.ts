@@ -17,7 +17,7 @@ describe("fetchNonMembers", () => {
 
     await fetchNonMembers({ groupId: 1 });
 
-    expect(apiFetch).toHaveBeenCalledWith("/api/v1/groups/1/non-members?limit=500&offset=0");
+    expect(apiFetch).toHaveBeenCalledWith("/api/v1/groups/1/non-members?limit=100&offset=0");
   });
 
   it("q パラメータを含む URL を呼び出す", async () => {

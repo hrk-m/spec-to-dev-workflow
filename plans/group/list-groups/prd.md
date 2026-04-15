@@ -5,7 +5,7 @@
 | 項目         | 内容                                                                                                                           |
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------ |
 | 機能名       | `list-groups`                                                                                                                  |
-| 目的         | グループをキーワード・offset 条件で絞り込んで一覧取得する。フロントエンドは 500 件一括取得してクライアントキャッシュで表示する |
+| 目的         | グループをキーワード・offset 条件で絞り込んで一覧取得する。フロントエンドは 100 件ずつ取得してクライアントキャッシュで無限スクロール表示する |
 | API          | `GET /api/v1/groups`                                                                                                           |
 | 認証         | 不要                                                                                                                           |
 | データソース | MySQL (`sample-api/internal/repository/mysql`)                                                                                 |
@@ -44,22 +44,26 @@
 ```
 1. 開始
 2. HomePage コンポーネントがマウントされる
-3. HomePage → API クライアント: GET /api/v1/groups?limit=500&offset=0 を送信
+3. HomePage → API クライアント: GET /api/v1/groups?limit=100&offset=0 を送信
 4. レスポンスは成功？
    - Yes（200）→
-      5. 取得したグループ一覧（最大 500 件）と total を state にキャッシュ
-      6. 画面にデフォルト 20 件/ページで表示
-      7. ページネーション（20 / 50 / 100 件/ページ切り替え）を UI に表示
+      5. 取得したグループ一覧（最大 100 件）と total を state にキャッシュ
+      6. 取得した全件をリストに表示
+      7. リスト末尾にセンチネル要素を追加（IntersectionObserver で監視）
       8. 終了
    - No（4xx・5xx）→
       5. エラーメッセージを画面に表示
       6. 終了
-9. ユーザーが表示ページを進め、キャッシュ済みの 500 件を超えるページに到達
-10. HomePage → API クライアント: GET /api/v1/groups?limit=500&offset=500 を送信
-11. 手順 4 と同様（取得データを既存 state に追加キャッシュ）
-12. ユーザーが検索キーワードを入力
-13. HomePage → API クライアント: GET /api/v1/groups?limit=500&offset=0&q={keyword} を送信
-14. 手順 4 と同様（キャッシュをクリアして再キャッシュ）
+9. センチネル要素が viewport に入る
+10. lastBatchSize === 100 →
+        isFetchingMore = true（リスト末尾にスピナー表示）
+        GET /api/v1/groups?limit=100&offset=N を送信
+        - 成功 → キャッシュに追加（全件表示）、isFetchingMore = false
+        - 失敗 → isFetchingMore = false、リスト末尾にエラーメッセージ表示
+11. ユーザーが検索キーワードを入力
+12. 300ms デバウンス後にキャッシュをクリアして
+    GET /api/v1/groups?limit=100&offset=0&q={keyword} を送信
+13. 手順 4 と同様（キャッシュをクリアして再キャッシュ）
 ```
 
 #### バックエンド 処理フロー
@@ -78,7 +82,7 @@
    - q が指定されている場合: スペース区切りのトークンごとに AND 結合で絞り込む
      各トークン: `(g.name LIKE '%token%' OR g.description LIKE '%token%')`
    - LIMIT :limit OFFSET :offset
-   - total: フィルターなしのグループ全件数を COUNT で取得（`countGroups` が先行実行）
+   - total: q フィルターを適用したグループ件数を COUNT で取得（`countFilteredGroups` が先行実行）
 9. DB エラーの場合
    - 500 Internal Server Error { "message": "internal server error" } を返す
    - 終了
@@ -117,8 +121,8 @@
 }
 ```
 
-※ `total`: フィルターなしのグループ全件数
-※ `groups`: 今回のフェッチで返ったグループ一覧（最大 500 件）
+※ `total`: q フィルターを適用したグループ件数（`q` 未指定時は全グループ件数と等しい）
+※ `groups`: 今回のフェッチで返ったグループ一覧（最大 100 件。フロントエンドは limit=100 で送信）
 
 ### エラーケース一覧
 
@@ -164,9 +168,9 @@
 | --- | -------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
 | 1   | 正常系   | 検索 0 件時にヘッダーラベルが "No groups found" に変わる         | `/` → networkidle → 検索欄に `ZZZZNONEXISTENT` → 500ms 待機               | `"No groups found"` がサブタイトルに表示される                           |
 | 2   | 正常系   | 検索 0 件時に空状態メッセージが表示される                        | `/` → networkidle → 検索欄に `ZZZZNONEXISTENT` → 500ms 待機               | `"No groups matched that search."` が表示される                          |
-| 3   | 正常系   | 検索 0 件時にページネーションが非表示になる                      | `/` → networkidle → 検索欄に `ZZZZNONEXISTENT` → 500ms 待機               | Previous / Next ボタンが DOM に存在しない                                |
+| 3   | 正常系   | 検索 0 件時にページネーション UI が存在しない                    | `/` → networkidle → 検索欄に `ZZZZNONEXISTENT` → 500ms 待機               | Previous / Next ボタン・件数セレクタが DOM に存在しない                  |
 
-> **備考**: `total` は API 側でフィルターなし全件数を返す設計のため、フロントエンドは検索中に `cachedGroups.length`（実際の取得件数）を `effectiveTotal` として使用してラベル・ページネーション表示を制御する。
+> **備考**: ページネーション UI は削除済み。無限スクロールへの変更後も 0 件検索時の空状態メッセージ表示は維持する。
 
 ---
 
@@ -190,10 +194,10 @@
 
 | ファイル                                            | 役割                                                                                  |
 | --------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `sample-front/src/pages/home/api/fetch-groups.ts`   | GET /api/v1/groups 呼び出し（search/page → q/offset/limit に変更）                                              |
-| `sample-front/src/pages/home/model/useGroupList.ts` | グループ一覧取得・クライアントサイドページネーションカスタムフック（`effectiveTotal` で 0 件制御）               |
-| `sample-front/src/pages/home/ui/GroupList.tsx`      | グループ一覧コンポーネント（Load More → Previous/Next + 20/50/100 件/ページ切り替え）                           |
-| `e2e/tests/group-list.spec.ts`                      | グループ 0 件検索 E2E テスト追加（ヘッダーラベル・ページネーション非表示・空状態メッセージの確認）               |
+| `sample-front/src/pages/home/api/fetch-groups.ts`   | GET /api/v1/groups 呼び出し（limit=100 に変更）                                                                  |
+| `sample-front/src/pages/home/model/useGroupList.ts` | グループ一覧取得・無限スクロールカスタムフック（`displayedCount`・`isFetchingMore`・IntersectionObserver 対応）   |
+| `sample-front/src/pages/home/ui/GroupList.tsx`      | グループ一覧コンポーネント（ページネーション UI 削除・センチネル要素追加・リスト末尾スピナー／エラー表示）        |
+| `e2e/tests/group-list.spec.ts`                      | グループ 0 件検索 E2E テスト（ヘッダーラベル・ページネーション UI 非存在・空状態メッセージの確認）               |
 
 ---
 
@@ -205,13 +209,19 @@
 4. `offset` が 0 未満の場合に 400 を返す
 5. `q` が指定された場合、グループの name / description で LIKE 検索が動作する
 6. レスポンスが `{ "groups": [...], "total": N }` 形式を返す（`pagination` オブジェクト廃止）
-7. `total` は `q` フィルターなしのグループ全件数を返す
+7. `total` は `q` フィルターを適用したグループ件数を返す（`q` 未指定時は全グループ件数と等しい）
 8. 該当グループが 0 件の場合は空配列を返す（エラーにしない）
 9. DB エラーは 500 で返す
-10. フロントエンドが 500 件一括取得 → クライアントキャッシュ → スライス表示する
-11. フロントエンドの UI が Previous/Next ボタン + 20/50/100 件/ページ切り替えを表示する（Load More 廃止）
-12. 検索で 0 件のとき、ヘッダーサブタイトルに "No groups found" を表示し、ページネーションを非表示にする
-13. フロントエンドは `total`（フィルターなし全件数）ではなく `cachedGroups.length` を `effectiveTotal` として使用し、検索中のラベル・ページネーション表示を制御する
+10. フロントエンドが 100 件ずつ取得 → クライアントキャッシュ → 無限スクロール表示する
+11. 取得した全件をリストに即時表示する（`displayedCount` による分割表示なし）
+12. キャッシュが枯渇かつ `lastBatchSize === 100` のとき `offset+=100` で追加フェッチする
+13. 追加フェッチ中はリスト末尾にスピナーを表示する
+14. 追加フェッチ失敗時はリスト末尾にエラーメッセージを表示する（既存表示アイテムは維持）
+15. 検索で 0 件のとき、ヘッダーサブタイトルに "No groups found" を表示する
+16. フロントエンドの UI から Previous/Next ボタンおよび件数セレクタ（20/50/100）を削除する
+17. `currentPage` / `totalPages` / `perPage` / `handlePerPageChange` の状態を削除する
+18. IntersectionObserver の jsdom mock を `setup.ts` に追加する
+19. 検索変更時にキャッシュをクリアし `offset=0` でリセットする
 
 ---
 

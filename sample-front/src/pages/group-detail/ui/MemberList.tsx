@@ -6,17 +6,17 @@ import {
   Checkbox,
   Flex,
   Skeleton,
+  Spinner,
   Text,
   TextField,
 } from "@radix-ui/themes";
-import { FaChevronLeft, FaChevronRight, FaMagnifyingGlass } from "react-icons/fa6";
+import { FaMagnifyingGlass } from "react-icons/fa6";
 
 import { deleteGroupMembers } from "@/pages/group-detail/api/delete-group-members";
 import type { UserSummary } from "@/pages/group-detail/model/group-detail";
 import { clearMemberListCache, useMemberList } from "@/pages/group-detail/model/member-list";
 import { styles } from "./MemberList.styles";
 
-const PER_PAGE_OPTIONS = [20, 50, 100] as const;
 const SKELETON_ROWS = 5;
 
 function MemberAvatar({ member }: { member: UserSummary }) {
@@ -104,14 +104,12 @@ type MemberListProps = {
 export function MemberList({ groupId, onMemberClick, onRefetch }: MemberListProps) {
   const {
     members,
-    currentPage,
-    totalPages,
-    perPage,
     searchQuery,
     error,
     isLoading,
-    setCurrentPage,
-    setPerPage,
+    isFetchingMore,
+    fetchMoreError,
+    sentinelRef,
     setSearchQuery,
   } = useMemberList(groupId);
 
@@ -177,22 +175,6 @@ export function MemberList({ groupId, onMemberClick, onRefetch }: MemberListProp
         </TextField.Root>
       </Box>
 
-      <Flex style={styles.perPageSection}>
-        {PER_PAGE_OPTIONS.map((option) => (
-          <button
-            key={option}
-            type="button"
-            style={{
-              ...styles.perPageButton,
-              ...(perPage === option ? styles.perPageButtonActive : styles.perPageButtonInactive),
-            }}
-            onClick={() => setPerPage(option)}
-          >
-            {option}
-          </button>
-        ))}
-      </Flex>
-
       {onRefetch !== undefined && (
         <Flex justify="end" style={{ marginTop: 12 }}>
           <Button
@@ -247,37 +229,27 @@ export function MemberList({ groupId, onMemberClick, onRefetch }: MemberListProp
         </Box>
       )}
 
-      {!isInitialLoading && members.length > 0 && (
-        <Flex style={styles.paginationSection}>
-          <Text as="p" style={styles.paginationMeta}>
-            Page {currentPage} of {totalPages}
-          </Text>
-          <Flex style={styles.paginationButtons}>
-            <Button
-              type="button"
-              size="2"
-              radius="full"
-              variant="soft"
-              disabled={currentPage <= 1}
-              onClick={() => setCurrentPage(currentPage - 1)}
-            >
-              <FaChevronLeft aria-hidden="true" />
-              Previous
-            </Button>
-            <Button
-              type="button"
-              size="2"
-              radius="full"
-              variant="soft"
-              disabled={currentPage >= totalPages}
-              onClick={() => setCurrentPage(currentPage + 1)}
-            >
-              Next
-              <FaChevronRight aria-hidden="true" />
-            </Button>
-          </Flex>
+      {/* Inline error for additional fetch failures */}
+      {fetchMoreError && (
+        <Text as="p" style={styles.errorText}>
+          {fetchMoreError}
+        </Text>
+      )}
+
+      {/* Spinner for additional fetch */}
+      {isFetchingMore && (
+        <Flex justify="center" style={{ marginTop: 12 }}>
+          <Spinner aria-label="Loading more members" />
         </Flex>
       )}
+
+      {/* Sentinel element for IntersectionObserver */}
+      <div
+        ref={sentinelRef}
+        style={{ height: 1 }}
+        aria-hidden="true"
+        data-testid="member-sentinel"
+      />
 
       <AlertDialog.Root open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialog.Content maxWidth="480px">

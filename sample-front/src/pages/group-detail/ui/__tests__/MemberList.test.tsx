@@ -1,11 +1,12 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { MockIntersectionObserver } from "@/test/setup";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import * as deleteGroupMembersModule from "@/pages/group-detail/api/delete-group-members";
 import { fetchGroupMembers } from "@/pages/group-detail/api/fetch-group-members";
 import type { MembersResponse } from "@/pages/group-detail/model/group-detail";
-import { clearMemberListCache } from "@/pages/group-detail/model/member-list";
+import { clearMemberListCache, FETCH_LIMIT } from "@/pages/group-detail/model/member-list";
 import * as memberList from "@/pages/group-detail/model/member-list";
 import { MemberList } from "@/pages/group-detail/ui/MemberList";
 
@@ -25,19 +26,11 @@ const mockMembersResponse: MembersResponse = {
   total: 2,
 };
 
-function createManyMembers(count: number): MembersResponse {
-  const members = Array.from({ length: Math.min(count, 500) }, (_, i) => ({
-    id: i + 1,
-    first_name: `First${String(i + 1)}`,
-    last_name: `Last${String(i + 1)}`,
-  }));
-  return { members, total: count };
-}
-
 describe("MemberList", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     clearMemberListCache();
+    MockIntersectionObserver.reset();
   });
 
   it("ローディング中にスケルトンを表示する", () => {
@@ -90,63 +83,79 @@ describe("MemberList", () => {
     });
   });
 
-  it("ページネーション情報を表示する", async () => {
+  it("ページネーション UI（Previous/Next ボタン・件数セレクタ）が存在しない", async () => {
+    const manyMembers: MembersResponse = {
+      members: Array.from({ length: 50 }, (_, i) => ({
+        id: i + 1,
+        first_name: `First${String(i + 1)}`,
+        last_name: `Last${String(i + 1)}`,
+      })),
+      total: 50,
+    };
+    vi.mocked(fetchGroupMembers).mockResolvedValueOnce(manyMembers);
+
+    render(<MemberList groupId={1} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Last1 First1")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByRole("button", { name: "Previous" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Next" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "20" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "50" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "100" })).not.toBeInTheDocument();
+  });
+
+  it("sentinel 要素が DOM に存在する", async () => {
     vi.mocked(fetchGroupMembers).mockResolvedValueOnce(mockMembersResponse);
 
     render(<MemberList groupId={1} />);
 
     await waitFor(() => {
-      expect(screen.getByText("Page 1 of 1")).toBeInTheDocument();
+      expect(screen.getByTestId("member-sentinel")).toBeInTheDocument();
     });
   });
 
-  it("perPage 切り替えボタンを表示する", async () => {
-    vi.mocked(fetchGroupMembers).mockResolvedValueOnce(mockMembersResponse);
+  it("fetch 後に cachedMembers の全件が表示される", async () => {
+    const manyMembers: MembersResponse = {
+      members: Array.from({ length: 55 }, (_, i) => ({
+        id: i + 1,
+        first_name: `First${String(i + 1)}`,
+        last_name: `Last${String(i + 1)}`,
+      })),
+      total: 55,
+    };
+    vi.mocked(fetchGroupMembers).mockResolvedValueOnce(manyMembers);
 
     render(<MemberList groupId={1} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Last1 First1")).toBeInTheDocument();
+    });
+
+    // DISPLAY_STEP 廃止後は全件即時表示される
+    expect(screen.getByText("Last51 First51")).toBeInTheDocument();
+    expect(screen.getByText("Last55 First55")).toBeInTheDocument();
+  });
+
+  it("再表示時はキャッシュを使ってスケルトンを出さない", async () => {
+    vi.mocked(fetchGroupMembers)
+      .mockResolvedValueOnce(mockMembersResponse)
+      .mockReturnValueOnce(new Promise(() => {}));
+
+    const { unmount } = render(<MemberList groupId={1} />);
 
     await waitFor(() => {
       expect(screen.getByText("Yamada Taro")).toBeInTheDocument();
     });
 
-    expect(screen.getByRole("button", { name: "20" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "50" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "100" })).toBeInTheDocument();
-  });
-
-  it("デフォルトで 20 件/ページ表示する", async () => {
-    const manyMembers = createManyMembers(50);
-    vi.mocked(fetchGroupMembers).mockResolvedValueOnce(manyMembers);
+    unmount();
 
     render(<MemberList groupId={1} />);
 
-    await waitFor(() => {
-      expect(screen.getByText("Last1 First1")).toBeInTheDocument();
-    });
-
-    expect(screen.getByText("Last20 First20")).toBeInTheDocument();
-    expect(screen.queryByText("Last21 First21")).not.toBeInTheDocument();
-    expect(screen.getByText("Page 1 of 3")).toBeInTheDocument();
-  });
-
-  it("perPage を 50 に切り替えられる", async () => {
-    const user = userEvent.setup();
-    const manyMembers = createManyMembers(100);
-    vi.mocked(fetchGroupMembers).mockResolvedValueOnce(manyMembers);
-
-    render(<MemberList groupId={1} />);
-
-    await waitFor(() => {
-      expect(screen.getByText("Last1 First1")).toBeInTheDocument();
-    });
-
-    const button50 = screen.getByRole("button", { name: "50" });
-    await user.click(button50);
-
-    await waitFor(() => {
-      expect(screen.getByText("Last50 First50")).toBeInTheDocument();
-    });
-    expect(screen.queryByText("Last51 First51")).not.toBeInTheDocument();
+    expect(screen.getByText("Yamada Taro")).toBeInTheDocument();
+    expect(screen.queryByText("loading members...")).not.toBeInTheDocument();
   });
 
   it("検索入力でメンバーを検索できる", async () => {
@@ -175,6 +184,38 @@ describe("MemberList", () => {
     });
   });
 
+  it("sentinel が visible になったとき lastBatchSize === FETCH_LIMIT なら次 offset でフェッチする", async () => {
+    const initialMembers = Array.from({ length: FETCH_LIMIT }, (_, i) => ({
+      id: i + 1,
+      first_name: `First${String(i + 1)}`,
+      last_name: `Last${String(i + 1)}`,
+    }));
+    const additionalMembers = [{ id: FETCH_LIMIT + 1, first_name: "Extra", last_name: "Member" }];
+
+    vi.mocked(fetchGroupMembers)
+      .mockResolvedValueOnce({ members: initialMembers, total: FETCH_LIMIT + 1 })
+      .mockResolvedValueOnce({ members: additionalMembers, total: FETCH_LIMIT + 1 });
+
+    render(<MemberList groupId={1} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Last1 First1")).toBeInTheDocument();
+    });
+
+    // Trigger sentinel: lastBatchSize === FETCH_LIMIT → doFetchMore fires
+    act(() => {
+      MockIntersectionObserver.triggerAll([
+        { isIntersecting: true, target: document.createElement("div") },
+      ]);
+    });
+
+    await waitFor(() => {
+      expect(vi.mocked(fetchGroupMembers)).toHaveBeenCalledWith(
+        expect.objectContaining({ groupId: 1, offset: FETCH_LIMIT }),
+      );
+    });
+  });
+
   it("onMemberClick が渡されたときメンバー行クリックで呼ばれる", async () => {
     const user = userEvent.setup();
     const onMemberClick = vi.fn();
@@ -196,127 +237,39 @@ describe("MemberList", () => {
     });
   });
 
-  it("再表示時はキャッシュを使ってスケルトンを出さない", async () => {
-    vi.mocked(fetchGroupMembers)
-      .mockResolvedValueOnce(mockMembersResponse)
-      .mockReturnValueOnce(new Promise(() => {}));
-
-    const { unmount } = render(<MemberList groupId={1} />);
-
-    await waitFor(() => {
-      expect(screen.getByText("Yamada Taro")).toBeInTheDocument();
-    });
-
-    unmount();
-
-    render(<MemberList groupId={1} />);
-
-    expect(screen.getByText("Yamada Taro")).toBeInTheDocument();
-    expect(screen.queryByText("loading members...")).not.toBeInTheDocument();
-  });
-
-  it("2ページ目でも再表示時はキャッシュを使ってスケルトンを出さない", async () => {
-    const user = userEvent.setup();
-    const manyMembers = createManyMembers(50);
-    vi.mocked(fetchGroupMembers)
-      .mockResolvedValueOnce(manyMembers)
-      .mockReturnValueOnce(new Promise(() => {}));
-
-    const { unmount } = render(<MemberList groupId={1} />);
-
-    await waitFor(() => {
-      expect(screen.getByText("Last1 First1")).toBeInTheDocument();
-    });
-
-    const nextButton = screen.getByRole("button", { name: "Next" });
-    await user.click(nextButton);
-
-    await waitFor(() => {
-      expect(screen.getByText("Last21 First21")).toBeInTheDocument();
-    });
-
-    unmount();
-
-    render(<MemberList groupId={1} />);
-
-    expect(screen.getByText("Last21 First21")).toBeInTheDocument();
-    expect(screen.getByText("Last40 First40")).toBeInTheDocument();
-    expect(screen.queryByText("loading members...")).not.toBeInTheDocument();
-  });
-
-  it("500 件キャッシュを超えるページに遷移すると offset=500 で追加フェッチする", async () => {
-    const user = userEvent.setup();
-
-    // 初回フェッチ: 500 件返却、total は 520（まだ残りがある）
-    const initialResponse = createManyMembers(520);
-    vi.mocked(fetchGroupMembers).mockResolvedValueOnce(initialResponse);
-
-    // 追加フェッチ: offset=500 から残り 20 件を返却
-    const additionalMembers = Array.from({ length: 20 }, (_, i) => ({
-      id: 501 + i,
-      first_name: `First${String(501 + i)}`,
-      last_name: `Last${String(501 + i)}`,
+  it("追加フェッチ失敗時にリスト末尾にエラーメッセージが表示され、既存アイテムは維持される", async () => {
+    const initialMembers = Array.from({ length: FETCH_LIMIT }, (_, i) => ({
+      id: i + 1,
+      first_name: `First${String(i + 1)}`,
+      last_name: `Last${String(i + 1)}`,
     }));
-    vi.mocked(fetchGroupMembers).mockResolvedValueOnce({
-      members: additionalMembers,
-      total: 520,
-    });
+
+    vi.mocked(fetchGroupMembers)
+      .mockResolvedValueOnce({ members: initialMembers, total: FETCH_LIMIT + 10 })
+      .mockRejectedValueOnce(new Error("500 Internal Server Error"));
 
     render(<MemberList groupId={1} />);
 
-    // 初回フェッチ完了を待つ
     await waitFor(() => {
       expect(screen.getByText("Last1 First1")).toBeInTheDocument();
     });
 
-    // perPage を 100 に切り替え（page=6 で startIndex=500 に到達できる）
-    const button100 = screen.getByRole("button", { name: "100" });
-    await user.click(button100);
-
-    // Next ボタンを 5 回クリックして page 6 に到達（startIndex=500, endIndex=600）
-    const nextButton = screen.getByRole("button", { name: "Next" });
-    await user.click(nextButton);
-    await user.click(nextButton);
-    await user.click(nextButton);
-    await user.click(nextButton);
-    await user.click(nextButton);
-
-    // 追加フェッチが offset=500 で呼ばれたことを検証
-    await waitFor(() => {
-      expect(vi.mocked(fetchGroupMembers)).toHaveBeenCalledWith(
-        expect.objectContaining({ groupId: 1, offset: 500, limit: 500 }),
-      );
+    // Trigger sentinel: lastBatchSize === FETCH_LIMIT → doFetchMore fires and fails
+    act(() => {
+      MockIntersectionObserver.triggerAll([
+        { isIntersecting: true, target: document.createElement("div") },
+      ]);
     });
+
+    await waitFor(() => {
+      expect(screen.getByText(/500 Internal Server Error/)).toBeInTheDocument();
+    });
+
+    // Existing items are still in DOM
+    expect(screen.getByText("Last1 First1")).toBeInTheDocument();
   });
 
-  it("Next / Previous ボタンでページを切り替えられる", async () => {
-    const user = userEvent.setup();
-    const manyMembers = createManyMembers(50);
-    vi.mocked(fetchGroupMembers).mockResolvedValueOnce(manyMembers);
-
-    render(<MemberList groupId={1} />);
-
-    await waitFor(() => {
-      expect(screen.getByText("Page 1 of 3")).toBeInTheDocument();
-    });
-
-    const nextButton = screen.getByRole("button", { name: "Next" });
-    await user.click(nextButton);
-
-    await waitFor(() => {
-      expect(screen.getByText("Page 2 of 3")).toBeInTheDocument();
-    });
-    expect(screen.getByText("Last21 First21")).toBeInTheDocument();
-
-    const prevButton = screen.getByRole("button", { name: "Previous" });
-    await user.click(prevButton);
-
-    await waitFor(() => {
-      expect(screen.getByText("Page 1 of 3")).toBeInTheDocument();
-    });
-  });
-
-  it("検索で 0 件のとき API の total が全件数でもページネーションを非表示にする", async () => {
+  it("検索で 0 件のとき ページネーション UI が存在しない", async () => {
     const user = userEvent.setup();
     vi.mocked(fetchGroupMembers).mockResolvedValueOnce(mockMembersResponse).mockResolvedValueOnce({
       members: [],
@@ -382,6 +335,7 @@ describe("MemberList - メンバー削除", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     clearMemberListCache();
+    MockIntersectionObserver.reset();
     clearCacheSpy = vi.spyOn(memberList, "clearMemberListCache");
   });
 

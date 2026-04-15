@@ -48,22 +48,26 @@
 ```
 1. 開始
 2. GroupDetailPage コンポーネントがマウントされる
-3. GroupDetailPage → API クライアント: GET /api/v1/groups/:id/members?limit=500&offset=0 を送信
+3. GroupDetailPage → API クライアント: GET /api/v1/groups/:id/members?limit=100&offset=0 を送信
 4. レスポンスは成功？
    - Yes（200）→
-      5. 取得したメンバー一覧（最大 500 件）と total を state にキャッシュ
-      6. 画面にデフォルト 20 件/ページで表示
-      7. ページネーション（20 / 50 / 100 件/ページ切り替え）を UI に表示
+      5. 取得したメンバー一覧（最大 100 件）と total を state にキャッシュ
+      6. 取得した全件をリストに表示
+      7. リスト末尾にセンチネル要素を追加（IntersectionObserver で監視）
       8. 終了
    - No（4xx・5xx）→
       5. エラーメッセージを画面に表示
       6. 終了
-9. ユーザーが表示ページを進め、キャッシュ済みの 500 件を超えるページに到達
-10. GroupDetailPage → API クライアント: GET /api/v1/groups/:id/members?limit=500&offset=500 を送信
-11. 手順 4 と同様（取得データを既存 state に追加キャッシュ）
-12. ユーザーが検索キーワードを入力
-13. GroupDetailPage → API クライアント: GET /api/v1/groups/:id/members?limit=500&offset=0&q={keyword} を送信
-14. 手順 4 と同様
+9. センチネル要素が viewport に入る
+10. lastBatchSize === 100 →
+        isFetchingMore = true（リスト末尾にスピナー表示）
+        GET /api/v1/groups/:id/members?limit=100&offset=N を送信
+        - 成功 → キャッシュに追加（全件表示）、isFetchingMore = false
+        - 失敗 → isFetchingMore = false、リスト末尾にエラーメッセージ表示
+11. ユーザーが検索キーワードを入力
+12. GroupDetailPage → API クライアント:
+    GET /api/v1/groups/:id/members?limit=100&offset=0&q={keyword} を送信
+13. 手順 4 と同様（キャッシュをクリアして再キャッシュ）
 ```
 
 #### バックエンド 処理フロー
@@ -92,7 +96,7 @@
 11. DB: group_members JOIN users WHERE group_id = :id
     - q が指定されている場合: search_key LIKE '%q%'（searchKeyLikeClause 定数を使用）
     - LIMIT :limit OFFSET :offset
-    - total: フィルターなしの GROUP の全メンバー数を COUNT で取得
+    - total: q フィルターを適用したメンバー件数を COUNT で取得（q 未指定時は全メンバー数と等しい）
 12. DB エラーの場合
     - 500 Internal Server Error { "message": "internal server error" } を返す
     - 終了
@@ -130,8 +134,8 @@
 }
 ```
 
-※ `total`: フィルターなしのグループの全メンバー数
-※ `members`: 今回のフェッチで返ったメンバー一覧（最大 500 件）
+※ `total`: `q` フィルターを適用したメンバー件数（`q` 未指定時は全メンバー数と等しい）
+※ `members`: 今回のフェッチで返ったメンバー一覧（最大 100 件。フロントエンドは limit=100 で送信）
 
 ### エラーケース一覧
 
@@ -177,10 +181,10 @@
 | #   | 観点   | テスト内容                                                    | 操作手順                                                                        | 期待結果                                      |
 | --- | ------ | ------------------------------------------------------------- | ------------------------------------------------------------------------------- | --------------------------------------------- |
 | 1   | 正常系 | メンバー検索 0 件時に空状態メッセージが表示される             | `/groups/1` → networkidle → メンバー検索欄に `ZZZZNONEXISTENT` → 500ms 待機     | `"No members found."` が表示される            |
-| 2   | 正常系 | メンバー検索 0 件時にページネーションが非表示になる           | `/groups/1` → networkidle → メンバー検索欄に `ZZZZNONEXISTENT` → 500ms 待機     | Previous / Next ボタンが DOM に存在しない     |
+| 2   | 正常系 | メンバー検索 0 件時にページネーション UI が存在しない         | `/groups/1` → networkidle → メンバー検索欄に `ZZZZNONEXISTENT` → 500ms 待機     | Previous / Next ボタン・件数セレクタが DOM に存在しない |
 | 3   | 正常系 | メンバー検索 0 件時にメンバー行が表示されない                 | `/groups/1` → networkidle → メンバー検索欄に `ZZZZNONEXISTENT` → 500ms 待機     | `data-testid="member-row"` 要素が 0 件        |
 
-> **備考**: MemberRow コンポーネントに `data-testid="member-row"` を追加し、E2E テストのセレクターを安定化させる。`total` は API 側でフィルターなし全件数を返す設計のため、フロントエンドは `cachedMembers.length` を `effectiveTotal` として使用してページネーション表示を制御する。
+> **備考**: MemberRow コンポーネントに `data-testid="member-row"` を追加し、E2E テストのセレクターを安定化させる。`total` は API 側でフィルターなし全件数を返す設計のため、フロントエンドは `cachedMembers.length`（実際の取得件数）を使用して空状態表示・追加フェッチトリガーを制御する。
 
 ---
 
@@ -204,10 +208,10 @@
 
 | ファイル                                                         | 役割                                                               |
 | ---------------------------------------------------------------- | ------------------------------------------------------------------ |
-| `sample-front/src/pages/group-detail/ui/MemberList.tsx`          | メンバー一覧コンポーネント（20/50/100 件/ページ切り替え）。MemberRow に `data-testid="member-row"` を付与 |
-| `sample-front/src/pages/group-detail/api/fetch-group-members.ts` | GET /api/v1/groups/:id/members 呼び出し                                                                   |
-| `sample-front/src/pages/group-detail/model/useMemberList.ts`     | メンバー一覧取得・クライアントサイドページネーションカスタムフック（`effectiveTotal` で 0 件制御）         |
-| `e2e/tests/group-detail.spec.ts`                                  | メンバー 0 件検索 E2E テスト追加                                                                           |
+| `sample-front/src/pages/group-detail/ui/MemberList.tsx`          | メンバー一覧コンポーネント（ページネーション UI 削除・センチネル要素追加・リスト末尾スピナー／エラー表示）。MemberRow に `data-testid="member-row"` を付与 |
+| `sample-front/src/pages/group-detail/api/fetch-group-members.ts` | GET /api/v1/groups/:id/members 呼び出し（limit=100 に変更）                                               |
+| `sample-front/src/pages/group-detail/model/useMemberList.ts`     | メンバー一覧取得・無限スクロールカスタムフック（`displayedCount`・`isFetchingMore` 追加・ページネーション状態削除）|
+| `e2e/tests/group-detail.spec.ts`                                  | メンバー 0 件検索 E2E テスト（ページネーション UI 非存在確認に更新）                                       |
 
 ---
 
@@ -220,11 +224,15 @@
 5. `limit` が 1〜500 の範囲外の場合に 400 を返す
 6. 対象グループが存在しない場合に 404 を返す
 7. `q` パラメータで search_key LIKE 検索が動作する（姓名・名姓順両方向対応）
-8. 詳細ページにメンバー一覧がデフォルト 20 件/ページで表示される（20/50/100 切り替え可）
-9. 500 件を超えるメンバーがいる場合、追加フェッチ（offset 増加）が実行される
-10. メンバー検索で 0 件のとき、"No members found." を表示し、ページネーションを非表示にする
-11. フロントエンドは `total`（フィルターなし全件数）ではなく `cachedMembers.length` を `effectiveTotal` として使用し、検索中のラベル・ページネーション表示を制御する
-12. MemberRow コンポーネントに `data-testid="member-row"` を付与し、E2E テストのセレクターを安定化させる
+8. 詳細ページにメンバー一覧が取得した全件で表示される（`displayedCount` による分割表示なし）
+9. キャッシュが枯渇かつ `lastBatchSize === 100` のとき `offset+=100` で追加フェッチする（全件即時表示）
+10. キャッシュが枯渇かつ `lastBatchSize === 100` のとき `offset+=100` で追加フェッチする
+11. 追加フェッチ中はリスト末尾にスピナーを表示する
+12. 追加フェッチ失敗時はリスト末尾にエラーメッセージを表示する（既存表示アイテムは維持）
+13. メンバー検索で 0 件のとき、"No members found." を表示する
+14. UI から Previous/Next ボタンおよび件数セレクタ（20/50/100）を削除する
+15. `currentPage` / `totalPages` / `perPage` / `handlePerPageChange` の状態を削除する
+16. MemberRow コンポーネントに `data-testid="member-row"` を付与し、E2E テストのセレクターを安定化させる
 
 ---
 

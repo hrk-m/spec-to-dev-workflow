@@ -3,18 +3,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchUsers } from "@/pages/users/api/fetch-users";
 import type { User } from "@/pages/users/model/user";
 
-const FETCH_LIMIT = 500;
-const DEFAULT_PER_PAGE = 20;
-
-export const PER_PAGE_OPTIONS = [20, 50, 100] as const;
-
-type PerPage = 20 | 50 | 100;
+export const FETCH_LIMIT = 100;
 
 type UserListCacheEntry = {
   users: User[];
   total: number;
-  currentPage: number;
-  perPage: PerPage;
   fetchedOffset: number;
   lastBatchSize: number;
 };
@@ -31,16 +24,18 @@ export function useUserList() {
   const [cachedUsers, setCachedUsers] = useState<User[]>(() => cachedEntry?.users ?? []);
   const cachedUsersRef = useRef(cachedUsers);
   const [total, setTotal] = useState(() => cachedEntry?.total ?? 0);
-  const [currentPage, setCurrentPage] = useState(() => cachedEntry?.currentPage ?? 1);
-  const [perPage, setPerPage] = useState<PerPage>(() => cachedEntry?.perPage ?? DEFAULT_PER_PAGE);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(() => !cachedEntry);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const [fetchMoreError, setFetchMoreError] = useState<string | null>(null);
   const [fetchedOffset, setFetchedOffset] = useState(() => cachedEntry?.fetchedOffset ?? 0);
   const [lastBatchSize, setLastBatchSize] = useState(
     () => cachedEntry?.lastBatchSize ?? FETCH_LIMIT,
   );
+
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     cachedUsersRef.current = cachedUsers;
@@ -89,6 +84,32 @@ export function useUserList() {
       });
   }, []);
 
+  const doFetchMore = useCallback((offset: number, query: string) => {
+    setIsFetchingMore(true);
+    setFetchMoreError(null);
+
+    fetchUsers({ limit: FETCH_LIMIT, offset, q: query || undefined })
+      .then((data) => {
+        const nextUsers = [
+          ...cachedUsersRef.current,
+          ...data.users.filter(
+            (user) => !cachedUsersRef.current.some((cachedUser) => cachedUser.id === user.id),
+          ),
+        ];
+        setCachedUsers(nextUsers);
+        setTotal(data.total);
+        setFetchedOffset(offset + FETCH_LIMIT);
+        setLastBatchSize(data.users.length);
+      })
+      .catch((err: unknown) => {
+        setFetchMoreError(String(err));
+        setLastBatchSize(0);
+      })
+      .finally(() => {
+        setIsFetchingMore(false);
+      });
+  }, []);
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedQuery(searchQuery);
@@ -104,109 +125,107 @@ export function useUserList() {
       if (cacheEntry) {
         setCachedUsers(cacheEntry.users);
         setTotal(cacheEntry.total);
-        setCurrentPage(cacheEntry.currentPage);
-        setPerPage(cacheEntry.perPage);
         setFetchedOffset(cacheEntry.fetchedOffset);
         setLastBatchSize(cacheEntry.lastBatchSize);
       } else {
         setCachedUsers([]);
         setTotal(0);
-        setCurrentPage(1);
-        setPerPage(DEFAULT_PER_PAGE);
         setFetchedOffset(0);
         setLastBatchSize(FETCH_LIMIT);
       }
     } else {
       setCachedUsers([]);
       setTotal(0);
-      setCurrentPage(1);
       setFetchedOffset(0);
       setLastBatchSize(FETCH_LIMIT);
     }
 
+    setFetchMoreError(null);
     doFetch(0, debouncedQuery, false);
   }, [debouncedQuery, doFetch]);
 
-  // Note: When no search query is active, we use `total` (unfiltered DB count)
-  // rather than cachedUsers.length to allow navigation beyond the initial 500-item cache
-  // (additional batches are auto-fetched per PRD req 14).
-  // When searching, cachedUsers.length is used since total reflects the unfiltered count.
-  const effectiveTotal = debouncedQuery ? cachedUsers.length : total;
-  const totalPages = Math.max(1, Math.ceil(effectiveTotal / perPage));
-
-  const startIndex = (currentPage - 1) * perPage;
-  const endIndex = startIndex + perPage;
-
-  const needsMoreData = endIndex > cachedUsers.length && lastBatchSize === FETCH_LIMIT;
+  // Refs to avoid stale closures in IntersectionObserver callback
+  const isFetchingMoreRef = useRef(isFetchingMore);
+  const isLoadingRef = useRef(isLoading);
+  const lastBatchSizeRef = useRef(lastBatchSize);
+  const fetchedOffsetRef = useRef(fetchedOffset);
+  const debouncedQueryRef = useRef(debouncedQuery);
 
   useEffect(() => {
-    if (needsMoreData && !isLoading) {
-      doFetch(fetchedOffset, debouncedQuery, true);
+    isFetchingMoreRef.current = isFetchingMore;
+  }, [isFetchingMore]);
+  useEffect(() => {
+    isLoadingRef.current = isLoading;
+  }, [isLoading]);
+  useEffect(() => {
+    lastBatchSizeRef.current = lastBatchSize;
+  }, [lastBatchSize]);
+  useEffect(() => {
+    fetchedOffsetRef.current = fetchedOffset;
+  }, [fetchedOffset]);
+  useEffect(() => {
+    debouncedQueryRef.current = debouncedQuery;
+  }, [debouncedQuery]);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (!entry?.isIntersecting) return;
+        if (isLoadingRef.current || isFetchingMoreRef.current) return;
+
+        if (lastBatchSizeRef.current === FETCH_LIMIT) {
+          doFetchMore(fetchedOffsetRef.current, debouncedQueryRef.current);
+        }
+      },
+      { threshold: 0.1 },
+    );
+
+    const sentinel = sentinelRef.current;
+    if (sentinel) {
+      observer.observe(sentinel);
     }
-  }, [needsMoreData, isLoading, fetchedOffset, debouncedQuery, doFetch]);
 
-  const visibleUsers = cachedUsers.slice(startIndex, endIndex);
+    return () => observer.disconnect();
+  }, [doFetchMore]);
 
-  const handleSearch = useCallback((query: string) => {
-    setSearchQuery(query);
-    setCurrentPage(1);
-  }, []);
-
-  const handlePerPageChange = useCallback((newPerPage: PerPage) => {
-    setPerPage(newPerPage);
-    setCurrentPage(1);
-  }, []);
+  const visibleUsers = cachedUsers;
+  const effectiveTotal = debouncedQuery ? cachedUsers.length : total;
 
   const hasCachedUsers = cachedUsers.length > 0;
   const shouldShowLoading = isLoading && !hasCachedUsers;
-
-  const visibleUserCountLabel = shouldShowLoading
-    ? "Loading users..."
-    : effectiveTotal > 0
-      ? `Showing ${String(visibleUsers.length)} of ${String(effectiveTotal)} users`
-      : "";
+  const isEmptyResult = !isLoading && effectiveTotal === 0;
 
   useEffect(() => {
     if (!debouncedQuery) {
       userListCache.set(USER_LIST_CACHE_KEY, {
         users: cachedUsers,
         total: effectiveTotal,
-        currentPage,
-        perPage,
         fetchedOffset,
         lastBatchSize,
       });
     }
-  }, [
-    cachedUsers,
-    effectiveTotal,
-    currentPage,
-    perPage,
-    fetchedOffset,
-    lastBatchSize,
-    debouncedQuery,
-  ]);
+  }, [cachedUsers, effectiveTotal, fetchedOffset, lastBatchSize, debouncedQuery]);
 
-  const isEmptyResult = !isLoading && effectiveTotal === 0;
+  const handleSearch = useCallback((query: string) => {
+    setSearchQuery(query);
+  }, []);
 
   return {
     users: visibleUsers,
     total: effectiveTotal,
-    currentPage,
-    totalPages,
-    perPage,
     searchQuery,
     error,
     isLoading: shouldShowLoading,
+    isFetchingMore,
+    fetchMoreError,
     isEmptyResult,
-    setCurrentPage,
-    setPerPage: handlePerPageChange,
+    sentinelRef,
     setSearchQuery: handleSearch,
     userCountLabel: shouldShowLoading
       ? "Loading users..."
-      : effectiveTotal > 0
-        ? `${String(effectiveTotal)} users`
-        : "No users found",
-    visibleUserCountLabel,
+      : effectiveTotal === 0
+        ? "No users found"
+        : `${String(effectiveTotal)} users`,
   };
 }

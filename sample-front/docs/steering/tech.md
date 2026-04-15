@@ -145,8 +145,23 @@ Prettier +
 
 - `vitest.config.ts` で React plugin と jsdom を設定済み
 - `globals: true` により `describe`, `it`, `expect` 等をインポート不要で使用可能
-- セットアップファイル: `src/test/setup.ts`（`@testing-library/jest-dom` のインポート）
+- セットアップファイル: `src/test/setup.ts`（`@testing-library/jest-dom` のインポート + `MockIntersectionObserver` のグローバル登録）
 - カバレッジ: `vitest run --coverage`（v8 プロバイダー、レポーター: `text` + `lcov`）
+
+**MockIntersectionObserver パターン**:
+
+jsdom は `IntersectionObserver` を実装しないため、`src/test/setup.ts` で `MockIntersectionObserver` クラスをグローバルに設定している。テストから利用する際は以下のパターンを使う:
+
+```ts
+import { MockIntersectionObserver } from "@/test/setup";
+
+beforeEach(() => MockIntersectionObserver.reset());
+
+// sentinel 要素が viewport に入ったとき（`isIntersecting: true`）を模倣してフックを発火させる
+MockIntersectionObserver.triggerAll([{ isIntersecting: true }]);
+```
+
+`MockIntersectionObserver.triggerAll` はすべての登録済み observer に対してコールバックを発火する。個別の observer だけ発火させたい場合は `MockIntersectionObserver.instances[n].triggerIntersect(entries)` を使う。
 
 ## コマンド
 

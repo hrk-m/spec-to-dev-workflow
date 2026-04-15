@@ -3,12 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchNonMembers } from "@/pages/group-detail/api/fetch-non-members";
 import type { UserSummary } from "@/pages/group-detail/model/group-detail";
 
-const FETCH_LIMIT = 500;
-const DEFAULT_PER_PAGE = 20;
-
-export const PER_PAGE_OPTIONS = [20, 50, 100] as const;
-
-type PerPage = 20 | 50 | 100;
+export const FETCH_LIMIT = 100;
 
 type NonMemberListState = {
   users: UserSummary[];
@@ -24,17 +19,22 @@ export function clearNonMemberListCache() {
 }
 
 export function useNonMemberList(groupId: number) {
-  const [cachedUsers, setCachedUsers] = useState<UserSummary[]>([]);
+  const cachedEntry = nonMemberListCache.get(groupId) ?? null;
+  const [cachedUsers, setCachedUsers] = useState<UserSummary[]>(() => cachedEntry?.users ?? []);
   const cachedUsersRef = useRef(cachedUsers);
-  const [total, setTotal] = useState(0);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [perPage, setPerPage] = useState<PerPage>(DEFAULT_PER_PAGE);
-  const [isLoading, setIsLoading] = useState(true);
+  const [total, setTotal] = useState(() => cachedEntry?.total ?? 0);
+  const [isLoading, setIsLoading] = useState(() => !cachedEntry);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const [fetchMoreError, setFetchMoreError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
-  const [fetchedOffset, setFetchedOffset] = useState(0);
-  const [lastBatchSize, setLastBatchSize] = useState(FETCH_LIMIT);
+  const [fetchedOffset, setFetchedOffset] = useState(() => cachedEntry?.fetchedOffset ?? 0);
+  const [lastBatchSize, setLastBatchSize] = useState(
+    () => cachedEntry?.lastBatchSize ?? FETCH_LIMIT,
+  );
+
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     cachedUsersRef.current = cachedUsers;
@@ -72,6 +72,35 @@ export function useNonMemberList(groupId: number) {
     [groupId],
   );
 
+  const doFetchMore = useCallback(
+    (offset: number, query: string) => {
+      setIsFetchingMore(true);
+      setFetchMoreError(null);
+
+      fetchNonMembers({ groupId, limit: FETCH_LIMIT, offset, q: query || undefined })
+        .then((data) => {
+          const nextUsers = [
+            ...cachedUsersRef.current,
+            ...data.users.filter(
+              (user) => !cachedUsersRef.current.some((cached) => cached.id === user.id),
+            ),
+          ];
+          setCachedUsers(nextUsers);
+          setTotal(data.total);
+          setFetchedOffset(offset + FETCH_LIMIT);
+          setLastBatchSize(data.users.length);
+        })
+        .catch((err: unknown) => {
+          setFetchMoreError(String(err));
+          setLastBatchSize(0);
+        })
+        .finally(() => {
+          setIsFetchingMore(false);
+        });
+    },
+    [groupId],
+  );
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedQuery(searchQuery);
@@ -80,52 +109,106 @@ export function useNonMemberList(groupId: number) {
   }, [searchQuery]);
 
   useEffect(() => {
-    setCachedUsers([]);
-    setTotal(0);
-    setCurrentPage(1);
-    setFetchedOffset(0);
-    setLastBatchSize(FETCH_LIMIT);
+    if (!debouncedQuery) {
+      const cacheEntry = nonMemberListCache.get(groupId) ?? null;
+
+      if (cacheEntry) {
+        setCachedUsers(cacheEntry.users);
+        setTotal(cacheEntry.total);
+        setFetchedOffset(cacheEntry.fetchedOffset);
+        setLastBatchSize(cacheEntry.lastBatchSize);
+        setFetchMoreError(null);
+        return;
+      }
+
+      setCachedUsers([]);
+      setTotal(0);
+      setFetchedOffset(0);
+      setLastBatchSize(FETCH_LIMIT);
+    } else {
+      setCachedUsers([]);
+      setTotal(0);
+      setFetchedOffset(0);
+      setLastBatchSize(FETCH_LIMIT);
+    }
+
+    setFetchMoreError(null);
     doFetch(0, debouncedQuery, false);
   }, [groupId, debouncedQuery, doFetch]);
 
-  const effectiveTotal = debouncedQuery ? cachedUsers.length : total;
-  const totalPages = Math.max(1, Math.ceil(effectiveTotal / perPage));
-
-  const startIndex = (currentPage - 1) * perPage;
-  const endIndex = startIndex + perPage;
-
-  const needsMoreData = endIndex > cachedUsers.length && lastBatchSize === FETCH_LIMIT;
+  // Refs to avoid stale closures in IntersectionObserver callback
+  const isFetchingMoreRef = useRef(isFetchingMore);
+  const isLoadingRef = useRef(isLoading);
+  const lastBatchSizeRef = useRef(lastBatchSize);
+  const fetchedOffsetRef = useRef(fetchedOffset);
+  const debouncedQueryRef = useRef(debouncedQuery);
 
   useEffect(() => {
-    if (needsMoreData && !isLoading) {
-      doFetch(fetchedOffset, debouncedQuery, true);
-    }
-  }, [needsMoreData, isLoading, fetchedOffset, debouncedQuery, doFetch]);
+    isFetchingMoreRef.current = isFetchingMore;
+  }, [isFetchingMore]);
+  useEffect(() => {
+    isLoadingRef.current = isLoading;
+  }, [isLoading]);
+  useEffect(() => {
+    lastBatchSizeRef.current = lastBatchSize;
+  }, [lastBatchSize]);
+  useEffect(() => {
+    fetchedOffsetRef.current = fetchedOffset;
+  }, [fetchedOffset]);
+  useEffect(() => {
+    debouncedQueryRef.current = debouncedQuery;
+  }, [debouncedQuery]);
 
-  const visibleUsers = cachedUsers.slice(startIndex, endIndex);
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (!entry?.isIntersecting) return;
+        if (isLoadingRef.current || isFetchingMoreRef.current) return;
+
+        if (lastBatchSizeRef.current === FETCH_LIMIT) {
+          doFetchMore(fetchedOffsetRef.current, debouncedQueryRef.current);
+        }
+      },
+      { threshold: 0.1 },
+    );
+
+    const sentinel = sentinelRef.current;
+    if (sentinel) {
+      observer.observe(sentinel);
+    }
+
+    return () => observer.disconnect();
+  }, [doFetchMore]);
+
+  const visibleUsers = cachedUsers;
+  const effectiveTotal = debouncedQuery ? cachedUsers.length : total;
+
+  useEffect(() => {
+    if (!debouncedQuery) {
+      nonMemberListCache.set(groupId, {
+        users: cachedUsers,
+        total,
+        fetchedOffset,
+        lastBatchSize,
+      });
+    }
+  }, [groupId, cachedUsers, total, fetchedOffset, lastBatchSize, debouncedQuery]);
 
   const handleSetSearchQuery = useCallback((query: string) => {
     setSearchQuery(query);
-    setCurrentPage(1);
-  }, []);
-
-  const handleSetPerPage = useCallback((newPerPage: PerPage) => {
-    setPerPage(newPerPage);
-    setCurrentPage(1);
   }, []);
 
   return {
     users: visibleUsers,
     total: effectiveTotal,
-    currentPage,
-    totalPages,
-    perPage,
     isLoading,
+    isFetchingMore,
+    fetchMoreError,
     error,
     searchQuery,
+    sentinelRef,
     setSearchQuery: handleSetSearchQuery,
-    setCurrentPage,
-    setPerPage: handleSetPerPage,
     lastBatchSize,
   };
 }
