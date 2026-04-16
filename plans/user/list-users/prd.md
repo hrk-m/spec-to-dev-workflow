@@ -7,7 +7,7 @@
 | 機能名       | `list-users`                                                                                                                     |
 | 目的         | アクティブなユーザー一覧をキーワード検索付きで取得し、無限スクロールで表示する                                                   |
 | API          | `GET /api/v1/users`                                                                                                              |
-| 認証         | 不要                                                                                                                             |
+| 認証         | 必要（AuthMiddleware）                                                                                                           |
 | データソース | MySQL (`sample-api/internal/repository/mysql`)                                                                                   |
 
 ---

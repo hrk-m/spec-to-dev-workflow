@@ -7,7 +7,7 @@
 | 機能名       | `add-group-member`                                                                                                  |
 | 目的         | グループ詳細画面からユーザーをグループに追加できるようにする                                                        |
 | API          | `GET /api/v1/groups/:id/non-members`（グループ未所属ユーザー一覧取得）<br>`POST /api/v1/groups/:id/members`（メンバー追加） |
-| 認証         | 不要                                                                                                                |
+| 認証         | 必要（AuthMiddleware）                                                                                              |
 | データソース | MySQL (`sample-api/internal/repository/mysql`)                                                                      |
 
 ---

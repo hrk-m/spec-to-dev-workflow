@@ -7,7 +7,7 @@
 | 機能名       | `get-group`                                                                                             |
 | 目的         | グループ ID を指定してグループの基本情報を取得する。グループ詳細画面（`/groups/:id`）の主要データソース |
 | API          | `GET /api/v1/groups/:id`                                                                                |
-| 認証         | 不要                                                                                                    |
+| 認証         | 必要（AuthMiddleware）                                                                                  |
 | データソース | MySQL (`sample-api/internal/repository/mysql`)                                                          |
 
 ---

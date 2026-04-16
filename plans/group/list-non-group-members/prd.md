@@ -7,7 +7,7 @@
 | 機能名       | `list-non-group-members`                                                                       |
 | 目的         | 指定グループに所属していないユーザー一覧を取得し、グループメンバー追加画面で無限スクロール表示する |
 | API          | `GET /api/v1/groups/:id/non-members`                                                           |
-| 認証         | 不要                                                                                           |
+| 認証         | 必要（AuthMiddleware）                                                                         |
 | データソース | MySQL (`sample-api/internal/repository/mysql`)                                                 |
 
 ---

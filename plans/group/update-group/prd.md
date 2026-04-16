@@ -7,7 +7,7 @@
 | 機能名       | `update-group`                                                                                           |
 | 目的         | グループ詳細画面からグループの基本情報（name / description）を編集できる                                 |
 | API          | `PUT /api/v1/groups/:id`                                                                                 |
-| 認証         | 不要                                                                                                     |
+| 認証         | 必要（AuthMiddleware）                                                                                   |
 | データソース | MySQL (`sample-api/internal/repository/mysql`)                                                           |
 
 ---

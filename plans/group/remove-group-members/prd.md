@@ -7,7 +7,7 @@
 | 機能名       | `remove-group-members`                                                            |
 | 目的         | グループ詳細画面のメンバー一覧から、1 件または複数件のメンバーを一括で削除できるようにする |
 | API          | `DELETE /api/v1/groups/:id/members`（メンバー一括削除）                           |
-| 認証         | 不要                                                                              |
+| 認証         | 必要（AuthMiddleware）                                                            |
 | データソース | MySQL (`sample-api/internal/repository/mysql`)                                    |
 
 ---

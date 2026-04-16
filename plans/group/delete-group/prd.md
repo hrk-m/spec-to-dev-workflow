@@ -7,7 +7,7 @@
 | 機能名       | `delete-group`                                                                                           |
 | 目的         | グループを物理削除せず `deleted_at` に削除日時をセットすることで、データを保持しつつグループを「削除済み」状態にできる |
 | API          | `DELETE /api/v1/groups/:id`                                                                              |
-| 認証         | 不要                                                                                                     |
+| 認証         | 必要（AuthMiddleware）                                                                                   |
 | データソース | MySQL (`sample-api/internal/repository/mysql`)                                                           |
 
 ---

@@ -7,7 +7,7 @@
 | 機能名       | `list-group-members`                                                               |
 | 目的         | グループに所属するメンバー一覧を取得する。グループ詳細画面のメンバー一覧表示に使用 |
 | API          | `GET /api/v1/groups/:id/members`                                                   |
-| 認証         | 不要                                                                               |
+| 認証         | 必要（AuthMiddleware）                                                             |
 | データソース | MySQL (`sample-api/internal/repository/mysql`)                                     |
 
 ---

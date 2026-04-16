@@ -163,7 +163,7 @@
 | --------------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
 | `groups`        | API 経由（ユーザー操作） / シードデータ（`db/seed/seed.sql`） | `GET /api/v1/groups` — グループ一覧取得 / `GET /api/v1/groups/:id` — グループ詳細取得                     |
 | `group_members` | API 経由（ユーザー操作） / シードデータ（`db/seed/seed.sql`） | `GET /api/v1/groups` — メンバー数集計 / `GET /api/v1/groups/:id/members` — メンバー一覧取得（users JOIN） |
-| `users`         | API 経由（ユーザー操作） / シードデータ（`db/seed/seed.sql`） | `GET /api/v1/users` — ユーザー一覧取得（`search_key LIKE` 検索）<br>`GET /api/v1/groups/:id/members` — メンバー情報取得（group_members JOIN）<br>`GET /api/v1/groups/:id/non-members` — 未所属ユーザー取得（`search_key LIKE` 検索） |
+| `users`         | API 経由（ユーザー操作） / シードデータ（`db/seed/seed.sql`） | `GET /api/v1/me` — 認証ユーザー取得（`uuid` による `GetByUUID`）<br>`GET /api/v1/users` — ユーザー一覧取得（`search_key LIKE` 検索）<br>`GET /api/v1/groups/:id/members` — メンバー情報取得（group_members JOIN）<br>`GET /api/v1/groups/:id/non-members` — 未所属ユーザー取得（`search_key LIKE` 検索） |
 
 ---
 

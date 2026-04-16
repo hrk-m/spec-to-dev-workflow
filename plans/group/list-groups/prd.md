@@ -7,7 +7,7 @@
 | 機能名       | `list-groups`                                                                                                                  |
 | 目的         | グループをキーワード・offset 条件で絞り込んで一覧取得する。フロントエンドは 100 件ずつ取得してクライアントキャッシュで無限スクロール表示する |
 | API          | `GET /api/v1/groups`                                                                                                           |
-| 認証         | 不要                                                                                                                           |
+| 認証         | 必要（AuthMiddleware）                                                                                                         |
 | データソース | MySQL (`sample-api/internal/repository/mysql`)                                                                                 |
 
 ---
