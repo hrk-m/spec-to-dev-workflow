@@ -14,6 +14,7 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 
+	authSvc "github.com/hrk-m/spec-to-dev-workflow/sample-api/auth"
 	groupSvc "github.com/hrk-m/spec-to-dev-workflow/sample-api/group"
 	mysqlRepo "github.com/hrk-m/spec-to-dev-workflow/sample-api/internal/repository/mysql"
 	"github.com/hrk-m/spec-to-dev-workflow/sample-api/internal/rest"
@@ -82,6 +83,12 @@ func main() {
 		log.Fatal("failed to connect to MySQL: ", err)
 	}
 
+	appEnv := getEnv("APP_ENV", "")
+	if appEnv == "" {
+		log.Fatal("APP_ENV is required")
+	}
+	// defaultUserUUID の取得・バリデーションは AuthMiddleware 内で行う
+
 	e := echo.New()
 	e.Use(middleware.CORS())
 
@@ -90,9 +97,14 @@ func main() {
 	groupRepo := mysqlRepo.NewGroupRepository(db)
 	userRepo := mysqlRepo.NewUserRepository(db)
 	gSvc := groupSvc.NewService(groupRepo, userRepo)
-	rest.NewGroupHandler(e, gSvc)
 	uSvc := userSvc.NewService(userRepo)
-	rest.NewUserHandler(e, uSvc)
+
+	apiGroup := e.Group("/api/v1")
+	aSvc := authSvc.NewService(userRepo)
+	apiGroup.Use(rest.AuthMiddleware(appEnv, aSvc))
+	rest.NewAuthHandler(apiGroup, aSvc)
+	rest.NewGroupHandler(apiGroup, gSvc)
+	rest.NewUserHandler(apiGroup, uSvc)
 
 	e.Logger.Fatal(e.Start(":" + listenPort))
 }

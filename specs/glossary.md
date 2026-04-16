@@ -31,3 +31,8 @@
 | ユーザー | システムに登録されたユーザー。id・first_name・last_name を持つ | API では `user`。グループメンバー（`member`）の上位概念 |
 | ユーザー一覧 | `/users` 画面に表示する全ユーザーのリスト。`search_key LIKE '%q%'` で検索できる | API では `GET /api/v1/users` |
 | 一括削除 | チェックボックスで選択した複数メンバーを一度のリクエストでグループから除名する操作 | MemberList の「削除」ボタンで実行。API: `DELETE /api/v1/groups/:id/members` |
+| ProtectedRoute | `GET /api/v1/me` を呼び出して認証チェックを行うルートラッパーコンポーネント | 成功時は children を描画。失敗時は `/service-unavailable` へリダイレクト |
+| ServiceUnavailablePage | API 障害・認証失敗時に表示するメンテナンス画面 | マウント時に `GET /api/v1/me` を再確認し、200 なら `/` へ自動リダイレクト |
+| AuthContext | 認証済みユーザー情報をアプリ全体に提供する React Context | `useAuth` フックで利用。`id` / `uuid` / `firstName` / `lastName` を保持 |
+| DEV_USER_UUID | 開発環境（`APP_ENV=development`）で使用するユーザーの UUID を指定する環境変数 | この UUID でユーザーを取得し `GET /api/v1/me` が 200 を返す |
+| HttpError | HTTP エラーステータスを保持する `Error` サブクラス | `apiFetch` が HTTP エラーを受け取ったときに throw。`err.status` でステータスコードを判別できる |

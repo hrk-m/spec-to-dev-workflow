@@ -9,7 +9,7 @@
 | RDBMS            | MySQL                                                                                                   |
 | バージョン       | {要確認}（Docker Compose で管理）                                                                       |
 | ドキュメント種別 | 手書き                                                                                                  |
-| 最終更新日       | 2026-04-11                                                                                              |
+| 最終更新日       | 2026-04-15                                                                                              |
 
 ---
 
@@ -103,6 +103,7 @@
 | カラム名     | データ型          | NULL     | デフォルト                                        | 説明                                                                                   |
 | ------------ | ----------------- | -------- | ------------------------------------------------- | -------------------------------------------------------------------------------------- |
 | `id`         | `BIGINT UNSIGNED` | NOT NULL | AUTO_INCREMENT                                    | ユーザーの識別子（主キー）                                                             |
+| `uuid`       | `VARCHAR(36)`     | NOT NULL | なし                                              | ユーザーの UUID。外部公開用識別子（`GET /api/v1/me` の `sub` クレームに対応）          |
 | `first_name` | `VARCHAR(255)`    | NOT NULL | なし                                              | 名                                                                                     |
 | `last_name`  | `VARCHAR(255)`    | NOT NULL | なし                                              | 姓                                                                                     |
 | `created_at` | `DATETIME`        | NOT NULL | CURRENT_TIMESTAMP                                 | 作成日時                                                                               |
@@ -114,15 +115,17 @@
 
 #### 制約
 
-| 種別        | 名前      | 対象カラム | 説明                 |
-| ----------- | --------- | ---------- | -------------------- |
-| PRIMARY KEY | `PRIMARY` | `id`       | ユーザーの一意識別子 |
+| 種別        | 名前             | 対象カラム | 説明                         |
+| ----------- | ---------------- | ---------- | ---------------------------- |
+| PRIMARY KEY | `PRIMARY`        | `id`       | ユーザーの一意識別子         |
+| UNIQUE      | `uq_users_uuid`  | `uuid`     | UUID の一意性を保証          |
 
 #### インデックス
 
 | インデックス名    | 対象カラム          | 種別    | 用途                                      |
 | ----------------- | ------------------- | ------- | ----------------------------------------- |
 | `PRIMARY`         | `id`                | PRIMARY | 主キーアクセス                            |
+| `uq_users_uuid`   | `uuid`              | UNIQUE  | `GetByUUID` での高速検索                  |
 | `idx_users_active` | `(deleted_at, id)` | INDEX   | 有効ユーザー取得の高速化（deleted_at IS NULL 検索） |
 
 ---
@@ -158,9 +161,9 @@
 
 | テーブル        | データソース                                                               | 主なユースケース                                                                                          |
 | --------------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `groups`        | API 経由（ユーザー操作） / シードデータ（`db/seed/001_groups.sql`）        | `GET /api/v1/groups` — グループ一覧取得 / `GET /api/v1/groups/:id` — グループ詳細取得                     |
-| `group_members` | API 経由（ユーザー操作） / シードデータ（`db/seed/003_group_members.sql`） | `GET /api/v1/groups` — メンバー数集計 / `GET /api/v1/groups/:id/members` — メンバー一覧取得（users JOIN） |
-| `users`         | API 経由（ユーザー操作） / シードデータ（`db/seed/002_users.sql`）         | `GET /api/v1/users` — ユーザー一覧取得（`search_key LIKE` 検索）<br>`GET /api/v1/groups/:id/members` — メンバー情報取得（group_members JOIN）<br>`GET /api/v1/groups/:id/non-members` — 未所属ユーザー取得（`search_key LIKE` 検索） |
+| `groups`        | API 経由（ユーザー操作） / シードデータ（`db/seed/seed.sql`） | `GET /api/v1/groups` — グループ一覧取得 / `GET /api/v1/groups/:id` — グループ詳細取得                     |
+| `group_members` | API 経由（ユーザー操作） / シードデータ（`db/seed/seed.sql`） | `GET /api/v1/groups` — メンバー数集計 / `GET /api/v1/groups/:id/members` — メンバー一覧取得（users JOIN） |
+| `users`         | API 経由（ユーザー操作） / シードデータ（`db/seed/seed.sql`） | `GET /api/v1/users` — ユーザー一覧取得（`search_key LIKE` 検索）<br>`GET /api/v1/groups/:id/members` — メンバー情報取得（group_members JOIN）<br>`GET /api/v1/groups/:id/non-members` — 未所属ユーザー取得（`search_key LIKE` 検索） |
 
 ---
 
@@ -190,14 +193,13 @@
 | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
 | `sample-api/db/migrate/20260403120000_create_tables.up.sql`                      | `groups` / `users` / `group_members` テーブル定義（統合）                      |
 | `sample-api/db/migrate/20260411120000_add_search_key_to_users.up.sql`            | `users` テーブルへの `search_key` VIRTUAL GENERATED COLUMN 追加（add-group-member） |
+| `sample-api/db/migrate/20260415120000_add_uuid_to_users.up.sql`                  | `users` テーブルへの `uuid` カラム追加・既存レコードへ UUID 自動生成（auth/login） |
 
 ### シードデータファイル一覧
 
-| ファイル                                   | 内容                           |
-| ------------------------------------------ | ------------------------------ |
-| `sample-api/db/seed/001_groups.sql`        | グループのシードデータ         |
-| `sample-api/db/seed/002_users.sql`         | ユーザーのシードデータ         |
-| `sample-api/db/seed/003_group_members.sql` | グループメンバーのシードデータ |
+| ファイル                        | 内容                                                           |
+| ------------------------------- | -------------------------------------------------------------- |
+| `sample-api/db/seed/seed.sql`   | groups / users / group_members のシードデータ（FK 依存順に記載） |
 
 ---
 
@@ -218,6 +220,7 @@ erDiagram
     }
     users {
         BIGINT_UNSIGNED id PK
+        VARCHAR uuid UK
         VARCHAR first_name
         VARCHAR last_name
         DATETIME created_at

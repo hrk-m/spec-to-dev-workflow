@@ -16,7 +16,7 @@
 
 ### Seed（`db/seed/`）
 
-- ファイル命名: `001_groups.sql`（連番管理）
+- ファイル命名: `seed.sql`（全テーブル分を FK 依存順にまとめる）
 - 内容: DML のみ（INSERT など）、冪等に設計する
 - Makefile: `make db-seed`
 
@@ -87,8 +87,7 @@ db/
 │   ├── 20260403120000_create_groups.up.sql
 │   └── ...
 └── seed/             ← 初期データ（DML のみ）
-    ├── 001_groups.sql
-    └── ...
+    └── seed.sql
 {domain}/
 ├── mocks/
 │   └── FooRepository.go   ← 手動作成・手動保守

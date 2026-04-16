@@ -14,6 +14,7 @@ inclusion: always
 | UI コンポーネント       | Radix UI Themes                                                 |
 | アイコン                | react-icons                                                     |
 | スクロール制御          | react-remove-scroll-bar（Sidebar 開閉時のスクロールバー非表示） |
+| 認証                    | セッションベース認証（`GET /api/v1/me` による確認）             |
 | 言語                    | TypeScript (strict)                                             |
 | テスト                  | Vitest + Testing Library (jsdom)                                |
 | リント                  | oxlint                                                          |
@@ -61,6 +62,18 @@ import { apiFetch } from "../../shared/api/client";
 
 ローカル起動では `sample-front/.env.local`、Docker 起動では `sample-front/.env.docker`
 を使う。ホスト公開ポートはローカルが `3000`、Docker が `3001`。
+
+### 認証パターン
+
+`shared/auth` が `AuthContext` を提供し、`AuthProvider` でアプリ全体をラップする（`router.tsx` の
+`Layout` コンポーネント内）。
+
+- `useAuth()` — `{ user, setUser }` を返す。`AuthProvider` 外で呼び出すとエラーをスロー
+- `ProtectedRoute` — マウント時に `GET /api/v1/me` を呼び出してセッション確認。成功時は `setUser`
+  でユーザー情報をコンテキストに保存して子をレンダリング。401 は `reason="unauthenticated"` で
+  `/service-unavailable` へリダイレクト、その他エラーは `reason="api_unavailable"` でリダイレクト
+- `HttpError` — `apiFetch` がレスポンスの `ok` が偽のときにスローする。`status`
+  プロパティで HTTP ステータスコードを参照できる。`shared/api` の index.ts から re-export されている
 
 ### Sheet コンポーネントの動作規約
 

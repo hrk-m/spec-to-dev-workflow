@@ -12,6 +12,11 @@ sample-api/
 ├── domain/                  # コアドメイン層（フレームワーク依存ゼロ）
 │   ├── *.go                 # ドメインモデル（struct + json タグ）
 │   └── errors.go            # センチネルエラーの一元管理
+├── auth/                    # 認証ユースケース層
+│   ├── service.go           # auth.Service（GetByUUID）+ UserRepository インターフェース
+│   ├── service_test.go      # 外部テストパッケージ (package auth_test)
+│   └── mocks/               # テスト用 mock（手動保守）
+│       └── user_repository_mock.go
 ├── {feature}/               # ユースケース層（機能ごとにパッケージを作成）
 │   ├── service.go           # Service struct + コンストラクタ + メソッド
 │   ├── service_test.go      # 外部テストパッケージ (package {feature}_test)
@@ -27,8 +32,11 @@ sample-api/
 │       ├── {feature}.go       # ハンドラ + インターフェース定義 + ルート登録
 │       ├── {feature}_test.go  # モックを使ったハンドラテスト
 │       ├── errors.go          # エラー → HTTP ステータスコードのマッピング
+│       ├── auth.go              # AuthHandler + AuthMiddleware + AuthService インターフェース
+│       ├── auth_test.go         # AuthMiddleware・AuthHandler のテスト
 │       └── mocks/             # テスト用 mock（手動保守）
-│           └── {feature}_service_mock.go
+│           ├── {feature}_service_mock.go
+│           └── auth_user_repository_mock.go  # MockAuthService（AuthService テスト用）
 ├── .env.local               # 環境変数（ローカル用、git ignore）
 ├── .env.local.example       # ローカル環境変数のサンプル
 ├── .env.docker.example      # Docker 用環境変数のサンプル
@@ -40,7 +48,7 @@ sample-api/
 └── README.md                # プロジェクト説明
 ```
 
-例: `group/`, `user/`
+例: `group/`, `user/`, `auth/`
 
 ## 命名パターン
 
@@ -67,16 +75,23 @@ e.Use(middleware.CORS())           // ミドルウェア登録
 groupRepo := mysql.NewGroupRepository(db)
 userRepo := mysql.NewUserRepository(db)
 gSvc := group.NewService(groupRepo, userRepo)
-rest.NewGroupHandler(e, gSvc)
 
 // user: user 一覧の標準パターン
 uSvc := user.NewService(userRepo)
-rest.NewUserHandler(e, uSvc)
+
+// auth: 認証ミドルウェア + me エンドポイント
+// /api/v1 以下のルートグループに AuthMiddleware を適用する
+apiGroup := e.Group("/api/v1")
+aSvc := auth.NewService(userRepo)  // userRepo を共有
+apiGroup.Use(rest.AuthMiddleware(appEnv, aSvc))
+rest.NewAuthHandler(apiGroup, aSvc)
+rest.NewGroupHandler(apiGroup, gSvc)
+rest.NewUserHandler(apiGroup, uSvc)
 ```
 
 新しいドメインを追加する場合は group パターン（Repository → Service → Handler）を踏襲する。
 
-> **補足**: `mysql.UserRepository` は `group.UserRepository` と `user.UserRepository` の両インターフェースを実装している。複数のサービスから共有されるリポジトリ実装は 1 つのインスタンスを共有して DI する。
+> **補足**: `mysql.UserRepository` は `group.UserRepository`、`user.UserRepository`、`auth.UserRepository` の 3 つのインターフェースを実装している。複数のサービスから共有されるリポジトリ実装は 1 つのインスタンスを共有して DI する。
 
 > **handler メソッドと service IF の対応**: handler のメソッド名は必ずしも service IF と一致しない場合がある。例として `GroupHandler.DeleteGroupMembers` は `GroupService.RemoveGroupMembers` を呼ぶ。外部 HTTP 動詞（DELETE）と内部ユースケース名（Remove）の意味論的差異が命名に反映されている。
 

@@ -28,18 +28,18 @@ type GroupHandler struct {
 	Service GroupService
 }
 
-// NewGroupHandler registers the group routes on the given Echo instance.
-func NewGroupHandler(e *echo.Echo, svc GroupService) {
+// NewGroupHandler registers the group routes on the given Echo router group.
+func NewGroupHandler(g *echo.Group, svc GroupService) {
 	h := &GroupHandler{Service: svc}
-	e.GET("/api/v1/groups", h.ListGroups)
-	e.GET("/api/v1/groups/:id", h.GetByID)
-	e.GET("/api/v1/groups/:id/members", h.ListGroupMembers)
-	e.GET("/api/v1/groups/:id/non-members", h.ListNonGroupMembers)
-	e.POST("/api/v1/groups", h.Store)
-	e.POST("/api/v1/groups/:id/members", h.AddGroupMembers)
-	e.PUT("/api/v1/groups/:id", h.Update)
-	e.DELETE("/api/v1/groups/:id", h.Delete)
-	e.DELETE("/api/v1/groups/:id/members", h.DeleteGroupMembers)
+	g.GET("/groups", h.ListGroups)
+	g.GET("/groups/:id", h.GetByID)
+	g.GET("/groups/:id/members", h.ListGroupMembers)
+	g.GET("/groups/:id/non-members", h.ListNonGroupMembers)
+	g.POST("/groups", h.Store)
+	g.POST("/groups/:id/members", h.AddGroupMembers)
+	g.PUT("/groups/:id", h.Update)
+	g.DELETE("/groups/:id", h.Delete)
+	g.DELETE("/groups/:id/members", h.DeleteGroupMembers)
 }
 
 type groupListResponse struct {

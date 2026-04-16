@@ -31,9 +31,17 @@ app/main.go                    → DI 配線・サーバー起動のみ
 
 ## 実装済みドメイン
 
-- **group**: グループ CRUD + メンバー管理（一覧・追加）・非メンバー一覧
+- **group**: グループ CRUD + メンバー管理（一覧・追加・削除）・非メンバー一覧
 - **user**: ユーザー一覧取得（`GET /api/v1/users`）
+- **auth**: 認証ミドルウェア + `GET /api/v1/me`（開発環境では `DEV_USER_UUID` 環境変数を使用）
 
 ## mysql.UserRepository の共有
 
-`mysql.UserRepository` は `group.UserRepository`（GetByID）と `user.UserRepository`（ListUsers）の両 IF を実装する単一 struct。`app/main.go` で 1 インスタンスを `group.NewService` と `user.NewService` 両方に渡す。
+`mysql.UserRepository` は `group.UserRepository`（GetByID, CountByIDs）、`user.UserRepository`（ListUsers）、`auth.UserRepository`（GetByUUID）の 3 つの IF を実装する単一 struct。`app/main.go` で 1 インスタンスを `group.NewService`・`user.NewService`・`auth.NewService` の 3 つに渡す。
+
+## 認証パターン
+
+- `auth/service.go`: `auth.Service`（GetByUUID）+ `auth.UserRepository` IF（GetByUUID）
+- `internal/rest/auth.go`: `AuthService` IF（GetByUUID）+ `AuthHandler`（GetMe）+ `AuthMiddleware`
+- `AuthMiddleware` は `/api/v1` ルートグループに適用し、`c.Set("authUser", user)` で認証済みユーザーをコンテキストにセット
+- `User` ドメインモデルに `UUID string` フィールドが追加（`db/migrate/20260415120000_add_uuid_to_users.up.sql` で追加）

@@ -40,7 +40,14 @@ inclusion: always
   `react-remove-scroll-bar`
   でスクロールバーを非表示にし、ヘッダーの padding-right で幅のズレを補正。Sidebar の "Groups" ボタンは
   `/`、"Users" ボタンは `/users` へ遷移する（`onNavigate(path)` prop 経由）
-- react-router v7 によるクライアントサイドルーティング（`/`, `/groups`, `/groups/:id`, `/users`）
+- 認証ガード（`ProtectedRoute`）: `GET /api/v1/me` を呼び出してセッション確認。401 は
+  `reason="unauthenticated"` で `/service-unavailable` へリダイレクト、その他のエラーは
+  `reason="api_unavailable"` でリダイレクト。認証済みユーザー情報（`id`, `uuid`, `firstName`,
+  `lastName`）は `shared/auth` の `AuthContext` に保存される
+- サービス利用不可画面（`ServiceUnavailablePage`）: `/service-unavailable` ルート。マウント時に
+  `GET /api/v1/me` を再試行し、成功すれば `/` へリダイレクト。失敗時はメンテナンス中メッセージを表示
+- react-router v7 によるクライアントサイドルーティング（`/`, `/groups`, `/groups/:id`, `/users`,
+  `/service-unavailable`）
 - サーバーサイド API プロキシ（Bun サーバーが `/api/*` リクエストをバックエンドに中継）
 - Feature-Sliced Design に沿ったスケーラブルなフロントエンド構造のデモ
 

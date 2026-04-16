@@ -70,11 +70,29 @@ func (r *UserRepository) CountByIDs(ctx context.Context, ids []uint64) (int, err
 
 // GetByID returns a single active user by ID.
 func (r *UserRepository) GetByID(ctx context.Context, id uint64) (domain.User, error) {
-	query := "SELECT id, first_name, last_name FROM users WHERE id = ? AND deleted_at IS NULL"
+	query := "SELECT id, uuid, first_name, last_name FROM users WHERE id = ? AND deleted_at IS NULL"
 
 	var u domain.User
 
-	err := r.db.QueryRowContext(ctx, query, id).Scan(&u.ID, &u.FirstName, &u.LastName)
+	err := r.db.QueryRowContext(ctx, query, id).Scan(&u.ID, &u.UUID, &u.FirstName, &u.LastName)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return domain.User{}, domain.ErrNotFound
+		}
+
+		return domain.User{}, domain.ErrInternalServerError
+	}
+
+	return u, nil
+}
+
+// GetByUUID returns a single active user by UUID.
+func (r *UserRepository) GetByUUID(ctx context.Context, uuid string) (domain.User, error) {
+	query := "SELECT id, uuid, first_name, last_name FROM users WHERE uuid = ? AND deleted_at IS NULL"
+
+	var u domain.User
+
+	err := r.db.QueryRowContext(ctx, query, uuid).Scan(&u.ID, &u.UUID, &u.FirstName, &u.LastName)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return domain.User{}, domain.ErrNotFound
@@ -105,7 +123,7 @@ func (r *UserRepository) countFilteredUsers(ctx context.Context, q string) (int,
 }
 
 func (r *UserRepository) selectUsers(ctx context.Context, q string, limit, offset int) ([]domain.User, error) {
-	query := "SELECT id, first_name, last_name FROM users WHERE deleted_at IS NULL"
+	query := "SELECT id, uuid, first_name, last_name FROM users WHERE deleted_at IS NULL"
 	args := make([]interface{}, 0, 3)
 
 	if q != "" {
@@ -125,7 +143,7 @@ func (r *UserRepository) selectUsers(ctx context.Context, q string, limit, offse
 	var users []domain.User
 	for rows.Next() {
 		var u domain.User
-		if scanErr := rows.Scan(&u.ID, &u.FirstName, &u.LastName); scanErr != nil {
+		if scanErr := rows.Scan(&u.ID, &u.UUID, &u.FirstName, &u.LastName); scanErr != nil {
 			return nil, domain.ErrInternalServerError
 		}
 

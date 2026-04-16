@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { apiFetch } from "@/shared/api";
+import { apiFetch, HttpError } from "@/shared/api";
 
 describe("apiFetch", () => {
   beforeEach(() => {
@@ -15,12 +15,26 @@ describe("apiFetch", () => {
     expect(result).toEqual(mockData);
   });
 
-  it("エラーレスポンス時は Error をスローする", async () => {
+  it("エラーレスポンス時は HttpError をスローする", async () => {
     vi.mocked(fetch).mockResolvedValueOnce(
       new Response(null, { status: 404, statusText: "Not Found" }),
     );
 
     await expect(apiFetch("/not-found")).rejects.toThrow("404 Not Found");
+  });
+
+  it("401 レスポンス時は HttpError.status === 401 で判別できる", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(null, { status: 401, statusText: "Unauthorized" }),
+    );
+
+    try {
+      await apiFetch("/protected");
+      expect.fail("should have thrown");
+    } catch (err) {
+      expect(err).toBeInstanceOf(HttpError);
+      expect((err as HttpError).status).toBe(401);
+    }
   });
 
   it("正しい URL でリクエストする", async () => {

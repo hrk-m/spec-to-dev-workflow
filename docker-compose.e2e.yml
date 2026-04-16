@@ -31,11 +31,13 @@ services:
       retries: 12
       start_period: 60s
     environment:
+      APP_ENV: development
       MYSQL_HOST: mysql
       MYSQL_PORT: "3306"
       MYSQL_USER: root
       MYSQL_PASSWORD: password
       MYSQL_DATABASE: sample
+      DEV_USER_UUID: "00000000-0000-0000-0000-000000000001"
 
   front:
     build: ./sample-front

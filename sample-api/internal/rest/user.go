@@ -20,10 +20,10 @@ type UserHandler struct {
 	Service UserService
 }
 
-// NewUserHandler registers the user routes on the given Echo instance.
-func NewUserHandler(e *echo.Echo, svc UserService) {
+// NewUserHandler registers the user routes on the given Echo router group.
+func NewUserHandler(g *echo.Group, svc UserService) {
 	h := &UserHandler{Service: svc}
-	e.GET("/api/v1/users", h.ListUsers)
+	g.GET("/users", h.ListUsers)
 }
 
 type userListResponse struct {

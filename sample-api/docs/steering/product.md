@@ -19,6 +19,15 @@
 - `GET /health` — DB 接続を含むサーバーの稼働状態を返すエンドポイント
   - レスポンス: `{"status": "ok"}` (200) / `{"status": "error", "message": "db unavailable"}` (503)
 
+### 認証
+
+すべての `/api/v1/` エンドポイントは `AuthMiddleware` による認証が必要です。
+
+- `GET /api/v1/me` — 認証済みユーザー自身の情報を返すエンドポイント
+  - レスポンス: `{"id": uint64, "uuid": "string", "first_name": "string", "last_name": "string"}` (200)
+  - エラー: 認証情報なし → 401
+  - 認証方式: 開発環境（`APP_ENV=development`）では `DEV_USER_UUID` 環境変数で指定した UUID のユーザーを DB から取得してリクエストコンテキストにセット。本番環境向け認証（ALB OIDC 等）は未実装（実装時は `AuthMiddleware` 内で対応）
+
 ### グループ一覧取得
 
 - `GET /api/v1/groups` — グループ一覧を返すエンドポイント
@@ -100,9 +109,9 @@
 ## ドメインモデル
 
 - **Group**: id, name, description, member_count
-- **User**: id, first_name, last_name
+- **User**: id, uuid, first_name, last_name
 
-> **補足**: `User` はメンバー一覧（`GET /api/v1/groups/:id/members`）、未所属ユーザー一覧（`GET /api/v1/groups/:id/non-members`）、グループメンバー追加レスポンス（`POST /api/v1/groups/:id/members`）のすべてで使用する。`GroupMember` という別型は存在せず、`domain.User` で統一している。
+> **補足**: `User` はメンバー一覧（`GET /api/v1/groups/:id/members`）、未所属ユーザー一覧（`GET /api/v1/groups/:id/non-members`）、グループメンバー追加レスポンス（`POST /api/v1/groups/:id/members`）、認証レスポンス（`GET /api/v1/me`）のすべてで使用する。`GroupMember` という別型は存在せず、`domain.User` で統一している。`uuid` フィールドは `users` テーブルの `uuid` カラム（VARCHAR(36), UNIQUE）に対応し、`db/migrate/20260415120000_add_uuid_to_users.up.sql` で追加された。
 
 ## ユーザーとユースケース
 

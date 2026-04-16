@@ -26,13 +26,22 @@ db/seed/                    →  Seed data (DML only)
 ```
 
 - `domain/`: フレームワーク依存ゼロ。純粋な struct とセンチネルエラーのみ
-- `group/`、`user/` など機能別パッケージ: ビジネスロジックを実装し、repository interface を宣言する
+- `group/`、`user/`、`auth/` など機能別パッケージ: ビジネスロジックを実装し、repository interface を宣言する
 - `internal/repository/mysql/`: MySQL ベースの repository adapter を実装する
 - `internal/rest/`: Echo ハンドラ。上位層のインターフェースを定義し、DI で受け取る
 
 ### インターフェース定義の配置
 
 インターフェースは**消費側**で定義する。たとえば `GroupService` は `internal/rest/` が定義し、`GroupRepository` は `group/` が定義する。`UserRepository` も `user/` が定義する。これにより delivery 層と use case 層が実装詳細に依存しない。
+
+### 認証アーキテクチャ
+
+- `auth/service.go` に `auth.Service` を定義。`UserRepository` インターフェース（`GetByUUID`）を消費する
+- `internal/rest/auth.go` に `AuthService` インターフェース・`AuthHandler`・`AuthMiddleware` を定義
+  - `AuthMiddleware` は `APP_ENV=development` のとき `DEV_USER_UUID` 環境変数から UUID を読み取り、`svc.GetByUUID` でユーザーを取得してコンテキストにセットする
+  - `APP_ENV` が `development` 以外の場合は起動時に `log.Fatal` で終了する（本番向け認証は未実装）
+- `GET /api/v1/me` はコンテキストから `authUser` を取得して返す（`AuthMiddleware` が事前にセット）
+- `mysql.UserRepository` は `auth.UserRepository`（`GetByUUID`）も実装する
 
 ### エラーハンドリング
 
@@ -57,7 +66,7 @@ db/seed/                    →  Seed data (DML only)
 - mock は手動保守し、interface 変更時は同じ変更セットで追随させる
 - エラー系（センチネルエラー、予期しないエラー）のケースを必ず網羅する
 
-## サービスインターフェース（`GroupService` / `UserService`）
+## サービスインターフェース（`GroupService` / `UserService` / `AuthService`）
 
 インターフェースは消費側（`internal/rest/`）で宣言する。
 
@@ -79,6 +88,11 @@ type GroupService interface {
 type UserService interface {
     ListUsers(ctx context.Context, q string, limit, offset int) ([]domain.User, int, error)
 }
+
+// AuthService: internal/rest/auth.go で宣言
+type AuthService interface {
+    GetByUUID(ctx context.Context, uuid string) (domain.User, error)
+}
 ```
 
 `Update` は ID（`int64`）・name・description を受け取り、更新後の `*domain.Group` を返す。`Delete` は ID（`int64`）を受け取り、soft delete を実行する（成功時は `nil`、対象未存在時は `ErrNotFound`）。
@@ -91,7 +105,7 @@ type UserService interface {
 
 `RemoveGroupMembers` は handler 層で `user_ids` の空チェック（`len == 0` → 400）を行い、service 層でまず `deduplicateUint64` によるユーザー ID 重複除去を行い、グループ存在確認後に repository へ委譲する。`deduplicateUint64` は `AddGroupMembers` / `RemoveGroupMembers` の両方で service 層に実装されており、COUNT 比較や `RowsAffected` 比較の正確性を保証する。
 
-## リポジトリインターフェース（`GroupRepository`、`group.UserRepository`、`user.UserRepository`）
+## リポジトリインターフェース（`GroupRepository`、`group.UserRepository`、`user.UserRepository`、`auth.UserRepository`）
 
 それぞれのユースケース層が消費側でインターフェースを宣言する。
 
@@ -119,6 +133,11 @@ type UserRepository interface {
 type UserRepository interface {
     ListUsers(ctx context.Context, q string, limit, offset int) ([]domain.User, int, error)
 }
+
+// auth.UserRepository は認証サービスが使うユーザーデータアクセスのインターフェース（auth/service.go で宣言）
+type UserRepository interface {
+    GetByUUID(ctx context.Context, uuid string) (domain.User, error)
+}
 ```
 
 `Update` は DB の `groups` テーブルを `WHERE id = ? AND deleted_at IS NULL` で更新し、`RowsAffected() == 0` なら `ErrNotFound` を返す。更新後に `GetByID` で最新状態を取得して返す。`Delete` は `UPDATE groups SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL` で soft delete し、`RowsAffected() == 0` なら `ErrNotFound` を返す。
@@ -131,4 +150,4 @@ type UserRepository interface {
 
 `RemoveGroupMembers` は service 層でグループ存在確認を行い（`GetByID` 経由）、repository 層でトランザクション内に `DELETE FROM group_members WHERE group_id = ? AND user_id IN (?)` を実行する。`RowsAffected()` が `len(userIDs)` と一致しない場合（非メンバーが含まれる）は `ErrNotFound` を返してロールバックする。handler 層で `user_ids` の空チェック（`len == 0` → 400）を行う。成功時は `204 No Content` を返す。
 
-> **補足**: `mysql.UserRepository` は `group.UserRepository`（`GetByID`）と `user.UserRepository`（`ListUsers`）の両インターフェースを実装する単一の struct。`app/main.go` で `mysqlRepo.NewUserRepository(db)` で 1 インスタンスを生成し、`group.NewService` と `user.NewService` の両方に渡す。
+> **補足**: `mysql.UserRepository` は `group.UserRepository`（`GetByID`、`CountByIDs`）、`user.UserRepository`（`ListUsers`）、`auth.UserRepository`（`GetByUUID`）の 3 つのインターフェースを実装する単一の struct。`app/main.go` で `mysqlRepo.NewUserRepository(db)` で 1 インスタンスを生成し、`group.NewService`・`user.NewService`・`auth.NewService` の 3 つに渡す。

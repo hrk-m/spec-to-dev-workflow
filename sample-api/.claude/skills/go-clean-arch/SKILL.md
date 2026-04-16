@@ -294,7 +294,7 @@ DB schema 変更を入れるときは、migration file は repo ルートの `db
   - `make db-state` — 適用済み / 未適用のマイグレーション一覧を表示
 
 **Seed（`db/seed/`）**
-- ファイル命名: `001_groups.sql`, `002_users.sql`（連番で管理）
+- ファイル命名: `seed.sql`（全テーブル分を FK 依存順にまとめる）
 - 内容: DML のみ（INSERT, TRUNCATE など）
 - Makefile: `make db-seed`（冪等に設計すること）
 
