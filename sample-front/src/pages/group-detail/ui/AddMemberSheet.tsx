@@ -1,11 +1,14 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Box, Button, Checkbox, Flex, Skeleton, Spinner, Text, TextField } from "@radix-ui/themes";
 import { FaMagnifyingGlass } from "react-icons/fa6";
 
 import { addGroupMembers } from "@/pages/group-detail/api/add-group-members";
 import { useGroupDetail } from "@/pages/group-detail/model/group-detail-state";
 import { clearMemberListCache } from "@/pages/group-detail/model/member-list";
-import { useNonMemberList } from "@/pages/group-detail/model/useNonMemberList";
+import {
+  clearNonMemberListCache,
+  useNonMemberList,
+} from "@/pages/group-detail/model/useNonMemberList";
 import { appColors } from "@/shared/ui";
 
 const SKELETON_ROWS = 5;
@@ -136,6 +139,11 @@ function UserAvatar({ firstName, lastName }: { firstName: string; lastName: stri
 
 export function AddMemberSheet({ groupId, onClose }: AddMemberSheetProps) {
   const { refetch } = useGroupDetail(groupId);
+
+  useEffect(() => {
+    clearNonMemberListCache(groupId);
+  }, [groupId]);
+
   const {
     users,
     isLoading,

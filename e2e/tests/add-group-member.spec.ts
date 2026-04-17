@@ -363,4 +363,40 @@ test.describe("グループメンバー追加", () => {
       await expect(dialog.getByText("Suzuki Hanako")).not.toBeVisible();
     },
   );
+
+  // TC-16: メンバー追加後に AddMemberSheet を再度開くと追加済みユーザーが非メンバーリストに表示されない
+  test(
+    "[TC-16] メンバー追加後に AddMemberSheet を再度開くと追加済みユーザーが非メンバーリストに表示されない（キャッシュクリア確認）",
+    async ({ page }) => {
+      // POST を実際に通す（DB に追加される）
+      // 追加後の GET /non-members は実際の API を呼んで最新データを返す
+      await page.goto(GROUP_1_URL);
+      await page.waitForLoadState("networkidle");
+
+      // 1st open: AddMemberSheet を開き、Tanaka Jiro が非メンバー一覧にいることを確認
+      await page.getByRole("button", { name: "メンバー追加" }).click();
+      await page.waitForSelector('[role="dialog"]');
+      const dialog = page.getByRole("dialog");
+      await expect(dialog.getByText("Tanaka Jiro")).toBeVisible({ timeout: 5000 });
+
+      // Tanaka Jiro を選択して「一括追加」
+      await dialog
+        .getByRole("button")
+        .filter({ hasText: "Tanaka Jiro" })
+        .click();
+      await dialog.getByRole("button", { name: "一括追加" }).click();
+
+      // シートが閉じるまで待つ
+      await expect(dialog).not.toBeVisible({ timeout: 5000 });
+
+      // 2nd open: AddMemberSheet を再度開く → キャッシュがクリアされ新鮮なデータが取得される
+      await page.getByRole("button", { name: "メンバー追加" }).click();
+      await page.waitForSelector('[role="dialog"]');
+      const dialog2 = page.getByRole("dialog");
+      await page.waitForLoadState("networkidle");
+
+      // 追加済みの Tanaka Jiro は非メンバーリストに表示されない
+      await expect(dialog2.getByText("Tanaka Jiro")).not.toBeVisible({ timeout: 5000 });
+    },
+  );
 });

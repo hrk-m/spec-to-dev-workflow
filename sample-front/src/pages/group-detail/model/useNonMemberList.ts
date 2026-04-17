@@ -14,8 +14,12 @@ type NonMemberListState = {
 
 const nonMemberListCache = new Map<number, NonMemberListState>();
 
-export function clearNonMemberListCache() {
-  nonMemberListCache.clear();
+export function clearNonMemberListCache(groupId?: number): void {
+  if (groupId !== undefined) {
+    nonMemberListCache.delete(groupId);
+  } else {
+    nonMemberListCache.clear();
+  }
 }
 
 export function useNonMemberList(groupId: number) {

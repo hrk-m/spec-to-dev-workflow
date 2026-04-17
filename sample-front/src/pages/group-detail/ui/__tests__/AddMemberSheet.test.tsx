@@ -4,11 +4,15 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { addGroupMembers } from "@/pages/group-detail/api/add-group-members";
-import { useNonMemberList } from "@/pages/group-detail/model/useNonMemberList";
+import {
+  clearNonMemberListCache,
+  useNonMemberList,
+} from "@/pages/group-detail/model/useNonMemberList";
 import { AddMemberSheet } from "@/pages/group-detail/ui/AddMemberSheet";
 
 vi.mock("@/pages/group-detail/model/useNonMemberList", () => ({
   useNonMemberList: vi.fn(),
+  clearNonMemberListCache: vi.fn(),
 }));
 
 vi.mock("@/pages/group-detail/api/add-group-members", () => ({
@@ -249,5 +253,11 @@ describe("AddMemberSheet", () => {
     // Existing items are still displayed
     expect(screen.getByText("山田 太郎")).toBeInTheDocument();
     expect(screen.getByText("鈴木 花子")).toBeInTheDocument();
+  });
+
+  it("AddMemberSheet がマウントされたとき、clearNonMemberListCache(groupId) が呼ばれる", () => {
+    render(<AddMemberSheet groupId={42} onClose={mockOnClose} />);
+
+    expect(clearNonMemberListCache).toHaveBeenCalledWith(42);
   });
 });

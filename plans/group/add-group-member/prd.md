@@ -102,6 +102,19 @@
     - 終了
 ```
 
+#### フロントエンド 処理フロー（AddMemberSheet マウント時）
+
+```
+1. 開始
+2. AddMemberSheet がマウントされる（シートが開かれる）
+3. useEffect が実行される（deps: [groupId]）
+4. clearNonMemberListCache(groupId) を呼び出して非メンバーリストキャッシュをクリア
+5. useNonMemberList(groupId) がキャッシュなしの状態で初期化される
+   ※ clearNonMemberListCache(groupId) は useNonMemberList(groupId) 呼び出しより前に実行する
+6. GET /api/v1/groups/:id/non-members?limit=100&offset=0 を送信（最新データを取得）
+7. 終了
+```
+
 #### フロントエンド 処理フロー（AddMemberSheet 内の検索）
 
 ```
@@ -147,8 +160,8 @@
    - 存在しない（ErrNotFound）→
       - 404 Not Found { "message": "your requested item is not found" } を返す
       - 終了
-9. 各 user_id について UserRepository.GetByID(ctx, userID) でユーザー存在確認（WHERE id = ? AND deleted_at IS NULL）
-   - 1 件でも存在しない（ErrNotFound）→
+9. UserRepository.CountByIDs(ctx, userIDs) で全ユーザーの存在確認を 1 回の COUNT クエリで行う（WHERE id IN (?) AND deleted_at IS NULL）
+   - count != len(userIDs)（1 件でも存在しない）→
       - 404 Not Found { "message": "your requested item is not found" } を返す
       - 終了
 10. 各 user_id について group_members に既存レコードがないか確認（重複チェック）
@@ -306,6 +319,7 @@
 | 2   | 正常系 | 検索入力で未所属ユーザーが絞り込まれる        | q パラメータつき API が呼ばれ、一覧が更新される            |
 | 3   | 正常系 | 追加成功後に MemberList が再取得される        | シートが閉じ、MemberList と member_count が更新される      |
 | 4   | 異常系 | 409 エラー時にエラーメッセージを表示          | 「選択したユーザーはすでにメンバーです」が表示される       |
+| 5   | 正常系 | AddMemberSheet がマウントされたとき           | `clearNonMemberListCache(groupId)` が呼ばれる              |
 
 ---
 
@@ -333,9 +347,9 @@
 | --------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
 | `sample-front/src/pages/group-detail/api/fetch-non-members.ts`        | `GET /api/v1/groups/:id/non-members` 呼び出し                                      |
 | `sample-front/src/pages/group-detail/api/add-group-members.ts`        | `POST /api/v1/groups/:id/members` 呼び出し                                         |
-| `sample-front/src/pages/group-detail/model/useNonMemberList.ts`       | 未所属ユーザー一覧取得・クライアントサイドページネーションカスタムフック           |
-| `sample-front/src/pages/group-detail/ui/AddMemberSheet.tsx`           | シート内コンテンツ（検索 + チェックボックスリスト + 一括追加ボタン）               |
-| `sample-front/src/pages/group-detail/ui/GroupDetailContent.tsx`       | 「メンバー追加」ボタン追加・AddMemberSheet の開閉状態管理                          |
+| `sample-front/src/pages/group-detail/model/useNonMemberList.ts`       | `clearNonMemberListCache(groupId?: number)` のシグネチャ変更（引数追加）。指定時は `nonMemberListCache.delete(groupId)` で単一エントリのみクリア、未指定時は `nonMemberListCache.clear()` で全クリア |
+| `sample-front/src/pages/group-detail/ui/AddMemberSheet.tsx`           | マウント時 `useEffect(() => { clearNonMemberListCache(groupId); }, [groupId])` を追加（`useNonMemberList(groupId)` 呼び出しより前に配置）                                                               |
+| `sample-front/src/pages/group-detail/ui/GroupDetailContent.tsx`       | 「メンバー追加」ボタン追加・AddMemberSheet の開閉状態管理                                                                                                                                               |
 
 ---
 
@@ -355,6 +369,8 @@
 12. シート内に検索入力 + チェックボックス付きユーザー一覧 + 「一括追加」ボタンが表示される
 13. 追加成功後にシートを閉じ、MemberList と member_count（GroupDetail）を再取得する
 14. 409 エラー時はシート内にエラーメッセージを表示する
+15. `AddMemberSheet` がマウントされるたびに `clearNonMemberListCache(groupId)` を呼び出し、非メンバーリストのキャッシュをクリアする（他ユーザーの変更も反映される）
+16. `clearNonMemberListCache` は `groupId?: number` を受け取り、指定時は該当グループのキャッシュのみクリアする
 
 ---
 

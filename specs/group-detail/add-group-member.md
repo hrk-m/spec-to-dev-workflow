@@ -12,7 +12,8 @@
 ユーザーが「メンバー追加」ボタンをクリックする
   │
   ├─ AddMemberSheet が SheetStack に積まれ、右からスライドインして表示される
-  ├─ GET /api/v1/groups/:id/non-members?limit=100&offset=0 を送信する
+  ├─ AddMemberSheet のマウント時に clearNonMemberListCache(groupId) を呼び出して非メンバーキャッシュをクリアする
+  ├─ GET /api/v1/groups/:id/non-members?limit=100&offset=0 を送信する（常に最新データを取得）
   ├─ 未所属ユーザー一覧がシート内に表示される
   ├─ ユーザーが検索キーワードを入力する（300ms デバウンス）
   │    ├─ GET /api/v1/groups/:id/non-members?q={keyword}&limit=100&offset=0 を送信する
@@ -56,7 +57,7 @@
 | -------------------- | -------------- | ---------------------------------------------------------------------------------------------------------- |
 | `GroupDetailContent` | コンポーネント | 「メンバー追加」ボタンを配置し、`openSheet()` で AddMemberSheet を SheetStack に登録する                   |
 | `AddMemberSheet`     | コンポーネント | 検索入力・チェックボックス付きユーザー一覧・「一括追加」ボタンを提供するシートコンテンツ |
-| `useNonMemberList`   | カスタム Hook  | 未所属ユーザー一覧取得・クライアントサイドページネーション・検索クエリ管理を担う                           |
+| `useNonMemberList`   | カスタム Hook  | 未所属ユーザー一覧取得・クライアントサイドページネーション・検索クエリ管理を担う。`clearNonMemberListCache(groupId?: number)` でキャッシュをクリアできる（`groupId` 指定時は該当グループのみ、未指定時は全件） |
 | `addGroupMembers`    | API 関数       | `POST /api/v1/groups/:id/members` を呼び出す                                                               |
 | `selectedIds`        | state          | チェックされたユーザー ID の集合（`Set<number>`）                                                          |
 | `submitError`        | state          | 一括追加の API エラーメッセージ                                                                            |
@@ -80,6 +81,7 @@
 - [ ] GET /non-members が失敗するとシート内にエラーメッセージが表示される
 - [ ] 未所属ユーザーがいない場合に「追加できるユーザーがいません。」が表示される
 - [ ] シートモードで「メンバー追加」ボタンをクリックすると AddMemberSheet が 2 枚目のシートとして積まれる
+- [ ] メンバー追加後に AddMemberSheet を再度開くと、追加済みユーザーが非メンバーリストに表示されない（マウント時キャッシュクリアにより最新データを取得）
 ```
 
 ---
