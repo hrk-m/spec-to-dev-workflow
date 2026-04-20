@@ -111,12 +111,12 @@ db-reset:
 db-state:
 	@echo "Status | Version            | Migration"
 	@echo "-------|--------------------|--------------------------"
-	@applied=$$($(DOCKER_MYSQL_APP) \
+	@current=$$($(DOCKER_MYSQL_APP) \
 		-s --skip-column-names -e "SELECT version FROM schema_migrations;" 2>/dev/null); \
 	for f in db/migrate/*.up.sql; do \
 		version=$$(basename $$f | cut -d_ -f1); \
 		name=$$(basename $$f .up.sql | cut -d_ -f2-); \
-		if echo "$$applied" | grep -qx "$$version"; then \
+		if [ -n "$$current" ] && [ "$$version" -le "$$current" ]; then \
 			printf "up     | %s | %s\n" "$$version" "$$name"; \
 		else \
 			printf "down   | %s | %s\n" "$$version" "$$name"; \

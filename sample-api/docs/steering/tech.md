@@ -48,7 +48,7 @@ db/seed/                    →  Seed data (DML only)
 - `domain/errors.go` にセンチネルエラーを集約
 - `internal/rest/errors.go` でエラーを HTTP ステータスコードにマッピング（`ErrBadParamInput` → 400、`ErrNotFound` → 404、`ErrConflict` → 409、`ErrInternalServerError` → 500、その他 → 500）
 - ハンドラは `ResponseError{Message}` で JSON エラーレスポンスを返す
-- パスパラメータの ID は `strconv.Atoi` でパースし、変換失敗または `< 1` の場合は `getStatusCode` を通さず直接 400 を返す
+- パスパラメータの ID は `internal/rest/params.go` の `parsePathID`（`strconv.ParseUint` ベース）でパースし、変換失敗または `< 1` の場合は `getStatusCode` を通さず直接 400 を返す。同ファイルに `parseLimit`・`parseOffset` も定義されており、クエリパラメータのパースを共通化している
 
 ## コーディング規約
 
@@ -76,9 +76,9 @@ type GroupService interface {
     ListGroups(ctx context.Context, q string, limit, offset int) ([]domain.Group, int, error)
     GetByID(ctx context.Context, id uint64) (domain.Group, error)
     ListGroupMembers(ctx context.Context, id uint64, limit, offset int, q string) ([]domain.User, int, error)
-    Store(ctx context.Context, name, description string) (domain.Group, error)
-    Update(ctx context.Context, id int64, name, description string) (*domain.Group, error)
-    Delete(ctx context.Context, id int64) error
+    Store(ctx context.Context, name, description string, userID uint64) (domain.Group, error)
+    Update(ctx context.Context, id int64, name, description string, userID uint64) (*domain.Group, error)
+    Delete(ctx context.Context, id int64, userID uint64) error
     ListNonGroupMembers(ctx context.Context, groupID uint64, limit, offset int, q string) ([]domain.User, int, error)
     AddGroupMembers(ctx context.Context, groupID uint64, userIDs []uint64) ([]domain.User, error)
     RemoveGroupMembers(ctx context.Context, groupID uint64, userIDs []uint64) error
@@ -95,9 +95,9 @@ type AuthService interface {
 }
 ```
 
-`Update` は ID（`int64`）・name・description を受け取り、更新後の `*domain.Group` を返す。`Delete` は ID（`int64`）を受け取り、soft delete を実行する（成功時は `nil`、対象未存在時は `ErrNotFound`）。
+`Update` は ID（`int64`）・name・description・`userID`（操作者の `domain.User.ID`）を受け取り、更新後の `*domain.Group` を返す。`Delete` は ID（`int64`）と `userID` を受け取り、soft delete を実行する（成功時は `nil`、対象未存在時は `ErrNotFound`）。`userID` は `groups.updated_by` カラムに記録される（`20260417130000_add_updated_by_to_groups.up.sql` で追加）。
 
-`Update` および `Delete` は、`GetByID` や `ListGroupMembers` と同様に、service 層で `id < minID`（`minID = 1`）のバリデーションを行い、不正な ID には `ErrBadParamInput` を返す（repository は呼び出さない）。
+`Update` および `Delete` は、`GetByID` や `ListGroupMembers` と同様に、service 層で `id < minID`（`minID = 1`）のバリデーションを行い、不正な ID には `ErrBadParamInput` を返す（repository は呼び出さない）。`userID` は handler 層でコンテキストから取得した `authUser.ID` を渡す。
 
 `ListNonGroupMembers` は `groupID` の存在確認を service 層で行い（`GetByID` 経由）、存在しない場合は `ErrNotFound` を返す。
 
@@ -115,9 +115,9 @@ type GroupRepository interface {
     ListGroups(ctx context.Context, q string, limit, offset int) ([]domain.Group, int, error)
     GetByID(ctx context.Context, id uint64) (domain.Group, error)
     ListGroupMembers(ctx context.Context, id uint64, limit, offset int, q string) ([]domain.User, int, error)
-    Store(ctx context.Context, name, description string) (domain.Group, error)
-    Update(ctx context.Context, id int64, name, description string) (*domain.Group, error)
-    Delete(ctx context.Context, id int64) error
+    Store(ctx context.Context, name, description string, userID uint64) (domain.Group, error)
+    Update(ctx context.Context, id int64, name, description string, userID uint64) (*domain.Group, error)
+    Delete(ctx context.Context, id int64, userID uint64) error
     ListNonGroupMembers(ctx context.Context, groupID uint64, limit, offset int, q string) ([]domain.User, int, error)
     AddGroupMembers(ctx context.Context, groupID uint64, userIDs []uint64) ([]domain.User, error)
     RemoveGroupMembers(ctx context.Context, groupID uint64, userIDs []uint64) error
@@ -125,7 +125,6 @@ type GroupRepository interface {
 
 // group.UserRepository はグループサービスが使うユーザーデータアクセスのインターフェース（group/service.go で宣言）
 type UserRepository interface {
-    GetByID(ctx context.Context, id uint64) (domain.User, error)
     CountByIDs(ctx context.Context, ids []uint64) (int, error)
 }
 
@@ -140,14 +139,14 @@ type UserRepository interface {
 }
 ```
 
-`Update` は DB の `groups` テーブルを `WHERE id = ? AND deleted_at IS NULL` で更新し、`RowsAffected() == 0` なら `ErrNotFound` を返す。更新後に `GetByID` で最新状態を取得して返す。`Delete` は `UPDATE groups SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL` で soft delete し、`RowsAffected() == 0` なら `ErrNotFound` を返す。
+`Update` は DB の `groups` テーブルを `UPDATE groups SET name = ?, description = ?, updated_by = ? WHERE id = ? AND deleted_at IS NULL` で更新し、`RowsAffected() == 0` なら `ErrNotFound` を返す。更新後に `GetByID` で最新状態を取得して返す。`Delete` は `UPDATE groups SET deleted_at = NOW(), updated_by = ? WHERE id = ? AND deleted_at IS NULL` で soft delete し、`RowsAffected() == 0` なら `ErrNotFound` を返す。
 
 `ListNonGroupMembers` は `users` テーブルから `group_members` に存在しないユーザーを返す。total は `q` フィルタ込みの非メンバー数（`q` が空の場合は全非メンバー数と一致する）。名前検索は `users.search_key` カラムへの LIKE 検索で行う。`search_key` は `CONCAT(first_name, last_name, last_name, first_name)` を値とする VIRTUAL GENERATED カラムで、`db/migrate/20260411120000_add_search_key_to_users.up.sql` で追加された。
 
-`group.UserRepository.GetByID` および `CountByIDs` は `mysql.UserRepository` が実装する。`GetByID` は `users` テーブルから `deleted_at IS NULL` の条件で単一ユーザーを取得し、存在しない場合は `ErrNotFound` を返す。`CountByIDs` は `SELECT COUNT(DISTINCT id) FROM users WHERE id IN (?) AND deleted_at IS NULL` で存在するユーザー数を 1 クエリで返す。
+`group.UserRepository.CountByIDs` は `mysql.UserRepository` が実装する。`CountByIDs` は `SELECT COUNT(DISTINCT id) FROM users WHERE id IN (?) AND deleted_at IS NULL` で存在するユーザー数を 1 クエリで返す。
 
 `AddGroupMembers` はトランザクション内で `group_members` へ一括 INSERT する。INSERT 前に重複チェックを行い、既存メンバーが含まれる場合は `ErrConflict` を返す。成功後は追加したユーザーを `users` テーブルから SELECT して返す。
 
 `RemoveGroupMembers` は service 層でグループ存在確認を行い（`GetByID` 経由）、repository 層でトランザクション内に `DELETE FROM group_members WHERE group_id = ? AND user_id IN (?)` を実行する。`RowsAffected()` が `len(userIDs)` と一致しない場合（非メンバーが含まれる）は `ErrNotFound` を返してロールバックする。handler 層で `user_ids` の空チェック（`len == 0` → 400）を行う。成功時は `204 No Content` を返す。
 
-> **補足**: `mysql.UserRepository` は `group.UserRepository`（`GetByID`、`CountByIDs`）、`user.UserRepository`（`ListUsers`）、`auth.UserRepository`（`GetByUUID`）の 3 つのインターフェースを実装する単一の struct。`app/main.go` で `mysqlRepo.NewUserRepository(db)` で 1 インスタンスを生成し、`group.NewService`・`user.NewService`・`auth.NewService` の 3 つに渡す。
+> **補足**: `mysql.UserRepository` は `group.UserRepository`（`CountByIDs`）、`user.UserRepository`（`ListUsers`）、`auth.UserRepository`（`GetByUUID`）の 3 つのインターフェースを実装する単一の struct。加えて `GetByID` と `GetByUUID` も実装しており、`GetByID` は統合テスト向けに公開されている。`app/main.go` で `mysqlRepo.NewUserRepository(db)` で 1 インスタンスを生成し、`group.NewService`・`user.NewService`・`auth.NewService` の 3 つに渡す。

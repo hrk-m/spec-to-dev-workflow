@@ -41,7 +41,7 @@ test.describe("グループ作成モーダル", () => {
             id: createdGroupId,
             name: "Test Group E2E",
             description: "E2E test description",
-            member_count: 0,
+            member_count: 1,
           }),
         });
       } else {
@@ -82,7 +82,7 @@ test.describe("グループ作成モーダル", () => {
             id: createdGroupId,
             name: "No Description Group",
             description: "",
-            member_count: 0,
+            member_count: 1,
           }),
         });
       } else {
@@ -165,7 +165,7 @@ test.describe("グループ作成モーダル", () => {
             id: 9999,
             name: "Delayed Group",
             description: "",
-            member_count: 0,
+            member_count: 1,
           }),
         });
       } else {

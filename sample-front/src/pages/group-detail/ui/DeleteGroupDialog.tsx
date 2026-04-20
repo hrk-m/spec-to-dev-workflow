@@ -15,12 +15,7 @@ export function DeleteGroupDialog({
   onOpenChange,
   onSuccess,
 }: DeleteGroupDialogProps) {
-  const { isLoading, error, submit } = useDeleteGroup({
-    onSuccess: () => {
-      onOpenChange(false);
-      onSuccess();
-    },
-  });
+  const { isLoading, error, submit } = useDeleteGroup({ onSuccess });
 
   return (
     <AlertDialog.Root open={open} onOpenChange={onOpenChange}>
@@ -42,14 +37,19 @@ export function DeleteGroupDialog({
               Cancel
             </Button>
           </AlertDialog.Cancel>
-          <Button
-            color="red"
-            radius="full"
-            disabled={isLoading}
-            onClick={() => void submit(groupId)}
-          >
-            Delete
-          </Button>
+          <AlertDialog.Action>
+            <Button
+              color="red"
+              radius="full"
+              disabled={isLoading}
+              onClick={async (e) => {
+                e.preventDefault();
+                await submit(groupId);
+              }}
+            >
+              Delete
+            </Button>
+          </AlertDialog.Action>
         </Flex>
       </AlertDialog.Content>
     </AlertDialog.Root>

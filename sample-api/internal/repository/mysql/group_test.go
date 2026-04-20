@@ -118,8 +118,8 @@ func TestListGroups_ExcludesDeleted(t *testing.T) {
 	db := testDB(t)
 	defer db.Close()
 
-	// Insert a deleted group
-	result, err := db.Exec("INSERT INTO `groups` (name, description, deleted_at) VALUES ('Deleted', '', NOW())")
+	// Insert a deleted group (updated_by=1 is required after migration).
+	result, err := db.Exec("INSERT INTO `groups` (name, description, updated_by, deleted_at) VALUES ('Deleted', '', 1, NOW())")
 	require.NoError(t, err)
 
 	deletedID, err := result.LastInsertId()
@@ -138,17 +138,29 @@ func TestStore_OK(t *testing.T) {
 	db := testDB(t)
 	defer db.Close()
 
+	// Use user id=1 (Taro Yamada) as the creator.
+	const creatorID = uint64(1)
+
 	repo := mysqlRepo.NewGroupRepository(db)
-	g, err := repo.Store(context.Background(), "New Group", "A new group description")
+	g, err := repo.Store(context.Background(), "New Group", "A new group description", creatorID)
 
 	require.NoError(t, err)
 	assert.NotZero(t, g.ID)
 	assert.Equal(t, "New Group", g.Name)
 	assert.Equal(t, "A new group description", g.Description)
-	assert.Equal(t, 0, g.MemberCount)
+	assert.Equal(t, 1, g.MemberCount)
 
-	// Cleanup
-	defer db.Exec("DELETE FROM `groups` WHERE id = ?", g.ID) //nolint:errcheck
+	// Verify group_members row was inserted.
+	var memberCount int
+	require.NoError(t, db.QueryRow(
+		"SELECT COUNT(*) FROM group_members WHERE group_id = ? AND user_id = ?",
+		g.ID, creatorID,
+	).Scan(&memberCount))
+	assert.Equal(t, 1, memberCount)
+
+	// Cleanup (group_members cascade or delete explicitly)
+	db.Exec("DELETE FROM group_members WHERE group_id = ?", g.ID) //nolint:errcheck
+	db.Exec("DELETE FROM `groups` WHERE id = ?", g.ID)            //nolint:errcheck
 }
 
 func TestStore_DBError(t *testing.T) {
@@ -157,18 +169,61 @@ func TestStore_DBError(t *testing.T) {
 	db.Close()
 
 	repo := mysqlRepo.NewGroupRepository(db)
-	g, err := repo.Store(context.Background(), "Should Fail", "desc")
+	g, err := repo.Store(context.Background(), "Should Fail", "desc", uint64(1))
 
 	assert.ErrorIs(t, err, domain.ErrInternalServerError)
 	assert.Equal(t, domain.Group{}, g)
+}
+
+func TestStore_GroupsInsertFailed_FKViolation(t *testing.T) {
+	db := testDB(t)
+	defer db.Close()
+
+	// Use a non-existent user id for updated_by to trigger FK violation on groups INSERT.
+	// fk_groups_updated_by enforces that updated_by must reference users(id).
+	const nonExistentCreatorID = uint64(888888888)
+
+	repo := mysqlRepo.NewGroupRepository(db)
+	g, err := repo.Store(context.Background(), "FK Fail Group", "desc", nonExistentCreatorID)
+
+	assert.ErrorIs(t, err, domain.ErrInternalServerError)
+	assert.Equal(t, domain.Group{}, g)
+
+	// Verify no group was persisted (rollback succeeded).
+	var count int
+	require.NoError(t, db.QueryRow(
+		"SELECT COUNT(*) FROM `groups` WHERE name = 'FK Fail Group'",
+	).Scan(&count))
+	assert.Equal(t, 0, count)
+}
+
+func TestStore_GroupMembersInsertFailed_Rollback(t *testing.T) {
+	db := testDB(t)
+	defer db.Close()
+
+	// Use a non-existent user id to trigger FK violation on group_members INSERT.
+	const nonExistentUserID = uint64(999999999)
+
+	repo := mysqlRepo.NewGroupRepository(db)
+	g, err := repo.Store(context.Background(), "Rollback Group", "desc", nonExistentUserID)
+
+	assert.ErrorIs(t, err, domain.ErrInternalServerError)
+	assert.Equal(t, domain.Group{}, g)
+
+	// Verify no group was persisted (rollback succeeded).
+	var count int
+	require.NoError(t, db.QueryRow(
+		"SELECT COUNT(*) FROM `groups` WHERE name = 'Rollback Group'",
+	).Scan(&count))
+	assert.Equal(t, 0, count)
 }
 
 func TestUpdate_OK(t *testing.T) {
 	db := testDB(t)
 	defer db.Close()
 
-	// Insert a group to update.
-	result, err := db.Exec("INSERT INTO `groups` (name, description) VALUES ('Before Update', 'old desc')")
+	// Insert a group to update (updated_by=1 is required after migration).
+	result, err := db.Exec("INSERT INTO `groups` (name, description, updated_by) VALUES ('Before Update', 'old desc', 1)")
 	require.NoError(t, err)
 
 	id, err := result.LastInsertId()
@@ -176,8 +231,10 @@ func TestUpdate_OK(t *testing.T) {
 
 	defer db.Exec("DELETE FROM `groups` WHERE id = ?", id) //nolint:errcheck
 
+	const updaterID = uint64(1)
+
 	repo := mysqlRepo.NewGroupRepository(db)
-	g, err := repo.Update(context.Background(), id, "After Update", "new desc")
+	g, err := repo.Update(context.Background(), id, "After Update", "new desc", updaterID)
 
 	require.NoError(t, err)
 	assert.Equal(t, uint64(id), g.ID) //nolint:gosec
@@ -186,22 +243,12 @@ func TestUpdate_OK(t *testing.T) {
 	assert.Equal(t, 0, g.MemberCount)
 }
 
-func TestUpdate_NotFound(t *testing.T) {
+func TestUpdate_UpdatedByWritten(t *testing.T) {
 	db := testDB(t)
 	defer db.Close()
 
-	repo := mysqlRepo.NewGroupRepository(db)
-	_, err := repo.Update(context.Background(), 999999999, "name", "desc")
-
-	assert.ErrorIs(t, err, domain.ErrNotFound)
-}
-
-func TestDelete_OK(t *testing.T) {
-	db := testDB(t)
-	defer db.Close()
-
-	// Insert a group to delete.
-	result, err := db.Exec("INSERT INTO `groups` (name, description) VALUES ('To Delete', 'delete me')")
+	// Insert a group with updated_by=1, then update as user=2.
+	result, err := db.Exec("INSERT INTO `groups` (name, description, updated_by) VALUES ('UpdatedBy Test', 'desc', 1)")
 	require.NoError(t, err)
 
 	id, err := result.LastInsertId()
@@ -209,24 +256,89 @@ func TestDelete_OK(t *testing.T) {
 
 	defer db.Exec("DELETE FROM `groups` WHERE id = ?", id) //nolint:errcheck
 
+	const updaterID = uint64(2)
+
 	repo := mysqlRepo.NewGroupRepository(db)
-	err = repo.Delete(context.Background(), id)
+	_, err = repo.Update(context.Background(), id, "UpdatedBy Test", "desc", updaterID)
+	require.NoError(t, err)
+
+	// Verify updated_by was written correctly.
+	var updatedBy uint64
+	require.NoError(t, db.QueryRow("SELECT updated_by FROM `groups` WHERE id = ?", id).Scan(&updatedBy))
+	assert.Equal(t, updaterID, updatedBy)
+}
+
+func TestUpdate_NotFound(t *testing.T) {
+	db := testDB(t)
+	defer db.Close()
+
+	repo := mysqlRepo.NewGroupRepository(db)
+	_, err := repo.Update(context.Background(), 999999999, "name", "desc", uint64(1))
+
+	assert.ErrorIs(t, err, domain.ErrNotFound)
+}
+
+// Case #10: Normal - DELETE succeeds -> deleted_at and updated_by are set correctly in DB.
+func TestDelete_OK(t *testing.T) {
+	db := testDB(t)
+	defer db.Close()
+
+	// Insert a group to delete (updated_by=1 is required after migration).
+	result, err := db.Exec("INSERT INTO `groups` (name, description, updated_by) VALUES ('To Delete', 'delete me', 1)")
+	require.NoError(t, err)
+
+	id, err := result.LastInsertId()
+	require.NoError(t, err)
+
+	defer db.Exec("DELETE FROM `groups` WHERE id = ?", id) //nolint:errcheck
+
+	const deleterUserID = uint64(99)
+
+	repo := mysqlRepo.NewGroupRepository(db)
+	err = repo.Delete(context.Background(), id, deleterUserID)
 
 	require.NoError(t, err)
 
-	// Verify deleted_at is set.
+	// Verify deleted_at is set and updated_by matches the deleter's userID.
 	var deletedAt sql.NullTime
-	row := db.QueryRow("SELECT deleted_at FROM `groups` WHERE id = ?", id)
-	require.NoError(t, row.Scan(&deletedAt))
+	var updatedBy uint64
+	row := db.QueryRow("SELECT deleted_at, updated_by FROM `groups` WHERE id = ?", id)
+	require.NoError(t, row.Scan(&deletedAt, &updatedBy))
 	assert.True(t, deletedAt.Valid)
+	assert.Equal(t, deleterUserID, updatedBy)
 }
 
+// Case #11: Error - non-existent id -> ErrNotFound.
 func TestDelete_NotFound(t *testing.T) {
 	db := testDB(t)
 	defer db.Close()
 
 	repo := mysqlRepo.NewGroupRepository(db)
-	err := repo.Delete(context.Background(), 999999999)
+	err := repo.Delete(context.Background(), 999999999, uint64(1))
+
+	assert.ErrorIs(t, err, domain.ErrNotFound)
+}
+
+// Case #12: Error - already soft-deleted group -> ErrNotFound.
+func TestDelete_AlreadyDeleted(t *testing.T) {
+	db := testDB(t)
+	defer db.Close()
+
+	// Insert a group (updated_by=1 is required after migration).
+	result, err := db.Exec("INSERT INTO `groups` (name, description, updated_by) VALUES ('Already Deleted', 'desc', 1)")
+	require.NoError(t, err)
+
+	id, err := result.LastInsertId()
+	require.NoError(t, err)
+
+	defer db.Exec("DELETE FROM `groups` WHERE id = ?", id) //nolint:errcheck
+
+	// Soft-delete the group directly in DB.
+	_, err = db.Exec("UPDATE `groups` SET deleted_at = NOW() WHERE id = ?", id)
+	require.NoError(t, err)
+
+	repo := mysqlRepo.NewGroupRepository(db)
+	err = repo.Delete(context.Background(), id, uint64(1))
 
 	assert.ErrorIs(t, err, domain.ErrNotFound)
 }

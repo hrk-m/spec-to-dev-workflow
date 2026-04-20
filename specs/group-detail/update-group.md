@@ -70,7 +70,7 @@ API エラー（404 / 500 / ネットワークエラー）
 
 | エンドポイント | メソッド | 用途 |
 |---|---|---|
-| `/api/v1/groups/:id` | PUT | グループの name / description を更新する |
+| `/api/v1/groups/:id` | PUT | グループの name / description を更新する（`updated_by` に操作者 ID を記録） |
 
 ---
 

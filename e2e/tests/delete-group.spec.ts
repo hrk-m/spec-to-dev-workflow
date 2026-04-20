@@ -147,4 +147,26 @@ test.describe("グループ削除", () => {
       await expect(dialog.getByText(/internal server error/i)).toBeVisible();
     },
   );
+
+  // TC-08: シート（GroupDetailSheet）内にも [Delete] ボタンが表示される
+  test(
+    "[TC-08] シート（GroupDetailSheet）内にも [Delete] ボタンが表示される",
+    async ({ page }) => {
+      await page.goto("/");
+      await page.waitForLoadState("networkidle");
+      const searchBox = page.getByPlaceholder("Search by name or description");
+      await searchBox.fill("Group 001");
+      await page.waitForTimeout(500);
+      await page
+        .getByRole("button")
+        .filter({ hasText: "Group 001" })
+        .first()
+        .click();
+      await page.waitForSelector('[role="dialog"]');
+
+      // シート内に Delete ボタンが表示される
+      const sheet = page.getByRole("dialog").first();
+      await expect(sheet.getByRole("button", { name: "Delete" })).toBeVisible();
+    },
+  );
 });

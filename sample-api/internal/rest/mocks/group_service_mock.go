@@ -29,19 +29,19 @@ func (m *MockGroupService) ListGroupMembers(ctx context.Context, id uint64, limi
 	return args.Get(0).([]domain.User), args.Int(1), args.Error(2)
 }
 
-func (m *MockGroupService) Store(ctx context.Context, name, description string) (domain.Group, error) {
-	args := m.Called(ctx, name, description)
+func (m *MockGroupService) Store(ctx context.Context, name, description string, userID uint64) (domain.Group, error) {
+	args := m.Called(ctx, name, description, userID)
 	return args.Get(0).(domain.Group), args.Error(1)
 }
 
-func (m *MockGroupService) Update(ctx context.Context, id int64, name, description string) (*domain.Group, error) {
-	args := m.Called(ctx, id, name, description)
+func (m *MockGroupService) Update(ctx context.Context, id int64, name, description string, userID uint64) (*domain.Group, error) {
+	args := m.Called(ctx, id, name, description, userID)
 	g, _ := args.Get(0).(*domain.Group)
 	return g, args.Error(1)
 }
 
-func (m *MockGroupService) Delete(ctx context.Context, id int64) error {
-	args := m.Called(ctx, id)
+func (m *MockGroupService) Delete(ctx context.Context, id int64, userID uint64) error {
+	args := m.Called(ctx, id, userID)
 	return args.Error(0)
 }
 

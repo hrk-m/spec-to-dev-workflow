@@ -66,7 +66,7 @@ Cancel クリック
 
 | エンドポイント | メソッド | 用途 |
 |---|---|---|
-| `/api/v1/groups/:id` | DELETE | グループをソフトデリートする（`deleted_at` に現在時刻を設定） |
+| `/api/v1/groups/:id` | DELETE | グループをソフトデリートする（`deleted_at` に現在時刻を設定し、`updated_by` に操作者 ID を記録） |
 
 ---
 

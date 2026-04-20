@@ -1,38 +1,5 @@
 USE sample;
 
--- groups
-INSERT IGNORE INTO `groups` (id, name, description) VALUES
-(1, 'Group 001', 'Description for Group 001'),
-(2, 'Group 002', 'Description for Group 002'),
-(3, 'Group 003', 'Description for Group 003'),
-(4, 'Group 004', 'Description for Group 004'),
-(5, 'Group 005', 'Description for Group 005'),
-(6, 'Group 006', 'Description for Group 006'),
-(7, 'Group 007', 'Description for Group 007'),
-(8, 'Group 008', 'Description for Group 008'),
-(9, 'Group 009', 'Description for Group 009'),
-(10, 'Group 010', 'Description for Group 010'),
-(11, 'Group 011', 'Description for Group 011'),
-(12, 'Group 012', 'Description for Group 012'),
-(13, 'Group 013', 'Description for Group 013'),
-(14, 'Group 014', 'Description for Group 014'),
-(15, 'Group 015', 'Description for Group 015'),
-(16, 'Group 016', 'Description for Group 016'),
-(17, 'Group 017', 'Description for Group 017'),
-(18, 'Group 018', 'Description for Group 018'),
-(19, 'Group 019', 'Description for Group 019'),
-(20, 'Group 020', 'Description for Group 020'),
-(21, 'Group 021', 'Description for Group 021'),
-(22, 'Group 022', 'Description for Group 022'),
-(23, 'Group 023', 'Description for Group 023'),
-(24, 'Group 024', 'Description for Group 024'),
-(25, 'Group 025', 'Description for Group 025'),
-(26, 'Group 026', 'Description for Group 026'),
-(27, 'Group 027', 'Description for Group 027'),
-(28, 'Group 028', 'Description for Group 028'),
-(29, 'Group 029', 'Description for Group 029'),
-(30, 'Group 030', 'Description for Group 030');
-
 -- users
 INSERT IGNORE INTO users (id, uuid, first_name, last_name) VALUES
 (1,  '00000000-0000-0000-0000-000000000001', 'Taro',   'Yamada'),
@@ -50,6 +17,39 @@ INSERT IGNORE INTO users (id, uuid, first_name, last_name) VALUES
 (13, '00000000-0000-0000-0000-000000000013', 'Sota',   'Matsumoto'),
 (14, '00000000-0000-0000-0000-000000000014', 'Hana',   'Inoue'),
 (15, '00000000-0000-0000-0000-000000000015', 'Yuto',   'Kimura');
+
+-- groups
+INSERT IGNORE INTO `groups` (id, name, description, updated_by) VALUES
+(1, 'Group 001', 'Description for Group 001', 1),
+(2, 'Group 002', 'Description for Group 002', 1),
+(3, 'Group 003', 'Description for Group 003', 1),
+(4, 'Group 004', 'Description for Group 004', 1),
+(5, 'Group 005', 'Description for Group 005', 1),
+(6, 'Group 006', 'Description for Group 006', 1),
+(7, 'Group 007', 'Description for Group 007', 1),
+(8, 'Group 008', 'Description for Group 008', 1),
+(9, 'Group 009', 'Description for Group 009', 1),
+(10, 'Group 010', 'Description for Group 010', 1),
+(11, 'Group 011', 'Description for Group 011', 1),
+(12, 'Group 012', 'Description for Group 012', 1),
+(13, 'Group 013', 'Description for Group 013', 1),
+(14, 'Group 014', 'Description for Group 014', 1),
+(15, 'Group 015', 'Description for Group 015', 1),
+(16, 'Group 016', 'Description for Group 016', 1),
+(17, 'Group 017', 'Description for Group 017', 1),
+(18, 'Group 018', 'Description for Group 018', 1),
+(19, 'Group 019', 'Description for Group 019', 1),
+(20, 'Group 020', 'Description for Group 020', 1),
+(21, 'Group 021', 'Description for Group 021', 1),
+(22, 'Group 022', 'Description for Group 022', 1),
+(23, 'Group 023', 'Description for Group 023', 1),
+(24, 'Group 024', 'Description for Group 024', 1),
+(25, 'Group 025', 'Description for Group 025', 1),
+(26, 'Group 026', 'Description for Group 026', 1),
+(27, 'Group 027', 'Description for Group 027', 1),
+(28, 'Group 028', 'Description for Group 028', 1),
+(29, 'Group 029', 'Description for Group 029', 1),
+(30, 'Group 030', 'Description for Group 030', 1);
 
 -- group_members
 INSERT IGNORE INTO group_members (id, group_id, user_id) VALUES

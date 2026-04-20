@@ -18,7 +18,7 @@
 2. リクエスト: path `id`（整数・1 以上）、リクエストボディなし
 3. `id` が整数に変換できない場合、または 1 未満の場合は 400 を返す
 4. 対象グループが存在しない（または既に論理削除済み）場合は 404 を返す
-5. 論理削除: `UPDATE groups SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL` を実行する
+5. 論理削除: `UPDATE groups SET deleted_at = NOW(), updated_by = ? WHERE id = ? AND deleted_at IS NULL` を実行する
 6. Affected rows = 0 の場合は `domain.ErrNotFound` を返す
 7. 成功時は `204 No Content` を返す（レスポンスボディなし）
 8. DB エラー時は 500 を返す
@@ -73,9 +73,11 @@
 5. id < 1 の場合
    - 400 Bad Request { "message": "given param is not valid" } を返す
    - 終了
-6. Service.Delete(ctx, id) を呼び出す
-7. Repository.Delete(ctx, id) を呼び出す
-8. DB: UPDATE groups SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL を実行
+5.5. c.Get("authUser").(domain.User) で authUser を取得
+   - 型アサーション失敗 → 401 Unauthorized
+6. Service.Delete(ctx, id, authUser.ID) を呼び出す
+7. Repository.Delete(ctx, id, userID) を呼び出す
+8. DB: UPDATE groups SET deleted_at = NOW(), updated_by = ? WHERE id = ? AND deleted_at IS NULL を実行
    - Affected rows = 0 の場合
       - domain.ErrNotFound を返す（→ 404 Not Found）
       - 終了
@@ -117,7 +119,7 @@
 
 ```sql
 UPDATE `groups`
-SET deleted_at = NOW()
+SET deleted_at = NOW(), updated_by = ?
 WHERE id = ? AND deleted_at IS NULL
 ```
 
@@ -144,6 +146,7 @@ WHERE id = ? AND deleted_at IS NULL
 | --------------------------------------------- | ---------------------------------- | ------------------------- | --------------------------------------------------- |
 | `id` が整数に変換不可                         | Handler                            | 400 Bad Request           | `{ "message": "given param is not valid" }`         |
 | `id` が 1 未満                                | Handler                            | 400 Bad Request           | `{ "message": "given param is not valid" }`         |
+| authUser 取得失敗                             | Handler                            | 401 Unauthorized          | `{ "message": "Unauthorized" }`                     |
 | 対象グループが存在しない（削除済み含む）      | Repository                         | 404 Not Found             | `{ "message": "your requested item is not found" }` |
 | DB エラー                                     | Repository                         | 500 Internal Server Error | `{ "message": "internal server error" }`            |
 | ネットワークエラー                            | フロントエンド: API クライアント層 | —                         | ダイアログ内にエラーメッセージ表示                  |
@@ -158,26 +161,27 @@ WHERE id = ? AND deleted_at IS NULL
 
 | #   | 観点   | テスト内容                                               | 期待結果                   |
 | --- | ------ | -------------------------------------------------------- | -------------------------- |
-| 1   | 正常系 | 存在する id で削除                                       | 204 No Content             |
-| 2   | 異常系 | id が文字列                                              | 400 Bad Request            |
-| 3   | 異常系 | id = 0                                                   | 400 Bad Request            |
-| 4   | 異常系 | service が ErrNotFound を返す                            | 404 Not Found              |
-| 5   | 異常系 | service が ErrInternalServerError を返す                 | 500 Internal Server Error  |
+| 1   | 正常系 | authUser あり + 存在する id で削除                       | 204 No Content             |
+| 2   | 異常系 | authUser が取得できない（型アサーション失敗）            | 401 Unauthorized           |
+| 3   | 異常系 | id が文字列                                              | 400 Bad Request            |
+| 4   | 異常系 | id = 0                                                   | 400 Bad Request            |
+| 5   | 異常系 | service が ErrNotFound を返す                            | 404 Not Found              |
+| 6   | 異常系 | service が ErrInternalServerError を返す                 | 500 Internal Server Error  |
 
 **Service テスト** (`group/service_test.go`):
 
 | #   | 観点   | テスト内容                                               | 期待結果                   |
 | --- | ------ | -------------------------------------------------------- | -------------------------- |
-| 6   | 正常系 | repository.Delete 成功                                   | nil を返す                 |
-| 7   | 異常系 | repository.Delete が ErrNotFound を返す                  | ErrNotFound                |
-| 8   | 異常系 | repository.Delete が DB エラー                           | ErrInternalServerError     |
+| 7   | 正常系 | repository.Delete 成功（userID が渡されることを確認）    | nil を返す                 |
+| 8   | 異常系 | repository.Delete が ErrNotFound を返す                  | ErrNotFound                |
+| 9   | 異常系 | repository.Delete が DB エラー                           | ErrInternalServerError     |
 
 **Repository テスト** (`internal/repository/mysql/group_test.go`, integration):
 
 | #   | 観点   | テスト内容                                               | 期待結果                   |
 | --- | ------ | -------------------------------------------------------- | -------------------------- |
-| 9   | 正常系 | DELETE 成功 → deleted_at がセットされる（integration）  | nil                        |
-| 10  | 異常系 | 存在しない id → ErrNotFound                             | ErrNotFound                |
+| 10  | 正常系 | DELETE 成功 → deleted_at と updated_by がセットされる   | nil                        |
+| 11  | 異常系 | 存在しない id → ErrNotFound                             | ErrNotFound                |
 
 **FE: DeleteGroupDialog テスト** (`pages/group-detail/ui/__tests__/DeleteGroupDialog.test.tsx`):
 
@@ -204,14 +208,14 @@ WHERE id = ? AND deleted_at IS NULL
 
 | ファイル                                               | 変更内容                                                                 |
 | ------------------------------------------------------ | ------------------------------------------------------------------------ |
-| `group/service.go`                                     | `GroupRepository` IF に `Delete` 追加・`Service.Delete` 実装             |
-| `group/service_test.go`                                | `Delete` のテスト追加                                                    |
-| `group/mocks/group_repository_mock.go`                 | `Delete` mock メソッド追加                                               |
-| `internal/rest/group.go`                               | `GroupService` IF に `Delete` 追加・DELETE ルート登録・`Delete` ハンドラ実装 |
-| `internal/rest/group_test.go`                          | `Delete` ハンドラのテスト追加                                            |
-| `internal/rest/mocks/group_service_mock.go`            | `Delete` mock メソッド追加                                               |
-| `internal/repository/mysql/group.go`                   | `Delete` メソッド追加（UPDATE + RowsAffected チェック）                  |
-| `internal/repository/mysql/group_test.go`              | `Delete` integration テスト追加                                          |
+| `group/service.go`                                     | `GroupRepository` IF の `Delete` に `userID uint64` を追加・`Service.Delete` シグネチャ更新 |
+| `group/service_test.go`                                | `Delete` のテスト更新（userID 追加、正常系での渡し確認テスト追加）      |
+| `group/mocks/group_repository_mock.go`                 | `Delete` mock の `userID uint64` を追加                                  |
+| `internal/rest/group.go`                               | `GroupService` IF の `Delete` に `userID uint64` を追加・ハンドラで authUser 取得・401 返却・userID 渡し |
+| `internal/rest/group_test.go`                          | `Delete` ハンドラのテスト更新（authUser セット・401 テスト追加）         |
+| `internal/rest/mocks/group_service_mock.go`            | `Delete` mock の `userID uint64` を追加                                  |
+| `internal/repository/mysql/group.go`                   | `Delete` の SQL に `updated_by = ?` を追加・シグネチャに `userID uint64` を追加 |
+| `internal/repository/mysql/group_test.go`              | `Delete` integration テスト更新（deleted_at + updated_by 検証追加）      |
 
 ### sample-front
 
@@ -228,7 +232,6 @@ WHERE id = ? AND deleted_at IS NULL
 
 ## 対象外
 
-- 認証・認可（このエンドポイントは認証不要）
 - グループの物理削除
 - 削除済みグループの復元
 - メンバーの削除（グループ削除時のカスケード処理なし）

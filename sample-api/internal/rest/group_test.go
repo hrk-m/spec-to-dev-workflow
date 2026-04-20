@@ -645,10 +645,11 @@ func TestGroupHandler_Store_OK(t *testing.T) {
 	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
+	c.Set("authUser", domain.User{ID: 1, FirstName: "Taro", LastName: "Yamada"})
 
 	svc := new(mocks.MockGroupService)
-	resp := domain.Group{ID: 1, Name: "Test", Description: "Desc", MemberCount: 0}
-	svc.On("Store", mock.Anything, "Test", "Desc").Return(resp, nil)
+	resp := domain.Group{ID: 1, Name: "Test", Description: "Desc", MemberCount: 1}
+	svc.On("Store", mock.Anything, "Test", "Desc", uint64(1)).Return(resp, nil)
 
 	h := &rest.GroupHandler{Service: svc}
 	err := h.Store(c)
@@ -661,8 +662,49 @@ func TestGroupHandler_Store_OK(t *testing.T) {
 	assert.Equal(t, uint64(1), result.ID)
 	assert.Equal(t, "Test", result.Name)
 	assert.Equal(t, "Desc", result.Description)
-	assert.Equal(t, 0, result.MemberCount)
+	assert.Equal(t, 1, result.MemberCount)
 	svc.AssertExpectations(t)
+}
+
+func TestGroupHandler_Store_BindError(t *testing.T) {
+	e := echo.New()
+	body := strings.NewReader("invalid json")
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/groups", body)
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+
+	svc := new(mocks.MockGroupService)
+	h := &rest.GroupHandler{Service: svc}
+	err := h.Store(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+
+	var result map[string]string
+	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
+	assert.NotEmpty(t, result["message"])
+	svc.AssertNotCalled(t, "Store")
+}
+
+func TestGroupHandler_Store_Unauthorized(t *testing.T) {
+	e := echo.New()
+	body := strings.NewReader(`{"name":"Test","description":"Desc"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/groups", body)
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	// authUser not set in context
+
+	h := &rest.GroupHandler{Service: new(mocks.MockGroupService)}
+	err := h.Store(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
+
+	var result map[string]string
+	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
+	assert.Equal(t, "Unauthorized", result["message"])
 }
 
 func TestGroupHandler_Store_BadParam(t *testing.T) {
@@ -672,9 +714,10 @@ func TestGroupHandler_Store_BadParam(t *testing.T) {
 	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
+	c.Set("authUser", domain.User{ID: 1, FirstName: "Taro", LastName: "Yamada"})
 
 	svc := new(mocks.MockGroupService)
-	svc.On("Store", mock.Anything, "", "Desc").
+	svc.On("Store", mock.Anything, "", "Desc", uint64(1)).
 		Return(domain.Group{}, domain.ErrBadParamInput)
 
 	h := &rest.GroupHandler{Service: svc}
@@ -696,9 +739,10 @@ func TestGroupHandler_Store_InternalError(t *testing.T) {
 	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
+	c.Set("authUser", domain.User{ID: 1, FirstName: "Taro", LastName: "Yamada"})
 
 	svc := new(mocks.MockGroupService)
-	svc.On("Store", mock.Anything, "Test", "Desc").
+	svc.On("Store", mock.Anything, "Test", "Desc", uint64(1)).
 		Return(domain.Group{}, domain.ErrInternalServerError)
 
 	h := &rest.GroupHandler{Service: svc}
@@ -723,10 +767,11 @@ func TestGroupHandler_Update_OK(t *testing.T) {
 	c.SetPath("/api/v1/groups/:id")
 	c.SetParamNames("id")
 	c.SetParamValues("1")
+	c.Set("authUser", domain.User{ID: 1, FirstName: "Taro", LastName: "Yamada"})
 
 	svc := new(mocks.MockGroupService)
 	resp := &domain.Group{ID: 1, Name: "Updated", Description: "New Desc", MemberCount: 5}
-	svc.On("Update", mock.Anything, int64(1), "Updated", "New Desc").Return(resp, nil)
+	svc.On("Update", mock.Anything, int64(1), "Updated", "New Desc", uint64(1)).Return(resp, nil)
 
 	h := &rest.GroupHandler{Service: svc}
 	err := h.Update(c)
@@ -741,6 +786,29 @@ func TestGroupHandler_Update_OK(t *testing.T) {
 	assert.Equal(t, "New Desc", result.Description)
 	assert.Equal(t, 5, result.MemberCount)
 	svc.AssertExpectations(t)
+}
+
+func TestGroupHandler_Update_Unauthorized(t *testing.T) {
+	e := echo.New()
+	body := strings.NewReader(`{"name":"Updated","description":"New Desc"}`)
+	req := httptest.NewRequest(http.MethodPut, "/api/v1/groups/1", body)
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/groups/:id")
+	c.SetParamNames("id")
+	c.SetParamValues("1")
+	// authUser not set in context
+
+	h := &rest.GroupHandler{Service: new(mocks.MockGroupService)}
+	err := h.Update(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
+
+	var result map[string]string
+	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
+	assert.Equal(t, "Unauthorized", result["message"])
 }
 
 func TestGroupHandler_Update_InvalidIDString(t *testing.T) {
@@ -797,9 +865,10 @@ func TestGroupHandler_Update_ServiceBadParam(t *testing.T) {
 	c.SetPath("/api/v1/groups/:id")
 	c.SetParamNames("id")
 	c.SetParamValues("1")
+	c.Set("authUser", domain.User{ID: 1, FirstName: "Taro", LastName: "Yamada"})
 
 	svc := new(mocks.MockGroupService)
-	svc.On("Update", mock.Anything, int64(1), "", "Desc").
+	svc.On("Update", mock.Anything, int64(1), "", "Desc", uint64(1)).
 		Return((*domain.Group)(nil), domain.ErrBadParamInput)
 
 	h := &rest.GroupHandler{Service: svc}
@@ -824,9 +893,10 @@ func TestGroupHandler_Update_ServiceNotFound(t *testing.T) {
 	c.SetPath("/api/v1/groups/:id")
 	c.SetParamNames("id")
 	c.SetParamValues("9999")
+	c.Set("authUser", domain.User{ID: 1, FirstName: "Taro", LastName: "Yamada"})
 
 	svc := new(mocks.MockGroupService)
-	svc.On("Update", mock.Anything, int64(9999), "Updated", "Desc").
+	svc.On("Update", mock.Anything, int64(9999), "Updated", "Desc", uint64(1)).
 		Return((*domain.Group)(nil), domain.ErrNotFound)
 
 	h := &rest.GroupHandler{Service: svc}
@@ -851,9 +921,10 @@ func TestGroupHandler_Update_ServiceInternalError(t *testing.T) {
 	c.SetPath("/api/v1/groups/:id")
 	c.SetParamNames("id")
 	c.SetParamValues("1")
+	c.Set("authUser", domain.User{ID: 1, FirstName: "Taro", LastName: "Yamada"})
 
 	svc := new(mocks.MockGroupService)
-	svc.On("Update", mock.Anything, int64(1), "Updated", "Desc").
+	svc.On("Update", mock.Anything, int64(1), "Updated", "Desc", uint64(1)).
 		Return((*domain.Group)(nil), domain.ErrInternalServerError)
 
 	h := &rest.GroupHandler{Service: svc}
@@ -868,6 +939,7 @@ func TestGroupHandler_Update_ServiceInternalError(t *testing.T) {
 	svc.AssertExpectations(t)
 }
 
+// Case #1: Normal - authUser set + valid id -> service.Delete succeeds -> 204 No Content.
 func TestGroupHandler_Delete_OK(t *testing.T) {
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodDelete, "/api/v1/groups/1", nil)
@@ -876,9 +948,10 @@ func TestGroupHandler_Delete_OK(t *testing.T) {
 	c.SetPath("/api/v1/groups/:id")
 	c.SetParamNames("id")
 	c.SetParamValues("1")
+	c.Set("authUser", domain.User{ID: 42, FirstName: "Taro", LastName: "Yamada"})
 
 	svc := new(mocks.MockGroupService)
-	svc.On("Delete", mock.Anything, int64(1)).Return(nil)
+	svc.On("Delete", mock.Anything, int64(1), uint64(42)).Return(nil)
 
 	h := &rest.GroupHandler{Service: svc}
 	err := h.Delete(c)
@@ -889,6 +962,29 @@ func TestGroupHandler_Delete_OK(t *testing.T) {
 	svc.AssertExpectations(t)
 }
 
+// Case #2: Error - authUser type assertion fails -> 401.
+func TestGroupHandler_Delete_Unauthorized(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodDelete, "/api/v1/groups/1", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPath("/api/v1/groups/:id")
+	c.SetParamNames("id")
+	c.SetParamValues("1")
+	// authUser not set in context
+
+	h := &rest.GroupHandler{Service: new(mocks.MockGroupService)}
+	err := h.Delete(c)
+
+	assert.NoError(t, err)
+	assert.Equal(t, http.StatusUnauthorized, rec.Code)
+
+	var result map[string]string
+	assert.NoError(t, json.NewDecoder(rec.Body).Decode(&result))
+	assert.Equal(t, "Unauthorized", result["message"])
+}
+
+// Case #3: Error - id is a string -> 400.
 func TestGroupHandler_Delete_InvalidIDString(t *testing.T) {
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodDelete, "/api/v1/groups/abc", nil)
@@ -909,6 +1005,7 @@ func TestGroupHandler_Delete_InvalidIDString(t *testing.T) {
 	assert.Equal(t, "given param is not valid", result["message"])
 }
 
+// Case #4: Error - id = 0 -> 400.
 func TestGroupHandler_Delete_ZeroID(t *testing.T) {
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodDelete, "/api/v1/groups/0", nil)
@@ -929,6 +1026,7 @@ func TestGroupHandler_Delete_ZeroID(t *testing.T) {
 	assert.Equal(t, "given param is not valid", result["message"])
 }
 
+// Case #5: Error - service returns ErrNotFound -> 404.
 func TestGroupHandler_Delete_ServiceNotFound(t *testing.T) {
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodDelete, "/api/v1/groups/9999", nil)
@@ -937,9 +1035,10 @@ func TestGroupHandler_Delete_ServiceNotFound(t *testing.T) {
 	c.SetPath("/api/v1/groups/:id")
 	c.SetParamNames("id")
 	c.SetParamValues("9999")
+	c.Set("authUser", domain.User{ID: 1, FirstName: "Taro", LastName: "Yamada"})
 
 	svc := new(mocks.MockGroupService)
-	svc.On("Delete", mock.Anything, int64(9999)).Return(domain.ErrNotFound)
+	svc.On("Delete", mock.Anything, int64(9999), uint64(1)).Return(domain.ErrNotFound)
 
 	h := &rest.GroupHandler{Service: svc}
 	err := h.Delete(c)
@@ -953,6 +1052,7 @@ func TestGroupHandler_Delete_ServiceNotFound(t *testing.T) {
 	svc.AssertExpectations(t)
 }
 
+// Case #6: Error - service returns ErrInternalServerError -> 500.
 func TestGroupHandler_Delete_ServiceInternalError(t *testing.T) {
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodDelete, "/api/v1/groups/1", nil)
@@ -961,9 +1061,10 @@ func TestGroupHandler_Delete_ServiceInternalError(t *testing.T) {
 	c.SetPath("/api/v1/groups/:id")
 	c.SetParamNames("id")
 	c.SetParamValues("1")
+	c.Set("authUser", domain.User{ID: 1, FirstName: "Taro", LastName: "Yamada"})
 
 	svc := new(mocks.MockGroupService)
-	svc.On("Delete", mock.Anything, int64(1)).Return(domain.ErrInternalServerError)
+	svc.On("Delete", mock.Anything, int64(1), uint64(1)).Return(domain.ErrInternalServerError)
 
 	h := &rest.GroupHandler{Service: svc}
 	err := h.Delete(c)

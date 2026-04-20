@@ -9,7 +9,7 @@
 | RDBMS            | MySQL                                                                                                   |
 | バージョン       | {要確認}（Docker Compose で管理）                                                                       |
 | ドキュメント種別 | 手書き                                                                                                  |
-| 最終更新日       | 2026-04-15                                                                                              |
+| 最終更新日       | 2026-04-17                                                                                              |
 
 ---
 
@@ -17,7 +17,7 @@
 
 | テーブル名      | 概要                                                                 | 集約単位                     |
 | --------------- | -------------------------------------------------------------------- | ---------------------------- |
-| `groups`        | グループを表すルートエンティティ。名前・説明を持ちソフトデリート運用 | グループ集約のルート         |
+| `groups`        | グループを表すルートエンティティ。名前・説明・最終操作者を持ちソフトデリート運用 | グループ集約のルート         |
 | `group_members` | グループとユーザーの中間テーブル。group_id と user_id で紐付く       | グループ集約の子エンティティ |
 | `users`         | ユーザーを表すエンティティ。名（first_name）・姓（last_name）を持ちソフトデリート運用 | ユーザー集約のルート         |
 
@@ -27,7 +27,7 @@
 
 ### `groups`
 
-**概要**: グループを表す。名前・説明を持ち、`deleted_at` によるソフトデリート運用。
+**概要**: グループを表す。名前・説明・最終操作者を持ち、`deleted_at` によるソフトデリート運用。
 
 **集約単位**: グループ集約のルートエンティティ
 
@@ -38,13 +38,15 @@
 | `id`          | `BIGINT UNSIGNED` | NOT NULL | AUTO_INCREMENT | グループの識別子（主キー）                    |
 | `name`        | `VARCHAR(255)`    | NOT NULL | なし           | グループ名                                    |
 | `description` | `TEXT`            | NOT NULL | なし           | グループの説明                                |
+| `updated_by`  | `BIGINT UNSIGNED` | NOT NULL | なし           | グループの最終操作者のユーザー ID（FK → `users.id`）。作成・更新・削除のたびに更新される |
 | `deleted_at`  | `DATETIME`        | NULL     | なし           | 論理削除日時。NULL = 有効、非 NULL = 削除済み |
 
 #### 制約
 
-| 種別        | 名前      | 対象カラム | 説明                 |
-| ----------- | --------- | ---------- | -------------------- |
-| PRIMARY KEY | `PRIMARY` | `id`       | グループの一意識別子 |
+| 種別        | 名前                   | 対象カラム                    | 説明                                     |
+| ----------- | ---------------------- | ----------------------------- | ---------------------------------------- |
+| PRIMARY KEY | `PRIMARY`              | `id`                          | グループの一意識別子                     |
+| FOREIGN KEY | `fk_groups_updated_by` | `updated_by` → `users(id)`    | 最終操作者ユーザーへの参照整合性を保証   |
 
 #### インデックス
 
@@ -194,6 +196,7 @@
 | `sample-api/db/migrate/20260403120000_create_tables.up.sql`                      | `groups` / `users` / `group_members` テーブル定義（統合）                      |
 | `sample-api/db/migrate/20260411120000_add_search_key_to_users.up.sql`            | `users` テーブルへの `search_key` VIRTUAL GENERATED COLUMN 追加（add-group-member） |
 | `sample-api/db/migrate/20260415120000_add_uuid_to_users.up.sql`                  | `users` テーブルへの `uuid` カラム追加・既存レコードへ UUID 自動生成（auth/login） |
+| `sample-api/db/migrate/20260417130000_add_updated_by_to_groups.up.sql`           | `groups` テーブルへの `updated_by` カラム + FK 追加（updated_by 対応）             |
 
 ### シードデータファイル一覧
 
@@ -211,6 +214,7 @@ erDiagram
         BIGINT_UNSIGNED id PK
         VARCHAR name
         TEXT description
+        BIGINT_UNSIGNED updated_by FK
         DATETIME deleted_at
     }
     group_members {
@@ -230,6 +234,7 @@ erDiagram
     }
     groups ||--o{ group_members : "has"
     users ||--o{ group_members : "belongs to"
+    users ||--o{ groups : "updated_by"
 ```
 
 ---

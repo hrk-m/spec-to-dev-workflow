@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Box, Button, Dialog, Flex, Text, TextArea, TextField } from "@radix-ui/themes";
 import { FaPlus } from "react-icons/fa6";
 
-import { useCreateGroup } from "@/pages/home/model/group-create";
+import { useCreateGroup } from "@/pages/home/model/useCreateGroup";
 import { dialogStyles } from "./CreateGroupDialog.styles";
 
 export function CreateGroupDialog() {

@@ -302,10 +302,10 @@ func TestService_Store_OK(t *testing.T) {
 	userRepo := new(mocks.MockUserRepository)
 	svc := group.NewService(repo, userRepo)
 
-	expected := domain.Group{ID: 1, Name: "Test Group", Description: "A test group", MemberCount: 0}
-	repo.On("Store", mock.Anything, "Test Group", "A test group").Return(expected, nil)
+	expected := domain.Group{ID: 1, Name: "Test Group", Description: "A test group", MemberCount: 1}
+	repo.On("Store", mock.Anything, "Test Group", "A test group", uint64(10)).Return(expected, nil)
 
-	result, err := svc.Store(context.Background(), "Test Group", "A test group")
+	result, err := svc.Store(context.Background(), "Test Group", "A test group", uint64(10))
 
 	assert.NoError(t, err)
 	assert.Equal(t, expected, result)
@@ -317,10 +317,25 @@ func TestService_Store_TrimsName(t *testing.T) {
 	userRepo := new(mocks.MockUserRepository)
 	svc := group.NewService(repo, userRepo)
 
-	expected := domain.Group{ID: 1, Name: "Trimmed", Description: "", MemberCount: 0}
-	repo.On("Store", mock.Anything, "Trimmed", "").Return(expected, nil)
+	expected := domain.Group{ID: 1, Name: "Trimmed", Description: "", MemberCount: 1}
+	repo.On("Store", mock.Anything, "Trimmed", "", uint64(10)).Return(expected, nil)
 
-	result, err := svc.Store(context.Background(), "  Trimmed  ", "")
+	result, err := svc.Store(context.Background(), "  Trimmed  ", "", uint64(10))
+
+	assert.NoError(t, err)
+	assert.Equal(t, expected, result)
+	repo.AssertExpectations(t)
+}
+
+func TestService_Store_UserIDPropagated(t *testing.T) {
+	repo := new(mocks.MockGroupRepository)
+	userRepo := new(mocks.MockUserRepository)
+	svc := group.NewService(repo, userRepo)
+
+	expected := domain.Group{ID: 2, Name: "Another Group", Description: "", MemberCount: 1}
+	repo.On("Store", mock.Anything, "Another Group", "", uint64(42)).Return(expected, nil)
+
+	result, err := svc.Store(context.Background(), "Another Group", "", uint64(42))
 
 	assert.NoError(t, err)
 	assert.Equal(t, expected, result)
@@ -332,7 +347,7 @@ func TestService_Store_EmptyName(t *testing.T) {
 	userRepo := new(mocks.MockUserRepository)
 	svc := group.NewService(repo, userRepo)
 
-	_, err := svc.Store(context.Background(), "", "desc")
+	_, err := svc.Store(context.Background(), "", "desc", uint64(1))
 
 	assert.ErrorIs(t, err, domain.ErrBadParamInput)
 	repo.AssertNotCalled(t, "Store")
@@ -343,7 +358,7 @@ func TestService_Store_WhitespaceOnlyName(t *testing.T) {
 	userRepo := new(mocks.MockUserRepository)
 	svc := group.NewService(repo, userRepo)
 
-	_, err := svc.Store(context.Background(), "   ", "desc")
+	_, err := svc.Store(context.Background(), "   ", "desc", uint64(1))
 
 	assert.ErrorIs(t, err, domain.ErrBadParamInput)
 	repo.AssertNotCalled(t, "Store")
@@ -359,7 +374,7 @@ func TestService_Store_NameTooLong(t *testing.T) {
 		longName[i] = 'a'
 	}
 
-	_, err := svc.Store(context.Background(), string(longName), "desc")
+	_, err := svc.Store(context.Background(), string(longName), "desc", uint64(1))
 
 	assert.ErrorIs(t, err, domain.ErrBadParamInput)
 	repo.AssertNotCalled(t, "Store")
@@ -370,10 +385,10 @@ func TestService_Store_RepositoryError(t *testing.T) {
 	userRepo := new(mocks.MockUserRepository)
 	svc := group.NewService(repo, userRepo)
 
-	repo.On("Store", mock.Anything, "Valid", "desc").
+	repo.On("Store", mock.Anything, "Valid", "desc", uint64(1)).
 		Return(domain.Group{}, domain.ErrInternalServerError)
 
-	_, err := svc.Store(context.Background(), "Valid", "desc")
+	_, err := svc.Store(context.Background(), "Valid", "desc", uint64(1))
 
 	assert.ErrorIs(t, err, domain.ErrInternalServerError)
 	repo.AssertExpectations(t)
@@ -385,9 +400,9 @@ func TestService_Update_OK(t *testing.T) {
 	svc := group.NewService(repo, userRepo)
 
 	expected := &domain.Group{ID: 1, Name: "Updated Group", Description: "New desc", MemberCount: 3}
-	repo.On("Update", mock.Anything, int64(1), "Updated Group", "New desc").Return(expected, nil)
+	repo.On("Update", mock.Anything, int64(1), "Updated Group", "New desc", uint64(10)).Return(expected, nil)
 
-	result, err := svc.Update(context.Background(), 1, "Updated Group", "New desc")
+	result, err := svc.Update(context.Background(), 1, "Updated Group", "New desc", uint64(10))
 
 	assert.NoError(t, err)
 	assert.Equal(t, expected, result)
@@ -400,9 +415,24 @@ func TestService_Update_TrimsName(t *testing.T) {
 	svc := group.NewService(repo, userRepo)
 
 	expected := &domain.Group{ID: 1, Name: "Trimmed", Description: "", MemberCount: 0}
-	repo.On("Update", mock.Anything, int64(1), "Trimmed", "").Return(expected, nil)
+	repo.On("Update", mock.Anything, int64(1), "Trimmed", "", uint64(10)).Return(expected, nil)
 
-	result, err := svc.Update(context.Background(), 1, "  Trimmed  ", "")
+	result, err := svc.Update(context.Background(), 1, "  Trimmed  ", "", uint64(10))
+
+	assert.NoError(t, err)
+	assert.Equal(t, expected, result)
+	repo.AssertExpectations(t)
+}
+
+func TestService_Update_UserIDPropagated(t *testing.T) {
+	repo := new(mocks.MockGroupRepository)
+	userRepo := new(mocks.MockUserRepository)
+	svc := group.NewService(repo, userRepo)
+
+	expected := &domain.Group{ID: 1, Name: "Group", Description: "", MemberCount: 0}
+	repo.On("Update", mock.Anything, int64(1), "Group", "", uint64(42)).Return(expected, nil)
+
+	result, err := svc.Update(context.Background(), 1, "Group", "", uint64(42))
 
 	assert.NoError(t, err)
 	assert.Equal(t, expected, result)
@@ -414,7 +444,7 @@ func TestService_Update_EmptyName(t *testing.T) {
 	userRepo := new(mocks.MockUserRepository)
 	svc := group.NewService(repo, userRepo)
 
-	_, err := svc.Update(context.Background(), 1, "", "desc")
+	_, err := svc.Update(context.Background(), 1, "", "desc", uint64(1))
 
 	assert.ErrorIs(t, err, domain.ErrBadParamInput)
 	repo.AssertNotCalled(t, "Update")
@@ -425,7 +455,7 @@ func TestService_Update_WhitespaceOnlyName(t *testing.T) {
 	userRepo := new(mocks.MockUserRepository)
 	svc := group.NewService(repo, userRepo)
 
-	_, err := svc.Update(context.Background(), 1, "   ", "desc")
+	_, err := svc.Update(context.Background(), 1, "   ", "desc", uint64(1))
 
 	assert.ErrorIs(t, err, domain.ErrBadParamInput)
 	repo.AssertNotCalled(t, "Update")
@@ -441,7 +471,7 @@ func TestService_Update_NameTooLong(t *testing.T) {
 		longName[i] = 'a'
 	}
 
-	_, err := svc.Update(context.Background(), 1, string(longName), "desc")
+	_, err := svc.Update(context.Background(), 1, string(longName), "desc", uint64(1))
 
 	assert.ErrorIs(t, err, domain.ErrBadParamInput)
 	repo.AssertNotCalled(t, "Update")
@@ -452,7 +482,7 @@ func TestService_Update_InvalidID(t *testing.T) {
 	userRepo := new(mocks.MockUserRepository)
 	svc := group.NewService(repo, userRepo)
 
-	_, err := svc.Update(context.Background(), 0, "Valid", "desc")
+	_, err := svc.Update(context.Background(), 0, "Valid", "desc", uint64(1))
 
 	assert.ErrorIs(t, err, domain.ErrBadParamInput)
 	repo.AssertNotCalled(t, "Update")
@@ -463,10 +493,10 @@ func TestService_Update_RepositoryError(t *testing.T) {
 	userRepo := new(mocks.MockUserRepository)
 	svc := group.NewService(repo, userRepo)
 
-	repo.On("Update", mock.Anything, int64(1), "Valid", "desc").
+	repo.On("Update", mock.Anything, int64(1), "Valid", "desc", uint64(1)).
 		Return((*domain.Group)(nil), domain.ErrInternalServerError)
 
-	_, err := svc.Update(context.Background(), 1, "Valid", "desc")
+	_, err := svc.Update(context.Background(), 1, "Valid", "desc", uint64(1))
 
 	assert.ErrorIs(t, err, domain.ErrInternalServerError)
 	repo.AssertExpectations(t)
@@ -477,46 +507,49 @@ func TestService_Delete_InvalidID(t *testing.T) {
 	userRepo := new(mocks.MockUserRepository)
 	svc := group.NewService(repo, userRepo)
 
-	err := svc.Delete(context.Background(), 0)
+	err := svc.Delete(context.Background(), 0, uint64(1))
 
 	assert.ErrorIs(t, err, domain.ErrBadParamInput)
 	repo.AssertNotCalled(t, "Delete")
 }
 
+// Case #7: Normal - repository.Delete succeeds with userID correctly passed.
 func TestService_Delete_OK(t *testing.T) {
 	repo := new(mocks.MockGroupRepository)
 	userRepo := new(mocks.MockUserRepository)
 	svc := group.NewService(repo, userRepo)
 
-	repo.On("Delete", mock.Anything, int64(1)).Return(nil)
+	repo.On("Delete", mock.Anything, int64(1), uint64(42)).Return(nil)
 
-	err := svc.Delete(context.Background(), 1)
+	err := svc.Delete(context.Background(), 1, uint64(42))
 
 	assert.NoError(t, err)
 	repo.AssertExpectations(t)
 }
 
+// Case #8: Error - repository.Delete returns ErrNotFound.
 func TestService_Delete_NotFound(t *testing.T) {
 	repo := new(mocks.MockGroupRepository)
 	userRepo := new(mocks.MockUserRepository)
 	svc := group.NewService(repo, userRepo)
 
-	repo.On("Delete", mock.Anything, int64(9999)).Return(domain.ErrNotFound)
+	repo.On("Delete", mock.Anything, int64(9999), uint64(1)).Return(domain.ErrNotFound)
 
-	err := svc.Delete(context.Background(), 9999)
+	err := svc.Delete(context.Background(), 9999, uint64(1))
 
 	assert.ErrorIs(t, err, domain.ErrNotFound)
 	repo.AssertExpectations(t)
 }
 
+// Case #9: Error - repository.Delete returns DB error.
 func TestService_Delete_RepositoryError(t *testing.T) {
 	repo := new(mocks.MockGroupRepository)
 	userRepo := new(mocks.MockUserRepository)
 	svc := group.NewService(repo, userRepo)
 
-	repo.On("Delete", mock.Anything, int64(1)).Return(domain.ErrInternalServerError)
+	repo.On("Delete", mock.Anything, int64(1), uint64(1)).Return(domain.ErrInternalServerError)
 
-	err := svc.Delete(context.Background(), 1)
+	err := svc.Delete(context.Background(), 1, uint64(1))
 
 	assert.ErrorIs(t, err, domain.ErrInternalServerError)
 	repo.AssertExpectations(t)
@@ -905,6 +938,5 @@ func TestService_RemoveGroupMembers_IsolatedViaInterface(t *testing.T) {
 	assert.NoError(t, err)
 	// Verify only the mock was called, not a real DB.
 	repo.AssertExpectations(t)
-	userRepo.AssertNotCalled(t, "GetByID")
 	userRepo.AssertNotCalled(t, "CountByIDs")
 }

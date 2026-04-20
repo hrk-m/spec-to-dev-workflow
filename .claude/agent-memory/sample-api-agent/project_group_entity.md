@@ -12,7 +12,7 @@ type: project
 
 ## DB スキーマ
 
-- `groups`: id, name, description, **deleted_at（soft delete）**（20260403120000）
+- `groups`: id, name, description, **updated_by（作成者 FK → users.id）**, **deleted_at（soft delete）**（20260403120000 + 20260417120000）
   - インデックス: `idx_groups_active(deleted_at, id)`
 - `users`: id, first_name, last_name, created_at, updated_at, **deleted_at（soft delete）**（20260403120000）
   - インデックス: `idx_users_active(deleted_at, id)`
@@ -44,14 +44,19 @@ type GroupService interface {
     ListGroups(ctx context.Context, q string, limit, offset int) ([]domain.Group, int, error)
     GetByID(ctx context.Context, id uint64) (domain.Group, error)
     ListGroupMembers(ctx context.Context, id uint64, limit, offset int, q string) ([]domain.User, int, error)
-    Store(ctx context.Context, name, description string) (domain.Group, error)
-    Update(ctx context.Context, id int64, name, description string) (*domain.Group, error)
-    Delete(ctx context.Context, id int64) error
+    Store(ctx context.Context, name, description string, userID uint64) (domain.Group, error)
+    Update(ctx context.Context, id int64, name, description string, userID uint64) (*domain.Group, error)
+    Delete(ctx context.Context, id int64, userID uint64) error
     ListNonGroupMembers(ctx context.Context, groupID uint64, limit, offset int, q string) ([]domain.User, int, error)
     AddGroupMembers(ctx context.Context, groupID uint64, userIDs []uint64) ([]domain.User, error)
     RemoveGroupMembers(ctx context.Context, groupID uint64, userIDs []uint64) error
 }
 ```
+
+- `Store` の handler では `c.Get("authUser").(domain.User)` で authUser を取得し、型アサーション失敗時は 401 を返す
+- `Store` の repository 実装はトランザクション内で groups INSERT → group_members INSERT（作成者を初期メンバーに追加）し、MemberCount: 1 を返す
+- `Update` の handler も同様に authUser を取得して 401 チェックを行い、`userID` を service に渡す
+- `Update` の repository 実装は `UPDATE groups SET name=?, description=?, updated_by=? WHERE id=? AND deleted_at IS NULL` を実行し、RowsAffected=0 で ErrNotFound を返す。成功後は GetByID で最新データを返す
 
 ## GroupRepository インターフェース（group/service.go）
 
@@ -64,17 +69,16 @@ type GroupService interface {
 
 ## UserRepository インターフェース（group/service.go）
 
-`group.UserRepository` は `GetByID` と `CountByIDs` を持つ：
+`group.UserRepository` は `CountByIDs` のみを持つ（`GetByID` は service から使用しないため削除済み）：
 
 ```go
 type UserRepository interface {
-    GetByID(ctx context.Context, id uint64) (domain.User, error)
     CountByIDs(ctx context.Context, ids []uint64) (int, error)
 }
 ```
 
 - `NewService(repo GroupRepository, userRepo UserRepository) *Service` — 2 引数シグネチャ
-- MySQL 実装: `internal/repository/mysql/user.go` の `UserRepository` 型が `group.UserRepository` と `user.UserRepository` の両方を実装
+- MySQL 実装: `internal/repository/mysql/user.go` の `UserRepository` 型が `group.UserRepository`・`user.UserRepository`・`auth.UserRepository` の 3 つを実装
 - `main.go` では `groupRepo` と `userRepo` を分けて生成して両方のサービスに渡す
 - `AddGroupMembers` のユーザー存在確認は `userRepo.CountByIDs` で 1 クエリ
 - `RemoveGroupMembers` は service 層でグループ存在確認 → repository 層でトランザクション DELETE

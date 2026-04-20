@@ -22,7 +22,7 @@ sample-api/
 │   ├── service_test.go      # 外部テストパッケージ (package {feature}_test)
 │   └── mocks/               # テスト用 mock（手動保守）
 │       ├── {feature}_repository_mock.go
-│       └── user_repository_mock.go  # group は UserRepository も必要なため追加（group/mocks/ 配下に配置）
+│       └── user_repository_mock.go  # group.UserRepository（CountByIDs）の mock（group/mocks/ 配下に配置）
 ├── internal/
 │   ├── repository/
 │   │   └── mysql/           # Repository adapter（MySQL 実装）
@@ -36,7 +36,7 @@ sample-api/
 │       ├── auth_test.go         # AuthMiddleware・AuthHandler のテスト
 │       └── mocks/             # テスト用 mock（手動保守）
 │           ├── {feature}_service_mock.go
-│           └── auth_user_repository_mock.go  # MockAuthService（AuthService テスト用）
+│           └── auth_user_repository_mock.go  # MockAuthService（rest.AuthService インターフェースのモック）
 ├── .env.local               # 環境変数（ローカル用、git ignore）
 ├── .env.local.example       # ローカル環境変数のサンプル
 ├── .env.docker.example      # Docker 用環境変数のサンプル

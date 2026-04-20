@@ -98,17 +98,37 @@ func (r *GroupRepository) selectGroups(ctx context.Context, q string, limit, off
 	return groups, nil
 }
 
-// Store inserts a new group and returns the created entity.
-func (r *GroupRepository) Store(ctx context.Context, name, description string) (domain.Group, error) {
-	query := "INSERT INTO `groups` (name, description) VALUES (?, ?)"
-
-	result, err := r.db.ExecContext(ctx, query, name, description)
+// Store inserts a new group and its creator as the first member within a transaction.
+func (r *GroupRepository) Store(ctx context.Context, name, description string, userID uint64) (domain.Group, error) {
+	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
+		return domain.Group{}, domain.ErrInternalServerError
+	}
+
+	result, err := tx.ExecContext(ctx, "INSERT INTO `groups` (name, description, updated_by) VALUES (?, ?, ?)", name, description, userID)
+	if err != nil {
+		_ = tx.Rollback()
+
 		return domain.Group{}, domain.ErrInternalServerError
 	}
 
 	id, err := result.LastInsertId()
 	if err != nil || id < 0 {
+		_ = tx.Rollback()
+
+		return domain.Group{}, domain.ErrInternalServerError
+	}
+
+	_, err = tx.ExecContext(ctx, "INSERT INTO group_members (group_id, user_id) VALUES (?, ?)", id, userID)
+	if err != nil {
+		_ = tx.Rollback()
+
+		return domain.Group{}, domain.ErrInternalServerError
+	}
+
+	if commitErr := tx.Commit(); commitErr != nil {
+		_ = tx.Rollback()
+
 		return domain.Group{}, domain.ErrInternalServerError
 	}
 
@@ -116,15 +136,15 @@ func (r *GroupRepository) Store(ctx context.Context, name, description string) (
 		ID:          uint64(id), //nolint:gosec // id is validated non-negative above
 		Name:        name,
 		Description: description,
-		MemberCount: 0,
+		MemberCount: 1,
 	}, nil
 }
 
-// Update modifies a group's name and description, then returns the updated entity.
-func (r *GroupRepository) Update(ctx context.Context, id int64, name, description string) (*domain.Group, error) {
-	query := "UPDATE `groups` SET name = ?, description = ? WHERE id = ? AND deleted_at IS NULL"
+// Update modifies a group's name, description, and updated_by, then returns the updated entity.
+func (r *GroupRepository) Update(ctx context.Context, id int64, name, description string, userID uint64) (*domain.Group, error) {
+	query := "UPDATE `groups` SET name = ?, description = ?, updated_by = ? WHERE id = ? AND deleted_at IS NULL"
 
-	result, err := r.db.ExecContext(ctx, query, name, description, id)
+	result, err := r.db.ExecContext(ctx, query, name, description, userID, id)
 	if err != nil {
 		return nil, domain.ErrInternalServerError
 	}
@@ -146,11 +166,11 @@ func (r *GroupRepository) Update(ctx context.Context, id int64, name, descriptio
 	return &g, nil
 }
 
-// Delete soft-deletes a group by setting deleted_at.
-func (r *GroupRepository) Delete(ctx context.Context, id int64) error {
-	query := "UPDATE `groups` SET deleted_at = NOW() WHERE id = ? AND deleted_at IS NULL"
+// Delete soft-deletes a group by setting deleted_at and updated_by.
+func (r *GroupRepository) Delete(ctx context.Context, id int64, userID uint64) error {
+	query := "UPDATE `groups` SET deleted_at = NOW(), updated_by = ? WHERE id = ? AND deleted_at IS NULL"
 
-	result, err := r.db.ExecContext(ctx, query, id)
+	result, err := r.db.ExecContext(ctx, query, userID, id)
 	if err != nil {
 		return domain.ErrInternalServerError
 	}

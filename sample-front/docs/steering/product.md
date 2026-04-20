@@ -26,7 +26,8 @@ inclusion: always
   エンドポイント）。グループ詳細画面の「メンバー追加」ボタンから `AddMemberSheet`
   をシートで開き、`GET /api/v1/groups/:id/non-members`
   で取得した未所属ユーザーをチェックボックスで複数選択して一括追加する。`AddMemberSheet`
-  はマウント時に `clearNonMemberListCache(groupId)` を呼び出して当該グループの非メンバーキャッシュをクリアし、常に最新の非メンバー一覧を取得する。検索（300ms デバウンス）・IntersectionObserver 無限スクロールを備え、追加成功時は
+  はマウント時に `clearNonMemberListCache(groupId)`
+  を呼び出して当該グループの非メンバーキャッシュをクリアし、常に最新の非メンバー一覧を取得する。検索（300ms デバウンス）・IntersectionObserver 無限スクロールを備え、追加成功時は
   `clearMemberListCache()` → `refetch()`（グループ詳細再取得）→ `onClose()`（`closeSheet()` +
   `refetch()`
   を再呼び出し）の順に呼び出してメンバー一覧とグループ詳細を更新する。409 競合エラーは「選択したユーザーはすでにメンバーです」と表示する
