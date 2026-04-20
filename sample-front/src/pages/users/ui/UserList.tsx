@@ -5,55 +5,33 @@ import type { User } from "@/pages/users/model/user";
 import { useUserList } from "@/pages/users/model/user-list";
 import { styles } from "./UserList.styles";
 
-const SKELETON_ROWS = 5;
+const SKELETON_ROWS = 3;
 
-function UserAvatar({ user }: { user: User }) {
-  const initials = `${user.last_name.charAt(0)}${user.first_name.charAt(0)}`.toUpperCase();
-
+function UserTableRow({ user, isLast }: { user: User; isLast: boolean }) {
   return (
-    <Flex style={styles.avatar}>
-      <Text as="span">{initials}</Text>
-    </Flex>
+    <tr style={isLast ? styles.tableRowLast : styles.tableRow}>
+      <td style={styles.tableCellId}>{user.id}</td>
+      <td style={styles.tableCellUuid}>{user.uuid}</td>
+      <td style={styles.tableCellName}>
+        {user.last_name} {user.first_name}
+      </td>
+    </tr>
   );
 }
 
-function UserRow({ user, isLast }: { user: User; isLast: boolean }) {
+function SkeletonUserRow() {
   return (
-    <Box style={{ ...styles.rowBlock, ...(isLast ? {} : styles.rowBorder) }}>
-      <Flex style={styles.rowShell}>
-        <Flex style={styles.rowContent}>
-          <UserAvatar user={user} />
-          <Box style={styles.rowNameStack}>
-            <Text as="p" style={styles.rowName}>
-              {user.last_name} {user.first_name}
-            </Text>
-            <Text as="p" style={styles.rowSubtext}>
-              User profile
-            </Text>
-          </Box>
-        </Flex>
-        <Flex style={styles.rowMeta}>
-          <Text as="span" style={styles.rowMetaLabel}>
-            ID
-          </Text>
-          <Text as="span" style={styles.rowMetaValue}>
-            #{user.id}
-          </Text>
-        </Flex>
-      </Flex>
-    </Box>
-  );
-}
-
-function SkeletonUserRow({ isLast }: { isLast: boolean }) {
-  return (
-    <Flex style={{ ...styles.skeletonRow, ...(isLast ? {} : styles.rowBorder) }}>
-      <Box style={styles.skeletonAvatar} />
-      <Flex style={styles.skeletonNameStack}>
-        <Skeleton style={{ ...styles.skeletonLine, width: "52%" }} />
-        <Skeleton style={{ ...styles.skeletonLine, width: "38%" }} />
-      </Flex>
-    </Flex>
+    <tr style={styles.tableRow}>
+      <td style={styles.skeletonCell}>
+        <Skeleton style={{ ...styles.skeletonLine, width: "40px" }} />
+      </td>
+      <td style={styles.skeletonCell}>
+        <Skeleton style={{ ...styles.skeletonLine, width: "260px" }} />
+      </td>
+      <td style={styles.skeletonCell}>
+        <Skeleton style={{ ...styles.skeletonLine, width: "120px" }} />
+      </td>
+    </tr>
   );
 }
 
@@ -117,11 +95,20 @@ export function UserList() {
           <Text as="p" className="visually-hidden">
             loading...
           </Text>
-          <Box style={styles.listCard}>
-            {Array.from({ length: SKELETON_ROWS }, (_, i) => (
-              <SkeletonUserRow key={i} isLast={i === SKELETON_ROWS - 1} />
-            ))}
-          </Box>
+          <table style={styles.tableRoot}>
+            <thead style={styles.tableHeader}>
+              <tr>
+                <th style={styles.tableHeaderCell}>id</th>
+                <th style={styles.tableHeaderCell}>uuid</th>
+                <th style={styles.tableHeaderCell}>姓名</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Array.from({ length: SKELETON_ROWS }, (_, i) => (
+                <SkeletonUserRow key={i} />
+              ))}
+            </tbody>
+          </table>
         </Box>
       )}
 
@@ -133,23 +120,21 @@ export function UserList() {
                 All Users
               </Text>
             </Box>
-            <Box style={styles.listCard}>
-              {users.map((user, index) => (
-                <UserRow key={user.id} user={user} isLast={index === users.length - 1} />
-              ))}
-            </Box>
+            <table style={styles.tableRoot}>
+              <thead style={styles.tableHeader}>
+                <tr>
+                  <th style={styles.tableHeaderCell}>id</th>
+                  <th style={styles.tableHeaderCell}>uuid</th>
+                  <th style={styles.tableHeaderCell}>姓名</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map((user, index) => (
+                  <UserTableRow key={user.id} user={user} isLast={index === users.length - 1} />
+                ))}
+              </tbody>
+            </table>
           </section>
-        </Box>
-      )}
-
-      {!isInitialLoading && !error && users.length === 0 && (
-        <Box style={styles.emptyState}>
-          <Text as="p" style={styles.emptyStateTitle}>
-            No users found
-          </Text>
-          <Text as="p" style={styles.emptyStateText}>
-            Try a shorter phrase or search by part of a user name.
-          </Text>
         </Box>
       )}
 

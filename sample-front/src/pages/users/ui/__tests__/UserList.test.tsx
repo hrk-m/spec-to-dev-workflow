@@ -34,9 +34,55 @@ describe("UserList", () => {
     expect(screen.getByRole("heading", { name: "Users" })).toBeInTheDocument();
   });
 
-  it("取得したユーザーを表示する", async () => {
+  it("ローディング中はスケルトン行が表示される（テーブル行形式・3 列）", () => {
+    vi.mocked(fetchUsers).mockReturnValue(new Promise(() => {}));
+
+    renderUserList();
+
+    // スケルトンローディング中は aria に loading テキストが存在する
+    expect(screen.getByText("loading...")).toBeInTheDocument();
+    // スケルトン行は <tr> として DOM に存在する
+    const rows = document.querySelectorAll("tbody tr");
+    expect(rows.length).toBeGreaterThan(0);
+    // 各行に 3 つの <td> が存在する
+    rows.forEach((row) => {
+      expect(row.querySelectorAll("td").length).toBe(3);
+    });
+  });
+
+  it("取得したユーザーの id・uuid・last_name・first_name がテーブルセルに表示される", async () => {
     vi.mocked(fetchUsers).mockResolvedValueOnce({
-      users: [{ id: 1, first_name: "Taro", last_name: "Yamada" }],
+      users: [
+        {
+          id: 1,
+          uuid: "550e8400-e29b-41d4-a716-446655440001",
+          first_name: "Taro",
+          last_name: "Yamada",
+        },
+      ],
+      total: 1,
+    });
+
+    renderUserList();
+
+    await waitFor(() => {
+      expect(screen.getByText("1")).toBeInTheDocument();
+    });
+
+    expect(screen.getByText("550e8400-e29b-41d4-a716-446655440001")).toBeInTheDocument();
+    expect(screen.getByText("Yamada Taro")).toBeInTheDocument();
+  });
+
+  it("列ヘッダー id / uuid / 姓名 が存在する", async () => {
+    vi.mocked(fetchUsers).mockResolvedValueOnce({
+      users: [
+        {
+          id: 1,
+          uuid: "550e8400-e29b-41d4-a716-446655440001",
+          first_name: "Taro",
+          last_name: "Yamada",
+        },
+      ],
       total: 1,
     });
 
@@ -45,16 +91,36 @@ describe("UserList", () => {
     await waitFor(() => {
       expect(screen.getByText("Yamada Taro")).toBeInTheDocument();
     });
-    expect(screen.getByText("#1")).toBeInTheDocument();
+
+    // columnheader ロールは <th> 要素に付与される
+    expect(screen.getByRole("columnheader", { name: "id" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "uuid" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "姓名" })).toBeInTheDocument();
   });
 
-  it("ローディング中はスケルトン行が表示される", () => {
-    vi.mocked(fetchUsers).mockReturnValue(new Promise(() => {}));
+  it("アバターアイコン（頭文字円形）が DOM に存在しない", async () => {
+    vi.mocked(fetchUsers).mockResolvedValueOnce({
+      users: [
+        {
+          id: 1,
+          uuid: "550e8400-e29b-41d4-a716-446655440001",
+          first_name: "Taro",
+          last_name: "Yamada",
+        },
+      ],
+      total: 1,
+    });
 
     renderUserList();
 
-    // スケルトンローディング中は aria に loading テキストが存在する
-    expect(screen.getByText("loading...")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("Yamada Taro")).toBeInTheDocument();
+    });
+
+    // アバター要素（data-testid="user-avatar"）が存在しないことを確認
+    expect(document.querySelector("[data-testid='user-avatar']")).not.toBeInTheDocument();
+    // 頭文字の "YT" が DOM にないことを確認
+    expect(screen.queryByText("YT")).not.toBeInTheDocument();
   });
 
   it("0 件時は No users found メッセージが表示される", async () => {
@@ -63,7 +129,10 @@ describe("UserList", () => {
     renderUserList();
 
     await waitFor(() => {
-      expect(screen.getAllByText("No users found").length).toBeGreaterThan(0);
+      // header subtitle（見出し "Users" の直後の <p>）に "No users found" が表示されることを確認する
+      const heading = screen.getByRole("heading", { name: "Users" });
+      const subtitleEl = heading.nextElementSibling;
+      expect(subtitleEl).toHaveTextContent("No users found");
     });
   });
 
@@ -81,6 +150,7 @@ describe("UserList", () => {
     vi.mocked(fetchUsers).mockResolvedValueOnce({
       users: Array.from({ length: 25 }, (_, i) => ({
         id: i + 1,
+        uuid: "550e8400-e29b-41d4-a716-446655440001",
         first_name: `First${String(i + 1)}`,
         last_name: `Last${String(i + 1)}`,
       })),

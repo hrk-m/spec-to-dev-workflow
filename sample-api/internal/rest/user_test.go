@@ -24,7 +24,7 @@ func TestUserHandler_ListUsers_OK(t *testing.T) {
 
 	svc := new(mocks.MockUserService)
 	users := []domain.User{
-		{ID: 1, FirstName: "Taro", LastName: "Yamada"},
+		{ID: 1, UUID: "550e8400-e29b-41d4-a716-446655440001", FirstName: "Taro", LastName: "Yamada"},
 	}
 	svc.On("ListUsers", mock.Anything, "", 500, 0).Return(users, 15, nil)
 
@@ -117,7 +117,7 @@ func TestUserHandler_ListUsers_PaginationParams(t *testing.T) {
 
 	svc := new(mocks.MockUserService)
 	users := []domain.User{
-		{ID: 21, FirstName: "Jiro", LastName: "Tanaka"},
+		{ID: 21, UUID: "550e8400-e29b-41d4-a716-446655440003", FirstName: "Jiro", LastName: "Tanaka"},
 	}
 	svc.On("ListUsers", mock.Anything, "", 10, 20).Return(users, 30, nil)
 

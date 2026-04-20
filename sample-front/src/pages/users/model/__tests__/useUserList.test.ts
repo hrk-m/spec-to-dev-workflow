@@ -19,8 +19,18 @@ describe("useUserList", () => {
   it("初回表示で users と total をセットする", async () => {
     vi.mocked(fetchUsers).mockResolvedValueOnce({
       users: [
-        { id: 1, first_name: "Taro", last_name: "Yamada" },
-        { id: 2, first_name: "Hanako", last_name: "Sato" },
+        {
+          id: 1,
+          uuid: "550e8400-e29b-41d4-a716-446655440001",
+          first_name: "Taro",
+          last_name: "Yamada",
+        },
+        {
+          id: 2,
+          uuid: "550e8400-e29b-41d4-a716-446655440002",
+          first_name: "Hanako",
+          last_name: "Sato",
+        },
       ],
       total: 2,
     });
@@ -38,11 +48,25 @@ describe("useUserList", () => {
   it("検索入力で q を渡す", async () => {
     vi.mocked(fetchUsers)
       .mockResolvedValueOnce({
-        users: [{ id: 1, first_name: "Taro", last_name: "Yamada" }],
+        users: [
+          {
+            id: 1,
+            uuid: "550e8400-e29b-41d4-a716-446655440001",
+            first_name: "Taro",
+            last_name: "Yamada",
+          },
+        ],
         total: 1,
       })
       .mockResolvedValueOnce({
-        users: [{ id: 2, first_name: "Hanako", last_name: "Suzuki" }],
+        users: [
+          {
+            id: 2,
+            uuid: "550e8400-e29b-41d4-a716-446655440002",
+            first_name: "Hanako",
+            last_name: "Suzuki",
+          },
+        ],
         total: 1,
       });
 
@@ -57,6 +81,43 @@ describe("useUserList", () => {
     await waitFor(() => {
       expect(vi.mocked(fetchUsers)).toHaveBeenLastCalledWith(expect.objectContaining({ q: "Suz" }));
     });
+  });
+
+  it("検索クエリは 300ms デバウンスされる", async () => {
+    vi.useFakeTimers();
+
+    vi.mocked(fetchUsers).mockResolvedValue({ users: [], total: 0 });
+
+    const { result } = renderHook(() => useUserList());
+
+    // 初回フェッチを完了させる
+    await act(async () => {
+      await vi.runAllTimersAsync();
+    });
+
+    const callCountBeforeSearch = vi.mocked(fetchUsers).mock.calls.length;
+
+    // searchQuery をセットするが、300ms 経過前はフェッチされない
+    act(() => {
+      result.current.setSearchQuery("Taro");
+    });
+
+    // 299ms 経過しても追加フェッチは発生しない
+    act(() => {
+      vi.advanceTimersByTime(299);
+    });
+    expect(vi.mocked(fetchUsers).mock.calls.length).toBe(callCountBeforeSearch);
+
+    // 300ms 経過するとフェッチが発火する
+    await act(async () => {
+      vi.advanceTimersByTime(1);
+      await vi.runAllTimersAsync();
+    });
+
+    expect(vi.mocked(fetchUsers).mock.calls.length).toBeGreaterThan(callCountBeforeSearch);
+    expect(vi.mocked(fetchUsers)).toHaveBeenLastCalledWith(expect.objectContaining({ q: "Taro" }));
+
+    vi.useRealTimers();
   });
 
   it("0 件時は isEmptyResult が true になる", async () => {
@@ -99,6 +160,7 @@ describe("useUserList", () => {
     it("users は cachedUsers の全件を返す", async () => {
       const users = Array.from({ length: 55 }, (_, i) => ({
         id: i + 1,
+        uuid: "550e8400-e29b-41d4-a716-446655440001",
         first_name: `First${String(i + 1)}`,
         last_name: `Last${String(i + 1)}`,
       }));
@@ -115,10 +177,18 @@ describe("useUserList", () => {
     it("sentinel が visible になったら doFetchMore を呼ぶ（lastBatchSize === FETCH_LIMIT のとき）", async () => {
       const initialUsers = Array.from({ length: FETCH_LIMIT }, (_, i) => ({
         id: i + 1,
+        uuid: "550e8400-e29b-41d4-a716-446655440001",
         first_name: `First${String(i + 1)}`,
         last_name: `Last${String(i + 1)}`,
       }));
-      const additionalUsers = [{ id: FETCH_LIMIT + 1, first_name: "Extra", last_name: "User" }];
+      const additionalUsers = [
+        {
+          id: FETCH_LIMIT + 1,
+          uuid: "550e8400-e29b-41d4-a716-446655440001",
+          first_name: "Extra",
+          last_name: "User",
+        },
+      ];
 
       vi.mocked(fetchUsers)
         .mockResolvedValueOnce({ users: initialUsers, total: FETCH_LIMIT + 1 })
@@ -147,10 +217,18 @@ describe("useUserList", () => {
     it("sentinel が visible になった後に追加データが表示される", async () => {
       const initialUsers = Array.from({ length: FETCH_LIMIT }, (_, i) => ({
         id: i + 1,
+        uuid: "550e8400-e29b-41d4-a716-446655440001",
         first_name: `First${String(i + 1)}`,
         last_name: `Last${String(i + 1)}`,
       }));
-      const additionalUsers = [{ id: FETCH_LIMIT + 1, first_name: "Extra", last_name: "User" }];
+      const additionalUsers = [
+        {
+          id: FETCH_LIMIT + 1,
+          uuid: "550e8400-e29b-41d4-a716-446655440001",
+          first_name: "Extra",
+          last_name: "User",
+        },
+      ];
 
       vi.mocked(fetchUsers)
         .mockResolvedValueOnce({ users: initialUsers, total: FETCH_LIMIT + 1 })
@@ -176,10 +254,18 @@ describe("useUserList", () => {
     it("sentinel が交差したとき isFetchingMore が true → false と推移する", async () => {
       const initialUsers = Array.from({ length: FETCH_LIMIT }, (_, i) => ({
         id: i + 1,
+        uuid: "550e8400-e29b-41d4-a716-446655440001",
         first_name: `First${String(i + 1)}`,
         last_name: `Last${String(i + 1)}`,
       }));
-      const additionalUsers = [{ id: FETCH_LIMIT + 1, first_name: "Extra", last_name: "User" }];
+      const additionalUsers = [
+        {
+          id: FETCH_LIMIT + 1,
+          uuid: "550e8400-e29b-41d4-a716-446655440001",
+          first_name: "Extra",
+          last_name: "User",
+        },
+      ];
 
       vi.mocked(fetchUsers)
         .mockResolvedValueOnce({ users: initialUsers, total: FETCH_LIMIT + 1 })
@@ -213,6 +299,7 @@ describe("useUserList", () => {
     it("追加フェッチ失敗時は fetchMoreError が表示される（既存 users は維持）", async () => {
       const initialUsers = Array.from({ length: FETCH_LIMIT }, (_, i) => ({
         id: i + 1,
+        uuid: "550e8400-e29b-41d4-a716-446655440001",
         first_name: `First${String(i + 1)}`,
         last_name: `Last${String(i + 1)}`,
       }));

@@ -17,8 +17,8 @@ func TestService_ListUsers_OK(t *testing.T) {
 	svc := user.NewService(repo)
 
 	expected := []domain.User{
-		{ID: 1, FirstName: "Taro", LastName: "Yamada"},
-		{ID: 2, FirstName: "Hanako", LastName: "Suzuki"},
+		{ID: 1, UUID: "550e8400-e29b-41d4-a716-446655440001", FirstName: "Taro", LastName: "Yamada"},
+		{ID: 2, UUID: "550e8400-e29b-41d4-a716-446655440002", FirstName: "Hanako", LastName: "Suzuki"},
 	}
 	repo.On("ListUsers", mock.Anything, "Suzuki", 500, 0).Return(expected[1:2], 15, nil)
 
