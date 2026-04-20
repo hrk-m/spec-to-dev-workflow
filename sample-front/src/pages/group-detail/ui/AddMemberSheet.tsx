@@ -91,9 +91,8 @@ const styles = {
   },
   footer: {
     marginTop: 20,
-  },
-  bulkButton: {
-    width: "100%",
+    display: "flex",
+    justifyContent: "flex-end",
   },
   skeletonRow: {
     display: "flex",
@@ -211,6 +210,18 @@ export function AddMemberSheet({ groupId, onClose }: AddMemberSheetProps) {
         </TextField.Root>
       </Box>
 
+      <Box style={styles.footer}>
+        <Button
+          variant="soft"
+          size="2"
+          radius="full"
+          disabled={selectedIds.size === 0 || isSubmitting}
+          onClick={() => void handleSubmit()}
+        >
+          一括追加
+        </Button>
+      </Box>
+
       {fetchError && (
         <Text as="p" style={styles.errorText}>
           {fetchError}
@@ -305,18 +316,6 @@ export function AddMemberSheet({ groupId, onClose }: AddMemberSheetProps) {
         aria-hidden="true"
         data-testid="non-member-sentinel"
       />
-
-      <Box style={styles.footer}>
-        <Button
-          size="3"
-          radius="large"
-          style={styles.bulkButton}
-          disabled={selectedIds.size === 0 || isSubmitting}
-          onClick={() => void handleSubmit()}
-        >
-          一括追加
-        </Button>
-      </Box>
     </Box>
   );
 }

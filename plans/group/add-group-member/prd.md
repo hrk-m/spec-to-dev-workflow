@@ -122,15 +122,15 @@
 2. GroupDetailContent に「メンバー追加」ボタンを表示
 3. ユーザーがボタンをクリック
 4. AddMemberSheet を SheetStack に登録して表示
-5. シートがマウントされ、GET /api/v1/groups/:id/non-members?limit=500&offset=0 を送信
+5. シートがマウントされ、GET /api/v1/groups/:id/non-members?limit=100&offset=0 を送信
 6. レスポンスは成功？
    - Yes（200）→ 取得した users と total を state にキャッシュし、一覧を表示
    - No（4xx・5xx）→ シート内にエラーメッセージを表示
 7. ユーザーが検索キーワードを入力（300ms デバウンス）
-8. GET /api/v1/groups/:id/non-members?q={keyword}&limit=500&offset=0 を送信
+8. GET /api/v1/groups/:id/non-members?q={keyword}&limit=100&offset=0 を送信
 9. レスポンスに応じて state を更新・一覧を再描画
-10. ユーザーがページを進め、キャッシュ済みの 500 件を超えるページに到達
-11. GET /api/v1/groups/:id/non-members?limit=500&offset=500 を送信
+10. ユーザーがスクロールし、sentinel 要素が viewport に入り、キャッシュ済みの 100 件を超えるデータが存在する可能性がある場合
+11. GET /api/v1/groups/:id/non-members?limit=100&offset=100 を送信
 12. 取得データを既存 state に追加キャッシュ
 ```
 
@@ -320,6 +320,11 @@
 | 3   | 正常系 | 追加成功後に MemberList が再取得される        | シートが閉じ、MemberList と member_count が更新される      |
 | 4   | 異常系 | 409 エラー時にエラーメッセージを表示          | 「選択したユーザーはすでにメンバーです」が表示される       |
 | 5   | 正常系 | AddMemberSheet がマウントされたとき           | `clearNonMemberListCache(groupId)` が呼ばれる              |
+| 6   | 正常系 | 「一括追加」ボタンが検索フォームの下・ユーザー一覧の上に表示される | DOM 順でボタンが検索フォームより後、ユーザー一覧より前に存在する |
+| 7   | 正常系 | シート初期表示時のボタン状態                  | 選択ゼロのため disabled                                    |
+| 8   | 正常系 | チェックボックスを 1 件選択したとき           | ボタンが活性化される（disabled 解除）                      |
+| 9   | 正常系 | 全チェックを外したとき                        | ボタンが disabled に戻る                                   |
+| 10  | 正常系 | 下部に「一括追加」ボタンが存在しない          | DOM 内に「一括追加」ボタンが 1 つだけ存在する              |
 
 ---
 
@@ -348,7 +353,7 @@
 | `sample-front/src/pages/group-detail/api/fetch-non-members.ts`        | `GET /api/v1/groups/:id/non-members` 呼び出し                                      |
 | `sample-front/src/pages/group-detail/api/add-group-members.ts`        | `POST /api/v1/groups/:id/members` 呼び出し                                         |
 | `sample-front/src/pages/group-detail/model/useNonMemberList.ts`       | `clearNonMemberListCache(groupId?: number)` のシグネチャ変更（引数追加）。指定時は `nonMemberListCache.delete(groupId)` で単一エントリのみクリア、未指定時は `nonMemberListCache.clear()` で全クリア |
-| `sample-front/src/pages/group-detail/ui/AddMemberSheet.tsx`           | マウント時 `useEffect(() => { clearNonMemberListCache(groupId); }, [groupId])` を追加（`useNonMemberList(groupId)` 呼び出しより前に配置）                                                               |
+| `sample-front/src/pages/group-detail/ui/AddMemberSheet.tsx`           | マウント時 `useEffect` 追加・「一括追加」ボタンを検索フォームの直下（ユーザー一覧の上）に配置・`variant="soft"` / `radius="full"` / `size="2"` スタイル・右端揃え（`justifyContent: "flex-end"`）・下部ボタンを削除 |
 | `sample-front/src/pages/group-detail/ui/GroupDetailContent.tsx`       | 「メンバー追加」ボタン追加・AddMemberSheet の開閉状態管理                                                                                                                                               |
 
 ---
@@ -366,7 +371,8 @@
 9. 追加成功時に 201 Created + 追加したメンバー一覧を返す
 10. グループ詳細画面の MemberList ヘッダーに「メンバー追加」ボタンが表示される
 11. ボタン押下で AddMemberSheet（シート形式）が表示される
-12. シート内に検索入力 + チェックボックス付きユーザー一覧 + 「一括追加」ボタンが表示される
+12. シート内の構成（上から順）：検索入力 → 「一括追加」ボタン（検索フォーム直下・コンテンツ幅・右端揃え・soft スタイル・radius full・size 2）→ チェックボックス付きユーザー一覧。下部に「一括追加」ボタンは存在しない
+17. 「一括追加」ボタンは選択ユーザーが 1 件以上かつ送信中でないときのみ活性化する
 13. 追加成功後にシートを閉じ、MemberList と member_count（GroupDetail）を再取得する
 14. 409 エラー時はシート内にエラーメッセージを表示する
 15. `AddMemberSheet` がマウントされるたびに `clearNonMemberListCache(groupId)` を呼び出し、非メンバーリストのキャッシュをクリアする（他ユーザーの変更も反映される）

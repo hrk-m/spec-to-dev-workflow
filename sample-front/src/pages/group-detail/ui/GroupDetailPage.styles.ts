@@ -2,21 +2,14 @@ import { appColors } from "@/shared/ui";
 
 const colors = {
   separator: appColors.separator,
-  background: appColors.background,
   surfaceRaised: appColors.surfaceRaised,
   textPrimary: appColors.textPrimary,
   textSecondary: appColors.textSecondary,
   textTertiary: appColors.textTertiary,
   accent: appColors.accent,
-  accentSoft: appColors.accentSoft,
-  searchBackground: appColors.searchBackground,
 } as const;
 
 export const styles = {
-  container: {
-    width: "100%",
-    padding: "22px 16px 36px",
-  },
   content: {
     width: "100%",
   },
@@ -31,36 +24,6 @@ export const styles = {
     display: "inline-flex",
     alignItems: "center",
     gap: 4,
-  },
-  heroSection: {
-    paddingBottom: 6,
-    marginTop: 12,
-  },
-  pageTitle: {
-    fontSize: 40,
-    fontWeight: 700,
-    letterSpacing: -0.7,
-    color: colors.textPrimary,
-    margin: "6px 0 0 0",
-    lineHeight: 1.02,
-  },
-  pageDescription: {
-    fontSize: 15,
-    color: colors.textSecondary,
-    margin: "8px 0 0 0",
-    lineHeight: 1.5,
-  },
-  memberBadge: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: 4,
-    marginTop: 12,
-    padding: "4px 12px",
-    fontSize: 13,
-    fontWeight: 500,
-    color: colors.textSecondary,
-    background: colors.searchBackground,
-    borderRadius: 999,
   },
   sectionCard: {
     marginTop: 26,

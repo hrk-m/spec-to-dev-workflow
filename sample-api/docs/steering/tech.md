@@ -56,6 +56,7 @@ db/seed/                    →  Seed data (DML only)
 - テストファイルは `package xxx_test`（外部テストパッケージ）を使用
 - lll: 行の上限 160 文字、funlen: 関数は 150 行・80 文以内
 - lint 対象からテストファイルを除外（`.golangci.yml` の `exclude-files`）
+- 入力の正規化は service 層で行う: `name = strings.TrimSpace(name)` (Store/Update)、`q = strings.TrimSpace(q)` (ListUsers)。handler 層では正規化しない
 
 ## テスト方針
 
@@ -145,7 +146,9 @@ type UserRepository interface {
 
 `group.UserRepository.CountByIDs` は `mysql.UserRepository` が実装する。`CountByIDs` は `SELECT COUNT(DISTINCT id) FROM users WHERE id IN (?) AND deleted_at IS NULL` で存在するユーザー数を 1 クエリで返す。
 
-`AddGroupMembers` はトランザクション内で `group_members` へ一括 INSERT する。INSERT 前に重複チェックを行い、既存メンバーが含まれる場合は `ErrConflict` を返す。成功後は追加したユーザーを `users` テーブルから SELECT して返す。
+`AddGroupMembers` はトランザクション内で `group_members` へ一括 INSERT する。INSERT 前に重複チェックを行い、既存メンバーが含まれる場合は `ErrConflict` を返す。成功後は追加したユーザーを `users` テーブルから SELECT して返す（`id, first_name, last_name` のみ; `uuid` は含まない）。
+
+`ListGroupMembers` の `users` SELECT は `id, first_name, last_name` のみ（`uuid` は含まない）。`ListNonGroupMembers` も同様に `id, first_name, last_name` のみ。`ListUsers` は `id, uuid, first_name, last_name` をすべて SELECT する。同一の `domain.User` 型を使い回すため、`uuid` を SELECT しないエンドポイントでは `uuid` フィールドが空文字になる。
 
 `RemoveGroupMembers` は service 層でグループ存在確認を行い（`GetByID` 経由）、repository 層でトランザクション内に `DELETE FROM group_members WHERE group_id = ? AND user_id IN (?)` を実行する。`RowsAffected()` が `len(userIDs)` と一致しない場合（非メンバーが含まれる）は `ErrNotFound` を返してロールバックする。handler 層で `user_ids` の空チェック（`len == 0` → 400）を行う。成功時は `204 No Content` を返す。
 

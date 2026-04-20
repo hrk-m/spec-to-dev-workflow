@@ -9,6 +9,7 @@ bun.lock
 
 # Generated files
 *.tsbuildinfo
+test-results/
 
 # Environment files
 .env

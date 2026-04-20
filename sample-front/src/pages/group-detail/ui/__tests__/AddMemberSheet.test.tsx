@@ -260,4 +260,83 @@ describe("AddMemberSheet", () => {
 
     expect(clearNonMemberListCache).toHaveBeenCalledWith(42);
   });
+
+  it("「一括追加」ボタンが検索フォームの下・ユーザー一覧の上に表示される", () => {
+    vi.mocked(useNonMemberList).mockReturnValue({
+      ...defaultHookReturn,
+      users: [{ id: 1, first_name: "太郎", last_name: "山田" }],
+      total: 1,
+    });
+
+    render(<AddMemberSheet groupId={1} onClose={mockOnClose} />);
+
+    const bulkButton = screen.getByRole("button", { name: "一括追加" });
+    const searchInput = screen.getByPlaceholderText(/Search/i);
+    const userName = screen.getByText("山田 太郎");
+
+    // button comes after search input
+    const posAfterSearch = searchInput.compareDocumentPosition(bulkButton);
+    expect(posAfterSearch & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    // button comes before user list item
+    const posBeforeUser = bulkButton.compareDocumentPosition(userName);
+    expect(posBeforeUser & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("初期状態では「一括追加」ボタンが disabled である", () => {
+    vi.mocked(useNonMemberList).mockReturnValue({
+      ...defaultHookReturn,
+      users: [{ id: 1, first_name: "太郎", last_name: "山田" }],
+      total: 1,
+    });
+
+    render(<AddMemberSheet groupId={1} onClose={mockOnClose} />);
+
+    expect(screen.getByRole("button", { name: "一括追加" })).toBeDisabled();
+  });
+
+  it("チェックボックスを 1 件選択すると「一括追加」ボタンが活性化する", async () => {
+    const user = userEvent.setup();
+    vi.mocked(useNonMemberList).mockReturnValue({
+      ...defaultHookReturn,
+      users: [{ id: 1, first_name: "太郎", last_name: "山田" }],
+      total: 1,
+    });
+
+    render(<AddMemberSheet groupId={1} onClose={mockOnClose} />);
+
+    await user.click(screen.getByText("山田 太郎"));
+
+    expect(screen.getByRole("button", { name: "一括追加" })).not.toBeDisabled();
+  });
+
+  it("全チェックを外すと「一括追加」ボタンが再び disabled に戻る", async () => {
+    const user = userEvent.setup();
+    vi.mocked(useNonMemberList).mockReturnValue({
+      ...defaultHookReturn,
+      users: [{ id: 1, first_name: "太郎", last_name: "山田" }],
+      total: 1,
+    });
+
+    render(<AddMemberSheet groupId={1} onClose={mockOnClose} />);
+
+    await user.click(screen.getByText("山田 太郎"));
+    expect(screen.getByRole("button", { name: "一括追加" })).not.toBeDisabled();
+
+    await user.click(screen.getByText("山田 太郎"));
+    expect(screen.getByRole("button", { name: "一括追加" })).toBeDisabled();
+  });
+
+  it("DOM 内に「一括追加」ボタンが 1 つだけ存在する（下部に重複しない）", () => {
+    vi.mocked(useNonMemberList).mockReturnValue({
+      ...defaultHookReturn,
+      users: [{ id: 1, first_name: "太郎", last_name: "山田" }],
+      total: 1,
+    });
+
+    render(<AddMemberSheet groupId={1} onClose={mockOnClose} />);
+
+    const buttons = screen.getAllByRole("button", { name: "一括追加" });
+    expect(buttons).toHaveLength(1);
+  });
 });
