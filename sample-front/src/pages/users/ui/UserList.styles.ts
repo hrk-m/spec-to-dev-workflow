@@ -67,11 +67,6 @@ export const styles = {
     color: colors.textPrimary,
     letterSpacing: -0.2,
   },
-  sectionMeta: {
-    margin: 0,
-    fontSize: 13,
-    color: colors.textSecondary,
-  },
   tableRoot: {
     width: "100%",
     borderCollapse: "collapse" as const,
@@ -98,12 +93,6 @@ export const styles = {
     borderBottom: `1px solid ${colors.separator}`,
   },
   tableRowLast: {},
-  tableCell: {
-    padding: "13px 16px",
-    fontSize: 14,
-    color: colors.textPrimary,
-    verticalAlign: "middle" as const,
-  },
   tableCellId: {
     padding: "13px 16px",
     fontSize: 14,

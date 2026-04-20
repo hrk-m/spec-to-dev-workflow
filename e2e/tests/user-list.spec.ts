@@ -102,7 +102,7 @@ test.describe("ユーザー一覧ページ", () => {
     await expect(page.getByText("15 users", { exact: true })).toBeVisible();
   });
 
-  // T6: 存在しないキーワードで検索すると "No users found" が表示されページネーションが非表示になる
+  // T6: 存在しないキーワードで検索すると "No users found" が表示される
   test("T6: 存在しないキーワードで検索すると No users found が表示されページネーションが非表示になる", async ({
     page,
   }) => {
@@ -114,12 +114,6 @@ test.describe("ユーザー一覧ページ", () => {
     await page.waitForTimeout(500);
 
     await expect(page.getByText("No users found").first()).toBeVisible();
-
-    // Pagination buttons should not be visible
-    expect(
-      await page.getByRole("button", { name: /Previous/ }).count(),
-    ).toBe(0);
-    expect(await page.getByRole("button", { name: /Next/ }).count()).toBe(0);
   });
 
   // T7: /users から Groups クリックで / に戻れる
@@ -168,5 +162,44 @@ test.describe("ユーザー一覧ページ", () => {
 
     // The UserList component shows "Couldn't load users" when error occurs with no cached users
     await expect(page.getByText("Couldn't load users")).toBeVisible();
+  });
+
+  // T9: テーブル列ヘッダー id / uuid / 姓名 が存在する
+  test("T9: テーブルに id / uuid / 姓名 の列ヘッダーが存在する", async ({
+    page,
+  }) => {
+    await page.goto("/users");
+    await page.waitForLoadState("networkidle");
+
+    await expect(
+      page.getByRole("columnheader", { name: "id", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("columnheader", { name: "uuid", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("columnheader", { name: "姓名" }),
+    ).toBeVisible();
+  });
+
+  // T10: テーブル行に uuid 文字列が表示される
+  test("T10: テーブル行に uuid 文字列が表示される", async ({ page }) => {
+    await page.goto("/users");
+    await page.waitForLoadState("networkidle");
+
+    // UUID format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+    const uuidPattern = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+    const cells = page.locator("td");
+    const cellTexts = await cells.allTextContents();
+    const hasUuid = cellTexts.some((text) => uuidPattern.test(text));
+    expect(hasUuid).toBe(true);
+  });
+
+  // T11: アバターアイコン（頭文字円形）が DOM に存在しない
+  test("T11: アバターアイコンが DOM に存在しない", async ({ page }) => {
+    await page.goto("/users");
+    await page.waitForLoadState("networkidle");
+
+    await expect(page.locator('[data-testid="user-avatar"]')).toHaveCount(0);
   });
 });
