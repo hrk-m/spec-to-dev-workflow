@@ -14,7 +14,7 @@
   ├─ useGroupList が limit=100, offset=0 で API リクエストを発行する
   ├─ 初回読み込み時はスケルトンローディングを表示する
   ├─ バックエンドからグループ一覧と total が返る
-  ├─ cachedGroups にキャッシュされ、グループ（名称・説明・メンバー数）がリスト表示される
+  ├─ cachedGroups にキャッシュされ、グループが ID・グループ名・説明・メンバー数の 4 列テーブル形式で表示される
   ├─ リスト末尾にセンチネル要素（sentinelRef）が配置される
   └─ グループ行をクリックするとグループ詳細画面（/groups/:id）へ遷移する
 
@@ -68,7 +68,6 @@
 | `fetchedOffset` | state | サーバーから取得済みのオフセット位置を保持する |
 | `sentinelRef` | ref | リスト末尾のセンチネル要素への参照。IntersectionObserver に渡す |
 | `effectiveTotal` | derived | 検索中は cachedGroups.length、非検索時は API の total を使用する |
-| `isWideLayout` | state | ウィンドウ幅が 1024px 以上かどうかのレイアウトフラグ |
 
 ---
 

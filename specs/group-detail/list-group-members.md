@@ -14,7 +14,7 @@
   ├─ useMemberList が groupId・limit=100・offset=0・q を元に API リクエストを発行する
   ├─ 初回読み込み時はスケルトンローディングを表示する
   ├─ バックエンドからメンバー一覧と総件数が返る
-  ├─ メンバーがイニシャルアバター＋フルネーム形式でリスト表示される
+  ├─ メンバーが ID・姓名の 2 列テーブル形式で表示される（削除モード時はチェックボックス列が追加される）
   └─ リスト末尾にセンチネル要素（sentinelRef）が配置される
 
 センチネル要素が viewport に入る（スクロールで末尾に到達する）
@@ -48,22 +48,21 @@
 
 ## 使用コンポーネント・状態
 
-| 要素 | 種別 | 役割 |
-|---|---|---|
-| `MemberList` | コンポーネント | メンバー検索・一覧・無限スクロール（センチネル要素）を表示する |
-| `MemberRow` | コンポーネント | 個々のメンバー行（アバター＋名前）を表示する。`data-testid="member-row"` が付与されており E2E テストのセレクターとして使用される |
-| `MemberAvatar` | コンポーネント | メンバーのイニシャルアバターを表示する |
-| `useMemberList` | カスタム Hook | fetch・検索・無限スクロール・キャッシュの状態と処理を管理する |
-| `cachedMembers` | state | サーバーから取得したメンバーをキャッシュする（100 件単位でフェッチ） |
-| `total` | state | メンバーの総件数を保持する（検索時は cachedMembers.length） |
-| `searchQuery` | state | メンバー検索キーワードを保持する |
-| `debouncedQuery` | state | 300ms デバウンス済みの検索キーワード（API リクエストに使用） |
-| `isFetchingMore` | state | センチネルトリガーによる追加フェッチ中かどうか |
-| `fetchMoreError` | state | 追加フェッチのエラーメッセージ（null なら正常） |
-| `lastBatchSize` | state | 直前のフェッチで取得した件数（FETCH_LIMIT 未満なら末尾到達と判定） |
-| `fetchedOffset` | state | サーバーから取得済みのオフセット位置を保持する |
-| `sentinelRef` | ref | リスト末尾のセンチネル要素への参照。IntersectionObserver に渡す |
-| `effectiveTotal` | derived | 検索中は cachedMembers.length、非検索時は API の total を使用する |
+| 要素             | 種別           | 役割                                                                                                                              |
+| ---------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `MemberList`     | コンポーネント | メンバー検索・一覧・無限スクロール（センチネル要素）を表示する                                                                    |
+| `MemberRow`      | コンポーネント | 個々のメンバー行（ID・姓名の 2 列）を表示する。`data-testid="member-row"` が付与されており E2E テストのセレクターとして使用される |
+| `useMemberList`  | カスタム Hook  | fetch・検索・無限スクロール・キャッシュの状態と処理を管理する                                                                     |
+| `cachedMembers`  | state          | サーバーから取得したメンバーをキャッシュする（100 件単位でフェッチ）                                                              |
+| `total`          | state          | メンバーの総件数を保持する（検索時は cachedMembers.length）                                                                       |
+| `searchQuery`    | state          | メンバー検索キーワードを保持する                                                                                                  |
+| `debouncedQuery` | state          | 300ms デバウンス済みの検索キーワード（API リクエストに使用）                                                                      |
+| `isFetchingMore` | state          | センチネルトリガーによる追加フェッチ中かどうか                                                                                    |
+| `fetchMoreError` | state          | 追加フェッチのエラーメッセージ（null なら正常）                                                                                   |
+| `lastBatchSize`  | state          | 直前のフェッチで取得した件数（FETCH_LIMIT 未満なら末尾到達と判定）                                                                |
+| `fetchedOffset`  | state          | サーバーから取得済みのオフセット位置を保持する                                                                                    |
+| `sentinelRef`    | ref            | リスト末尾のセンチネル要素への参照。IntersectionObserver に渡す                                                                   |
+| `effectiveTotal` | derived        | 検索中は cachedMembers.length、非検索時は API の total を使用する                                                                 |
 
 ---
 
@@ -71,7 +70,7 @@
 
 ```
 - [ ] グループ詳細画面を開くとメンバー一覧がスケルトン表示後に表示される
-- [ ] メンバーのイニシャルアバターとフルネーム（姓 名）が正しく表示される
+- [ ] メンバーの ID と姓名（姓 名）が正しく表示される
 - [ ] メンバー検索ボックスにキーワードを入力すると名前で絞り込まれる
 - [ ] スクロールしてリスト末尾に到達すると次バッチが自動でロードされる（無限スクロール）
 - [ ] 全件取得済みのとき末尾到達しても追加フェッチが走らない
@@ -85,9 +84,9 @@
 
 ## 使用 API
 
-| エンドポイント | メソッド | 用途 |
-|---|---|---|
-| `/api/v1/groups/:id/members?limit=N&offset=N&q=keyword` | GET | メンバー一覧を取得する |
+| エンドポイント                                          | メソッド | 用途                   |
+| ------------------------------------------------------- | -------- | ---------------------- |
+| `/api/v1/groups/:id/members?limit=N&offset=N&q=keyword` | GET      | メンバー一覧を取得する |
 
 ---
 
