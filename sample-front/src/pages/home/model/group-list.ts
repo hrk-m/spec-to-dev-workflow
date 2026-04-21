@@ -55,32 +55,11 @@ export function useGroupList() {
   const [lastBatchSize, setLastBatchSize] = useState(
     () => cachedEntry?.lastBatchSize ?? FETCH_LIMIT,
   );
-  const [isWideLayout, setIsWideLayout] = useState(
-    () => typeof window !== "undefined" && window.innerWidth >= 1024,
-  );
-
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     cachedGroupsRef.current = cachedGroups;
   }, [cachedGroups]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return undefined;
-    }
-
-    const handleResize = () => {
-      setIsWideLayout(window.innerWidth >= 1024);
-    };
-
-    handleResize();
-    window.addEventListener("resize", handleResize);
-
-    return () => {
-      window.removeEventListener("resize", handleResize);
-    };
-  }, []);
 
   const doFetch = useCallback((offset: number, query: string, append: boolean) => {
     setIsLoading(true);
@@ -258,7 +237,6 @@ export function useGroupList() {
     isLoading: shouldShowLoading,
     isFetchingMore,
     fetchMoreError,
-    isWideLayout,
     sentinelRef,
     setSearchQuery: handleSearch,
     groupCountLabel: shouldShowLoading

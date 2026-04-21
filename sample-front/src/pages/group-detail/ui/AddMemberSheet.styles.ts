@@ -7,6 +7,7 @@ const colors = {
   textSecondary: appColors.textSecondary,
   textTertiary: appColors.textTertiary,
   searchBackground: appColors.searchBackground,
+  error: appColors.error,
 } as const;
 
 export const styles = {
@@ -60,22 +61,9 @@ export const styles = {
   },
   tableRow: {
     borderBottom: `1px solid ${colors.separator}`,
+    cursor: "pointer",
   },
-  tableRowLast: {},
-  tableCellId: {
-    padding: "13px 16px",
-    fontSize: 14,
-    fontWeight: 600,
-    color: colors.textSecondary,
-    verticalAlign: "middle" as const,
-    width: 60,
-  },
-  tableCellName: {
-    padding: "13px 16px",
-    fontSize: 14,
-    fontWeight: 600,
-    color: colors.textPrimary,
-    verticalAlign: "middle" as const,
+  tableRowLast: {
     cursor: "pointer",
   },
   tableCellCheckbox: {
@@ -83,13 +71,22 @@ export const styles = {
     verticalAlign: "middle" as const,
     width: 48,
   },
+  tableCellName: {
+    padding: "13px 16px",
+    fontSize: 14,
+    fontWeight: 500,
+    color: colors.textPrimary,
+    verticalAlign: "middle" as const,
+  },
   errorText: {
-    margin: 0,
+    margin: "12px 0 0",
     fontSize: 14,
     lineHeight: 1.5,
-    color: colors.textSecondary,
-    textAlign: "center" as const,
-    padding: "28px 24px",
+    color: colors.error,
+    padding: "12px 16px",
+    background: appColors.errorBackground,
+    borderRadius: 12,
+    border: `1px solid ${appColors.errorBorder}`,
   },
   emptyText: {
     margin: 0,

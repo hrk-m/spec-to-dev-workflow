@@ -186,7 +186,7 @@ WHERE id = ? AND deleted_at IS NULL;
 
 ---
 
-## 最低要件
+## 要件
 
 1. ...
 2. ...

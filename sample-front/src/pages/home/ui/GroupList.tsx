@@ -2,93 +2,12 @@ import { Box, Callout, Flex, Heading, Skeleton, Spinner, Text, TextField } from 
 import { FaMagnifyingGlass } from "react-icons/fa6";
 import { useNavigate } from "react-router";
 
-import type { Group } from "@/pages/home/model/group";
 import { useGroupList } from "@/pages/home/model/group-list";
 import { PageContainer } from "@/shared/ui";
 import { CreateGroupDialog } from "./CreateGroupDialog";
 import { styles } from "./GroupList.styles";
 
 const SKELETON_ROWS = 5;
-
-function SkeletonRow({ isWideLayout, isLast }: { isWideLayout: boolean; isLast: boolean }) {
-  return (
-    <Box style={{ ...styles.rowBlock, ...(isLast ? {} : styles.rowBorder) }}>
-      <Flex
-        style={{
-          ...styles.rowShell,
-          flexDirection: isWideLayout ? "row" : "column",
-          alignItems: isWideLayout ? "center" : "flex-start",
-        }}
-      >
-        <Flex style={styles.skeletonStack}>
-          <Skeleton style={{ ...styles.skeletonLine, width: 84, height: 18 }} />
-          <Skeleton style={{ ...styles.skeletonLine, width: "72%", height: 14 }} />
-        </Flex>
-        <Flex style={styles.skeletonMeta}>
-          <Skeleton style={{ ...styles.skeletonLine, width: 68, height: 14 }} />
-          <Skeleton style={{ ...styles.skeletonLine, width: 42, height: 26, borderRadius: 999 }} />
-        </Flex>
-      </Flex>
-    </Box>
-  );
-}
-
-function GroupRow({
-  group,
-  isLast,
-  isWideLayout,
-  onClick,
-}: {
-  group: Group;
-  isLast: boolean;
-  isWideLayout: boolean;
-  onClick: () => void;
-}) {
-  const memberCount = group.member_count;
-  const rowShellStyle = {
-    ...styles.rowShell,
-    flexDirection: isWideLayout ? ("row" as const) : ("column" as const),
-    alignItems: isWideLayout ? ("center" as const) : ("flex-start" as const),
-  };
-  const rowMetaStyle = {
-    ...styles.rowMeta,
-    alignItems: isWideLayout ? ("flex-end" as const) : ("flex-start" as const),
-  };
-
-  return (
-    <Box
-      style={{ ...styles.rowBlock, ...(isLast ? {} : styles.rowBorder), cursor: "pointer" }}
-      onClick={onClick}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onClick();
-        }
-      }}
-    >
-      <Flex style={rowShellStyle}>
-        <Flex style={styles.rowContent}>
-          <Heading as="h2" style={styles.rowTitle}>
-            {group.name}
-          </Heading>
-          <Text as="p" style={styles.rowDescription}>
-            {group.description}
-          </Text>
-        </Flex>
-        <Flex style={rowMetaStyle}>
-          <Text as="span" style={styles.rowMetaLabel}>
-            Members
-          </Text>
-          <Text as="span" style={styles.rowMetaValue}>
-            {memberCount} {memberCount === 1 ? "member" : "members"}
-          </Text>
-        </Flex>
-      </Flex>
-    </Box>
-  );
-}
 
 type GroupListProps = {
   onGroupClick?: (groupId: number) => void;
@@ -103,7 +22,6 @@ export function GroupList({ onGroupClick }: GroupListProps) {
     isLoading,
     isFetchingMore,
     fetchMoreError,
-    isWideLayout,
     sentinelRef,
     setSearchQuery,
     groupCountLabel,
@@ -157,11 +75,34 @@ export function GroupList({ onGroupClick }: GroupListProps) {
           <Text as="p" className="visually-hidden">
             loading...
           </Text>
-          <Box style={styles.listCard}>
-            {Array.from({ length: SKELETON_ROWS }, (_, i) => (
-              <SkeletonRow key={i} isWideLayout={isWideLayout} isLast={i === SKELETON_ROWS - 1} />
-            ))}
-          </Box>
+          <table style={styles.tableRoot}>
+            <thead style={styles.tableHeader}>
+              <tr>
+                <th style={styles.tableHeaderCellId}>ID</th>
+                <th style={styles.tableHeaderCell}>グループ名</th>
+                <th style={styles.tableHeaderCell}>説明</th>
+                <th style={styles.tableHeaderCell}>メンバー数</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Array.from({ length: SKELETON_ROWS }, (_, i) => (
+                <tr key={i} style={styles.skeletonRow}>
+                  <td style={styles.skeletonCell}>
+                    <Skeleton style={{ ...styles.skeletonLine, width: 32 }} />
+                  </td>
+                  <td style={styles.skeletonCell}>
+                    <Skeleton style={{ ...styles.skeletonLine, width: 120 }} />
+                  </td>
+                  <td style={styles.skeletonCell}>
+                    <Skeleton style={{ ...styles.skeletonLine, width: "60%" }} />
+                  </td>
+                  <td style={styles.skeletonCell}>
+                    <Skeleton style={{ ...styles.skeletonLine, width: 40 }} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </Box>
       )}
 
@@ -173,36 +114,47 @@ export function GroupList({ onGroupClick }: GroupListProps) {
                 All Groups
               </Text>
             </Box>
-            <Box style={styles.listCard}>
-              {groups.map((group, index) => (
-                <GroupRow
-                  key={group.id}
-                  group={group}
-                  isLast={index === groups.length - 1}
-                  isWideLayout={isWideLayout}
-                  onClick={() => {
-                    if (onGroupClick) {
-                      onGroupClick(group.id);
-                    } else {
-                      navigate(`/groups/${String(group.id)}`);
-                    }
-                  }}
-                />
-              ))}
-            </Box>
+            <table style={styles.tableRoot}>
+              <thead style={styles.tableHeader}>
+                <tr>
+                  <th style={styles.tableHeaderCellId}>ID</th>
+                  <th style={styles.tableHeaderCell}>グループ名</th>
+                  <th style={styles.tableHeaderCell}>説明</th>
+                  <th style={styles.tableHeaderCell}>メンバー数</th>
+                </tr>
+              </thead>
+              <tbody>
+                {groups.map((group, index) => (
+                  <tr
+                    key={group.id}
+                    style={{
+                      ...(index < groups.length - 1 ? styles.tableRow : styles.tableRowLast),
+                      cursor: "pointer",
+                    }}
+                    onClick={() => {
+                      if (onGroupClick) {
+                        onGroupClick(group.id);
+                      } else {
+                        navigate(`/groups/${String(group.id)}`);
+                      }
+                    }}
+                  >
+                    <td style={styles.tableCellId}>{group.id}</td>
+                    <td style={styles.tableCellName}>{group.name}</td>
+                    <td style={styles.tableCellDescription}>{group.description}</td>
+                    <td style={styles.tableCellCount}>{group.member_count}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </section>
         </Box>
       )}
 
       {!isInitialLoading && !error && groups.length === 0 && (
-        <Box style={styles.emptyState}>
-          <Text as="p" style={styles.emptyStateTitle}>
-            No groups matched that search.
-          </Text>
-          <Text as="p" style={styles.emptyStateText}>
-            Try a shorter phrase or search by part of a group name.
-          </Text>
-        </Box>
+        <Text as="p" style={styles.emptyText}>
+          No groups matched that search.
+        </Text>
       )}
 
       {/* Inline error for additional fetch failures */}

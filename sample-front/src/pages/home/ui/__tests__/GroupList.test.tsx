@@ -85,9 +85,13 @@ describe("GroupList", () => {
     renderWithRouter();
 
     await waitFor(() => {
-      expect(screen.getByText("2 members")).toBeInTheDocument();
+      expect(screen.getByText("Engineering")).toBeInTheDocument();
     });
-    expect(screen.getByText("1 member")).toBeInTheDocument();
+    // テーブルセルでは数字のみ表示
+    const cells = screen.getAllByRole("cell");
+    const cellTexts = cells.map((cell) => cell.textContent);
+    expect(cellTexts).toContain("2");
+    expect(cellTexts).toContain("1");
   });
 
   it("API がエラーの場合はエラーメッセージを表示する", async () => {
@@ -178,7 +182,7 @@ describe("GroupList", () => {
       expect(screen.getByText("Engineering")).toBeInTheDocument();
     });
 
-    const engineeringRow = screen.getByText("Engineering").closest("[role='button']");
+    const engineeringRow = screen.getByText("Engineering").closest("tr");
     expect(engineeringRow).not.toBeNull();
     if (engineeringRow) {
       await user.click(engineeringRow);
@@ -187,6 +191,69 @@ describe("GroupList", () => {
     expect(onGroupClick).toHaveBeenCalledTimes(1);
     expect(onGroupClick).toHaveBeenCalledWith(1);
     expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it("ID 列の columnheader ロールがアクセシブルである", async () => {
+    vi.mocked(fetchGroups).mockResolvedValueOnce(mockGroupsResponse);
+    renderWithRouter();
+    await waitFor(() => {
+      expect(screen.getByText("Engineering")).toBeInTheDocument();
+    });
+    expect(screen.getByRole("columnheader", { name: "ID" })).toBeInTheDocument();
+  });
+
+  it("グループ名列の columnheader ロールがアクセシブルである", async () => {
+    vi.mocked(fetchGroups).mockResolvedValueOnce(mockGroupsResponse);
+    renderWithRouter();
+    await waitFor(() => {
+      expect(screen.getByText("Engineering")).toBeInTheDocument();
+    });
+    expect(screen.getByRole("columnheader", { name: "グループ名" })).toBeInTheDocument();
+  });
+
+  it("説明列の columnheader ロールがアクセシブルである", async () => {
+    vi.mocked(fetchGroups).mockResolvedValueOnce(mockGroupsResponse);
+    renderWithRouter();
+    await waitFor(() => {
+      expect(screen.getByText("Engineering")).toBeInTheDocument();
+    });
+    expect(screen.getByRole("columnheader", { name: "説明" })).toBeInTheDocument();
+  });
+
+  it("メンバー数列の columnheader ロールがアクセシブルである", async () => {
+    vi.mocked(fetchGroups).mockResolvedValueOnce(mockGroupsResponse);
+    renderWithRouter();
+    await waitFor(() => {
+      expect(screen.getByText("Engineering")).toBeInTheDocument();
+    });
+    expect(screen.getByRole("columnheader", { name: "メンバー数" })).toBeInTheDocument();
+  });
+
+  it("行クリックで navigate が呼ばれる (onGroupClick なし)", async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetchGroups).mockResolvedValueOnce(mockGroupsResponse);
+    renderWithRouter();
+    await waitFor(() => {
+      expect(screen.getByText("Engineering")).toBeInTheDocument();
+    });
+    const engineeringRow = screen.getByText("Engineering").closest("tr");
+    expect(engineeringRow).not.toBeNull();
+    if (engineeringRow) {
+      await user.click(engineeringRow);
+    }
+    expect(mockNavigate).toHaveBeenCalledWith("/groups/1");
+  });
+
+  it("tr に role='button' が付与されていない", async () => {
+    vi.mocked(fetchGroups).mockResolvedValueOnce(mockGroupsResponse);
+    renderWithRouter();
+    await waitFor(() => {
+      expect(screen.getByText("Engineering")).toBeInTheDocument();
+    });
+    const rows = screen.getAllByRole("row");
+    rows.forEach((row) => {
+      expect(row).not.toHaveAttribute("role", "button");
+    });
   });
 
   it("検索結果が 0 件のとき 'No groups found' を表示する", async () => {

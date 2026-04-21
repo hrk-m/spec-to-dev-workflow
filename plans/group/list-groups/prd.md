@@ -195,8 +195,9 @@
 | ファイル                                            | 役割                                                                                  |
 | --------------------------------------------------- | ------------------------------------------------------------------------------------- |
 | `sample-front/src/pages/home/api/fetch-groups.ts`   | GET /api/v1/groups 呼び出し（limit=100 に変更）                                                                  |
-| `sample-front/src/pages/home/model/useGroupList.ts` | グループ一覧取得・無限スクロールカスタムフック（`displayedCount`・`isFetchingMore`・IntersectionObserver 対応）   |
-| `sample-front/src/pages/home/ui/GroupList.tsx`      | グループ一覧コンポーネント（ページネーション UI 削除・センチネル要素追加・リスト末尾スピナー／エラー表示）        |
+| `sample-front/src/pages/home/model/group-list.ts`   | グループ一覧取得・無限スクロールカスタムフック（`displayedCount`・`isFetchingMore`・IntersectionObserver 対応）・isWideLayout state・resize listener を削除する |
+| `sample-front/src/pages/home/ui/GroupList.tsx`      | グループ一覧コンポーネント（ページネーション UI 削除・センチネル要素追加・リスト末尾スピナー／エラー表示・テーブル形式変換・isWideLayout 削除） |
+| `sample-front/src/pages/home/ui/GroupList.styles.ts` | テーブル用スタイル定数（tableRoot / tableHeader / tableHeaderCell / tableHeaderCellId / tableRow / tableRowLast / tableCellId / tableCellName / tableCellDescription / tableCellCount / skeletonRow / skeletonCell / skeletonLine / emptyText / errorText） |
 | `e2e/tests/group-list.spec.ts`                      | グループ 0 件検索 E2E テスト（ヘッダーラベル・ページネーション UI 非存在・空状態メッセージの確認）               |
 
 ---
@@ -222,6 +223,12 @@
 17. `currentPage` / `totalPages` / `perPage` / `handlePerPageChange` の状態を削除する
 18. IntersectionObserver の jsdom mock を `setup.ts` に追加する
 19. 検索変更時にキャッシュをクリアし `offset=0` でリセットする
+20. GroupList が `<table>` + `<thead>` + `<tbody>` 形式でレンダリングされる
+21. `<thead>` に **ID / グループ名 / 説明 / メンバー数** の 4 列ヘッダーを表示する
+22. 4 列すべてで `columnheader` ロールがアクセシブルである（`getByRole('columnheader', { name: '...' })` で取得可能）
+23. `GroupList.styles.ts` にテーブル用スタイル定数を持つ（UserList.styles.ts と同じパターン）
+24. `isWideLayout` フラグを `GroupList.tsx` と `group-list.ts` から削除する（常にテーブル表示）
+25. 各 `<tr>` はクリック可能（`onClick` + `cursor: pointer`）でグループ詳細画面へ遷移する（`<tr>` に `role="button"` は付与しない）
 
 ---
 

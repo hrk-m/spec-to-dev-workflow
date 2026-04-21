@@ -9,132 +9,32 @@ import {
   clearNonMemberListCache,
   useNonMemberList,
 } from "@/pages/group-detail/model/useNonMemberList";
-import { appColors } from "@/shared/ui";
+import { styles } from "./AddMemberSheet.styles";
 
 const SKELETON_ROWS = 5;
 
-const styles = {
-  container: {
-    padding: "0 24px 24px",
-  },
-  searchSection: {
-    marginTop: 18,
-  },
-  searchField: {
-    width: "100%",
-    boxSizing: "border-box" as const,
-    background: appColors.searchBackground,
-    borderRadius: 16,
-    boxShadow: `inset 0 0 0 1px ${appColors.separator}`,
-  },
-  searchFieldIcon: {
-    width: 18,
-    height: 18,
-    display: "block",
-    color: appColors.textSecondary,
-  },
-  listCard: {
-    marginTop: 16,
-    background: appColors.surfaceRaised,
-    border: `1px solid ${appColors.separator}`,
-    borderRadius: 22,
-    overflow: "hidden",
-    boxShadow: "0 18px 42px rgba(15, 23, 42, 0.06)",
-  },
-  userRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: 12,
-    padding: "14px 20px",
-    cursor: "pointer",
-  },
-  userRowBorder: {
-    borderBottom: `1px solid ${appColors.separator}`,
-  },
-  avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: "50%" as const,
-    background: appColors.accentSoft,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-    fontSize: 14,
-    fontWeight: 600,
-    color: appColors.accent,
-  },
-  userName: {
-    margin: 0,
-    fontSize: 15,
-    fontWeight: 500,
-    color: appColors.textPrimary,
-    flex: 1,
-  },
-  errorText: {
-    margin: "12px 0 0",
-    fontSize: 14,
-    lineHeight: 1.5,
-    color: appColors.error,
-    padding: "12px 16px",
-    background: appColors.errorBackground,
-    borderRadius: 12,
-    border: `1px solid ${appColors.errorBorder}`,
-  },
-  emptyText: {
-    margin: 0,
-    fontSize: 14,
-    lineHeight: 1.5,
-    color: appColors.textSecondary,
-    textAlign: "center" as const,
-    padding: "28px 24px",
-  },
-  footer: {
-    marginTop: 20,
-    display: "flex",
-    justifyContent: "flex-end",
-  },
-  skeletonRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: 12,
-    padding: "14px 20px",
-  },
-  skeletonAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: "50%" as const,
-    background: "rgba(118, 118, 128, 0.16)",
-    flexShrink: 0,
-  },
-  skeletonLine: {
-    background: "rgba(118, 118, 128, 0.16)",
-    borderRadius: 999,
-    height: 14,
-    width: "60%",
-  },
-  loadingText: {
-    margin: 0,
-    fontSize: 14,
-    color: appColors.textSecondary,
-    textAlign: "center" as const,
-    padding: "28px 24px",
-  },
+const containerStyle = {
+  padding: "0 24px 24px",
+} as const;
+
+const footerStyle = {
+  marginTop: 20,
+  display: "flex",
+  justifyContent: "flex-end",
+} as const;
+
+const loadingTextStyle = {
+  margin: 0,
+  fontSize: 14,
+  color: "#8e8e93",
+  textAlign: "center" as const,
+  padding: "28px 24px",
 } as const;
 
 type AddMemberSheetProps = {
   groupId: number;
   onClose: () => void;
 };
-
-function UserAvatar({ firstName, lastName }: { firstName: string; lastName: string }) {
-  const initials = `${lastName.charAt(0)}${firstName.charAt(0)}`.toUpperCase();
-  return (
-    <Flex style={styles.avatar}>
-      <Text as="span">{initials}</Text>
-    </Flex>
-  );
-}
 
 export function AddMemberSheet({ groupId, onClose }: AddMemberSheetProps) {
   const { refetch } = useGroupDetail(groupId);
@@ -193,7 +93,7 @@ export function AddMemberSheet({ groupId, onClose }: AddMemberSheetProps) {
   }, [groupId, selectedIds, refetch, onClose]);
 
   return (
-    <Box style={styles.container}>
+    <Box style={containerStyle}>
       <Box style={styles.searchSection}>
         <TextField.Root
           size="3"
@@ -210,7 +110,7 @@ export function AddMemberSheet({ groupId, onClose }: AddMemberSheetProps) {
         </TextField.Root>
       </Box>
 
-      <Box style={styles.footer}>
+      <Box style={footerStyle}>
         <Button
           variant="soft"
           size="2"
@@ -236,23 +136,31 @@ export function AddMemberSheet({ groupId, onClose }: AddMemberSheetProps) {
 
       {isLoading && users.length === 0 && (
         <>
-          <Text as="p" className="visually-hidden" style={styles.loadingText}>
+          <Text as="p" className="visually-hidden" style={loadingTextStyle}>
             loading non-members...
           </Text>
-          <Box style={styles.listCard}>
-            {Array.from({ length: SKELETON_ROWS }, (_, i) => (
-              <Flex
-                key={i}
-                style={{
-                  ...styles.skeletonRow,
-                  ...(i < SKELETON_ROWS - 1 ? styles.userRowBorder : {}),
-                }}
-              >
-                <Box style={styles.skeletonAvatar} />
-                <Skeleton style={styles.skeletonLine} />
-              </Flex>
-            ))}
-          </Box>
+          <table style={styles.tableRoot}>
+            <thead style={styles.tableHeader}>
+              <tr>
+                <th aria-label="選択" style={styles.tableHeaderCellCheckbox} />
+                <th style={styles.tableHeaderCell}>姓名</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Array.from({ length: SKELETON_ROWS }, (_, i) => (
+                <tr key={i} style={i < SKELETON_ROWS - 1 ? styles.skeletonRow : undefined}>
+                  <td style={styles.skeletonCell}>
+                    <Flex align="center">
+                      <Skeleton style={{ width: 16, height: 16, borderRadius: 4 }} />
+                    </Flex>
+                  </td>
+                  <td style={styles.skeletonCell}>
+                    <Skeleton style={styles.skeletonLine} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </>
       )}
 
@@ -263,36 +171,36 @@ export function AddMemberSheet({ groupId, onClose }: AddMemberSheetProps) {
       )}
 
       {users.length > 0 && (
-        <Box style={styles.listCard}>
-          {users.map((user, index) => (
-            <Flex
-              key={user.id}
-              style={{
-                ...styles.userRow,
-                ...(index < users.length - 1 ? styles.userRowBorder : {}),
-              }}
-              onClick={() => handleToggle(user.id)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  handleToggle(user.id);
-                }
-              }}
-            >
-              <Checkbox
-                checked={selectedIds.has(user.id)}
-                onClick={(e) => e.stopPropagation()}
-                onCheckedChange={() => handleToggle(user.id)}
-              />
-              <UserAvatar firstName={user.first_name} lastName={user.last_name} />
-              <Text as="p" style={styles.userName}>
-                {user.last_name} {user.first_name}
-              </Text>
-            </Flex>
-          ))}
-        </Box>
+        <table style={styles.tableRoot}>
+          <thead style={styles.tableHeader}>
+            <tr>
+              <th aria-label="選択" style={styles.tableHeaderCellCheckbox} />
+              <th style={styles.tableHeaderCell}>姓名</th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.map((user, index) => (
+              <tr
+                key={user.id}
+                style={index < users.length - 1 ? styles.tableRow : styles.tableRowLast}
+                onClick={() => handleToggle(user.id)}
+              >
+                <td style={styles.tableCellCheckbox}>
+                  <Flex align="center">
+                    <Checkbox
+                      checked={selectedIds.has(user.id)}
+                      onClick={(e) => e.stopPropagation()}
+                      onCheckedChange={() => handleToggle(user.id)}
+                    />
+                  </Flex>
+                </td>
+                <td style={styles.tableCellName}>
+                  {user.last_name} {user.first_name}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
 
       {/* Inline error for additional fetch failures */}

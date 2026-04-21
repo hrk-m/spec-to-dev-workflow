@@ -52,18 +52,18 @@
 4. レスポンスは成功？
    - Yes（200）→
       5. 取得したメンバー一覧（最大 100 件）と total を state にキャッシュ
-      6. 取得した全件をリストに表示
-      7. リスト末尾にセンチネル要素を追加（IntersectionObserver で監視）
+      6. 取得した全件をテーブル形式で表示（thead: □選択 / id / 姓名, tbody: 各メンバー行）
+      7. テーブル末尾にセンチネル要素を追加（IntersectionObserver で監視）
       8. 終了
    - No（4xx・5xx）→
       5. エラーメッセージを画面に表示
       6. 終了
 9. センチネル要素が viewport に入る
 10. lastBatchSize === 100 →
-        isFetchingMore = true（リスト末尾にスピナー表示）
+        isFetchingMore = true（テーブル末尾にスピナー表示）
         GET /api/v1/groups/:id/members?limit=100&offset=N を送信
         - 成功 → キャッシュに追加（全件表示）、isFetchingMore = false
-        - 失敗 → isFetchingMore = false、リスト末尾にエラーメッセージ表示
+        - 失敗 → isFetchingMore = false、テーブル末尾にエラーメッセージ表示
 11. ユーザーが検索キーワードを入力
 12. GroupDetailPage → API クライアント:
     GET /api/v1/groups/:id/members?limit=100&offset=0&q={keyword} を送信
@@ -172,6 +172,14 @@
 | 13  | 外部依存 | Service をモックで切り分け             | mockGroupService       | Handler 単体でテスト可能      |
 | 14  | 外部依存 | Repository をモックで切り分け          | mockGroupRepository    | Service 単体でテスト可能      |
 
+**フロントエンドテスト** (`MemberList.test.tsx`):
+
+| #   | 観点         | テスト内容                                                   | 期待結果                                                     |
+| --- | ------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| 15  | 列ヘッダー   | `id`・`姓名` の列ヘッダーが存在する                         | `columnheader` ロールで `id` / `姓名` が取得できる           |
+| 16  | アバターなし | アバターアイコン（イニシャル円形）が存在しない              | `MemberAvatar` に相当する要素が DOM に存在しない             |
+| 17  | 既存テスト   | メンバー名表示・空状態・検索・チェックボックス等の既存テストがテーブル形式で通過する | 既存 19 ケースがテーブル形式（`<tr>` / `<td>`）対応で全 pass |
+
 ---
 
 ## 確認ステップ 5-6: E2E テストケース（Playwright）
@@ -208,7 +216,9 @@
 
 | ファイル                                                         | 役割                                                               |
 | ---------------------------------------------------------------- | ------------------------------------------------------------------ |
-| `sample-front/src/pages/group-detail/ui/MemberList.tsx`          | メンバー一覧コンポーネント（ページネーション UI 削除・センチネル要素追加・リスト末尾スピナー／エラー表示）。MemberRow に `data-testid="member-row"` を付与 |
+| `sample-front/src/pages/group-detail/ui/MemberList.tsx`          | メンバー一覧コンポーネント（`<table>` + `<thead>` + `<tbody>` 形式に変換。列構成: □選択 / id / 姓名。アバター削除。センチネル要素・スピナー・エラー表示維持）。MemberRow に `data-testid="member-row"` を付与 |
+| `sample-front/src/pages/group-detail/ui/MemberList.styles.ts`    | テーブル用スタイル定数を追加（`tableRoot`, `tableHeader`, `tableHeaderCell`, `tableHeaderCellCheckbox`, `tableRow`, `tableRowLast`, `tableCellId`, `tableCellName`, `tableCellCheckbox`）|
+| `sample-front/src/pages/group-detail/ui/__tests__/MemberList.test.tsx` | テーブル形式向け更新（列ヘッダー確認・アバターなし確認）|
 | `sample-front/src/pages/group-detail/api/fetch-group-members.ts` | GET /api/v1/groups/:id/members 呼び出し（limit=100 に変更）                                               |
 | `sample-front/src/pages/group-detail/model/useMemberList.ts`     | メンバー一覧取得・無限スクロールカスタムフック（`displayedCount`・`isFetchingMore` 追加・ページネーション状態削除）|
 | `e2e/tests/group-detail.spec.ts`                                  | メンバー 0 件検索 E2E テスト（ページネーション UI 非存在確認に更新）                                       |
@@ -225,14 +235,18 @@
 6. 対象グループが存在しない場合に 404 を返す
 7. `q` パラメータで search_key LIKE 検索が動作する（姓名・名姓順両方向対応）
 8. 詳細ページにメンバー一覧が取得した全件で表示される（`displayedCount` による分割表示なし）
-9. キャッシュが枯渇かつ `lastBatchSize === 100` のとき `offset+=100` で追加フェッチする（全件即時表示）
-10. キャッシュが枯渇かつ `lastBatchSize === 100` のとき `offset+=100` で追加フェッチする
-11. 追加フェッチ中はリスト末尾にスピナーを表示する
-12. 追加フェッチ失敗時はリスト末尾にエラーメッセージを表示する（既存表示アイテムは維持）
-13. メンバー検索で 0 件のとき、"No members found." を表示する
-14. UI から Previous/Next ボタンおよび件数セレクタ（20/50/100）を削除する
-15. `currentPage` / `totalPages` / `perPage` / `handlePerPageChange` の状態を削除する
-16. MemberRow コンポーネントに `data-testid="member-row"` を付与し、E2E テストのセレクターを安定化させる
+9. キャッシュが枯渇かつ `lastBatchSize === 100` のとき `offset+=100` で追加フェッチし、取得結果をキャッシュに追加して全件即時表示する
+10. 追加フェッチ中はテーブル末尾にスピナーを表示する
+11. 追加フェッチ失敗時はテーブル末尾にエラーメッセージを表示する（既存表示アイテムは維持）
+12. メンバー検索で 0 件のとき、"No members found." を表示する
+13. UI から Previous/Next ボタンおよび件数セレクタ（20/50/100）を削除する
+14. `currentPage` / `totalPages` / `perPage` / `handlePerPageChange` の状態を削除する
+15. MemberRow コンポーネントに `data-testid="member-row"` を付与し、E2E テストのセレクターを安定化させる
+16. MemberList が `<table>` 形式（`<table>` + `<thead>` + `<tbody>`）で表示される
+17. `<thead>` に空の `<th>`（チェックボックス列、`aria-label="選択"`）・`id`・`姓名` の 3 列ヘッダーが存在する
+18. アバターアイコン（イニシャル円形）を表示しない（各メンバー行に `MemberAvatar` は使用しない）
+19. テーブルヘッダーの `columnheader` ロールで `id` および `姓名` が取得できる
+20. `MemberList.styles.ts` に UserList と同パターンのテーブル用スタイル定数が定義されている
 
 ---
 

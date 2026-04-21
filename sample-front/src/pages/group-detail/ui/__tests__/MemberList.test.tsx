@@ -52,15 +52,47 @@ describe("MemberList", () => {
     expect(screen.getByText("Sato Hanako")).toBeInTheDocument();
   });
 
-  it("メンバーのイニシャルアバターを表示する", async () => {
+  it("列ヘッダー id と 姓名 が columnheader ロールで取得できる", async () => {
     vi.mocked(fetchGroupMembers).mockResolvedValueOnce(mockMembersResponse);
 
     render(<MemberList groupId={1} />);
 
     await waitFor(() => {
-      expect(screen.getByText("YT")).toBeInTheDocument();
+      expect(screen.getByText("Yamada Taro")).toBeInTheDocument();
     });
-    expect(screen.getByText("SH")).toBeInTheDocument();
+
+    expect(screen.getByRole("columnheader", { name: "id" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "姓名" })).toBeInTheDocument();
+  });
+
+  it("onRefetch 渡し時に 選択・id・姓名 の 3 列ヘッダーがすべて columnheader ロールで取得できる", async () => {
+    vi.mocked(fetchGroupMembers).mockResolvedValueOnce(mockMembersResponse);
+
+    render(<MemberList groupId={1} onRefetch={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Yamada Taro")).toBeInTheDocument();
+    });
+
+    expect(screen.getByRole("columnheader", { name: "id" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "姓名" })).toBeInTheDocument();
+    // 選択列ヘッダーは aria-label="選択" を持つ <th> 要素として存在する
+    const selectionHeader = document.querySelector('th[aria-label="選択"]');
+    expect(selectionHeader).toBeInTheDocument();
+  });
+
+  it("アバターアイコン（イニシャル円形）が DOM に存在しない", async () => {
+    vi.mocked(fetchGroupMembers).mockResolvedValueOnce(mockMembersResponse);
+
+    render(<MemberList groupId={1} />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Yamada Taro")).toBeInTheDocument();
+    });
+
+    // イニシャル（YT, SH）が DOM に存在しないことを確認
+    expect(screen.queryByText("YT")).not.toBeInTheDocument();
+    expect(screen.queryByText("SH")).not.toBeInTheDocument();
   });
 
   it("API エラー時にエラーメッセージを表示する", async () => {

@@ -339,4 +339,44 @@ describe("AddMemberSheet", () => {
     const buttons = screen.getAllByRole("button", { name: "一括追加" });
     expect(buttons).toHaveLength(1);
   });
+
+  it("「姓名」の列ヘッダーが columnheader ロールで取得できる", () => {
+    vi.mocked(useNonMemberList).mockReturnValue({
+      ...defaultHookReturn,
+      users: [{ id: 1, first_name: "太郎", last_name: "山田" }],
+      total: 1,
+    });
+
+    render(<AddMemberSheet groupId={1} onClose={mockOnClose} />);
+
+    expect(screen.getByRole("columnheader", { name: "姓名" })).toBeInTheDocument();
+  });
+
+  it("アバターアイコン（イニシャル円形）が DOM に存在しない", () => {
+    vi.mocked(useNonMemberList).mockReturnValue({
+      ...defaultHookReturn,
+      users: [{ id: 1, first_name: "太郎", last_name: "山田" }],
+      total: 1,
+    });
+
+    const { container } = render(<AddMemberSheet groupId={1} onClose={mockOnClose} />);
+
+    // UserAvatar renders initials in a Flex element with specific avatar styles
+    // After conversion to table format, no avatar element should exist
+    const avatarElements = container.querySelectorAll('[data-testid="user-avatar"]');
+    expect(avatarElements).toHaveLength(0);
+  });
+
+  it("選択列ヘッダー th[aria-label='選択'] が DOM に存在する", () => {
+    vi.mocked(useNonMemberList).mockReturnValue({
+      ...defaultHookReturn,
+      users: [{ id: 1, first_name: "太郎", last_name: "山田" }],
+      total: 1,
+    });
+
+    const { container } = render(<AddMemberSheet groupId={1} onClose={mockOnClose} />);
+
+    const selectionHeader = container.querySelector('th[aria-label="選択"]');
+    expect(selectionHeader).toBeInTheDocument();
+  });
 });

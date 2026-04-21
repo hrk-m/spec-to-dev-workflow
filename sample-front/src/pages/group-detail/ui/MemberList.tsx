@@ -19,48 +19,38 @@ import { styles } from "./MemberList.styles";
 
 const SKELETON_ROWS = 5;
 
-function MemberAvatar({ member }: { member: UserSummary }) {
-  const initials = `${member.last_name.charAt(0)}${member.first_name.charAt(0)}`.toUpperCase();
-
-  return (
-    <Flex style={styles.avatar}>
-      <Text as="span">{initials}</Text>
-    </Flex>
-  );
-}
-
 function MemberRow({
   member,
   isLast,
   isSelected,
+  showCheckbox,
   onToggle,
   onClick,
 }: {
   member: UserSummary;
   isLast: boolean;
   isSelected: boolean;
+  showCheckbox: boolean;
   onToggle: (id: number) => void;
   onClick?: () => void;
 }) {
   return (
-    <Flex
-      data-testid="member-row"
-      style={{
-        ...styles.memberRow,
-        ...(isLast ? {} : styles.memberRowBorder),
-      }}
-    >
-      <Checkbox
-        checked={isSelected}
-        onCheckedChange={() => onToggle(member.id)}
-        aria-label={`Select ${member.last_name} ${member.first_name}`}
-        style={{ flexShrink: 0 }}
-      />
-      <Flex
+    <tr data-testid="member-row" style={isLast ? styles.tableRowLast : styles.tableRow}>
+      {showCheckbox && (
+        <td style={styles.tableCellCheckbox}>
+          <Flex align="center">
+            <Checkbox
+              checked={isSelected}
+              onCheckedChange={() => onToggle(member.id)}
+              aria-label={`Select ${member.last_name} ${member.first_name}`}
+            />
+          </Flex>
+        </td>
+      )}
+      <td style={styles.tableCellId}>{member.id}</td>
+      <td
         style={{
-          flex: 1,
-          alignItems: "center",
-          gap: 12,
+          ...styles.tableCellName,
           cursor: onClick ? "pointer" : undefined,
         }}
         onClick={onClick}
@@ -77,21 +67,34 @@ function MemberRow({
             : undefined
         }
       >
-        <MemberAvatar member={member} />
-        <Text as="p" style={styles.memberName}>
-          {member.last_name} {member.first_name}
-        </Text>
-      </Flex>
-    </Flex>
+        {member.last_name} {member.first_name}
+      </td>
+    </tr>
   );
 }
 
-function SkeletonMemberRow({ isLast }: { isLast: boolean }) {
+function SkeletonMemberRow({ isLast, showCheckbox }: { isLast: boolean; showCheckbox: boolean }) {
   return (
-    <Flex style={{ ...styles.skeletonRow, ...(isLast ? {} : styles.memberRowBorder) }}>
-      <Box style={styles.skeletonAvatar} />
-      <Skeleton style={styles.skeletonLine} />
-    </Flex>
+    <tr style={isLast ? styles.tableRowLast : styles.skeletonRow}>
+      {showCheckbox && (
+        <td style={styles.tableCellCheckbox}>
+          <Box
+            style={{
+              width: 16,
+              height: 16,
+              background: "rgba(118, 118, 128, 0.16)",
+              borderRadius: 4,
+            }}
+          />
+        </td>
+      )}
+      <td style={styles.skeletonCell}>
+        <Skeleton style={styles.skeletonLine} />
+      </td>
+      <td style={styles.skeletonCell}>
+        <Skeleton style={styles.skeletonLine} />
+      </td>
+    </tr>
   );
 }
 
@@ -119,6 +122,7 @@ export function MemberList({ groupId, onMemberClick, onRefetch }: MemberListProp
   const [isDeleting, setIsDeleting] = useState(false);
 
   const isInitialLoading = isLoading && members.length === 0;
+  const showCheckbox = onRefetch !== undefined;
 
   function handleToggle(id: number) {
     setSelectedIds((prev) => {
@@ -175,7 +179,7 @@ export function MemberList({ groupId, onMemberClick, onRefetch }: MemberListProp
         </TextField.Root>
       </Box>
 
-      {onRefetch !== undefined && (
+      {showCheckbox && (
         <Flex justify="end" style={{ marginTop: 12 }}>
           <Button
             type="button"
@@ -197,36 +201,55 @@ export function MemberList({ groupId, onMemberClick, onRefetch }: MemberListProp
         </Text>
       )}
 
-      {isInitialLoading && (
-        <Box style={styles.listCard}>
-          <Text as="p" className="visually-hidden">
-            loading members...
-          </Text>
-          {Array.from({ length: SKELETON_ROWS }, (_, i) => (
-            <SkeletonMemberRow key={i} isLast={i === SKELETON_ROWS - 1} />
-          ))}
-        </Box>
+      {!error && (
+        <table style={styles.tableRoot}>
+          <thead style={styles.tableHeader}>
+            <tr>
+              {showCheckbox && <th style={styles.tableHeaderCellCheckbox} aria-label="選択" />}
+              <th style={styles.tableHeaderCell}>id</th>
+              <th style={styles.tableHeaderCell}>姓名</th>
+            </tr>
+          </thead>
+          <tbody>
+            {isInitialLoading && (
+              <>
+                <tr>
+                  <td colSpan={showCheckbox ? 3 : 2} style={{ padding: "12px 16px" }}>
+                    <Text as="span" className="visually-hidden">
+                      loading members...
+                    </Text>
+                  </td>
+                </tr>
+                {Array.from({ length: SKELETON_ROWS }, (_, i) => (
+                  <SkeletonMemberRow
+                    key={i}
+                    isLast={i === SKELETON_ROWS - 1}
+                    showCheckbox={showCheckbox}
+                  />
+                ))}
+              </>
+            )}
+
+            {!isInitialLoading &&
+              members.map((member, index) => (
+                <MemberRow
+                  key={member.id}
+                  member={member}
+                  isLast={index === members.length - 1}
+                  isSelected={selectedIds.has(member.id)}
+                  showCheckbox={showCheckbox}
+                  onToggle={handleToggle}
+                  onClick={onMemberClick ? () => onMemberClick(member) : undefined}
+                />
+              ))}
+          </tbody>
+        </table>
       )}
 
       {!isInitialLoading && !error && members.length === 0 && (
         <Text as="p" style={styles.emptyText}>
           No members found.
         </Text>
-      )}
-
-      {!isInitialLoading && members.length > 0 && (
-        <Box style={styles.listCard}>
-          {members.map((member, index) => (
-            <MemberRow
-              key={member.id}
-              member={member}
-              isLast={index === members.length - 1}
-              isSelected={selectedIds.has(member.id)}
-              onToggle={handleToggle}
-              onClick={onMemberClick ? () => onMemberClick(member) : undefined}
-            />
-          ))}
-        </Box>
       )}
 
       {/* Inline error for additional fetch failures */}

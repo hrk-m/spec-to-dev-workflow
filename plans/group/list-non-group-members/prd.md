@@ -39,7 +39,36 @@
 
 ---
 
-## 確認ステップ 5-2: バックエンド処理フロー
+## 確認ステップ 5-2: 処理フロー
+
+### フロントエンド 処理フロー
+
+```
+1. 開始
+2. AddMemberSheet コンポーネントがマウントされる
+3. AddMemberSheet → API クライアント: GET /api/v1/groups/:id/non-members?limit=100&offset=0 を送信
+4. レスポンスは成功？
+   - Yes（200）→
+      5. 取得したユーザー一覧（最大 100 件）と total を state にキャッシュ
+      6. 取得した全件をテーブル形式で表示（thead: □選択 / 姓名, tbody: 各ユーザー行）
+      7. テーブル末尾にセンチネル要素を追加（IntersectionObserver で監視）
+      8. 終了
+   - No（4xx・5xx）→
+      5. エラーメッセージを画面に表示
+      6. 終了
+9. センチネル要素が viewport に入る
+10. lastBatchSize === 100 →
+        isFetchingMore = true（テーブル末尾にスピナー表示）
+        GET /api/v1/groups/:id/non-members?limit=100&offset=N を送信
+        - 成功 → キャッシュに追加（全件表示）、isFetchingMore = false
+        - 失敗 → isFetchingMore = false、テーブル末尾にエラーメッセージ表示
+11. ユーザーが検索キーワードを入力
+12. AddMemberSheet → API クライアント:
+    GET /api/v1/groups/:id/non-members?limit=100&offset=0&q={keyword} を送信
+13. 手順 4 と同様（キャッシュをクリアして再キャッシュ）
+```
+
+### バックエンド 処理フロー
 
 ```
 1. 開始
@@ -156,6 +185,15 @@
 | 18  | 異常系 | DB エラー                                         | repo モックがエラーを返す           | ErrInternalServerError          |
 | 19  | 外部依存 | Repository をモックで切り分け                   | MockGroupRepository                 | Service 単体でテスト可能        |
 
+**フロントエンドテスト** (`AddMemberSheet.test.tsx`):
+
+| #   | 観点         | テスト内容                                                   | 期待結果                                                     |
+| --- | ------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| 20  | 列ヘッダー   | `姓名` の列ヘッダーが存在する                               | `columnheader` ロールで `姓名` が取得できる                  |
+| 21  | アバターなし | アバターアイコン（イニシャル円形）が存在しない              | `UserAvatar` に相当する要素が DOM に存在しない               |
+| 22  | 選択ヘッダー | 選択列ヘッダーが存在する                                    | `th[aria-label="選択"]` が DOM に存在する                    |
+| 23  | 既存テスト   | 既存 14 ケースがテーブル形式（`<tr>` / `<td>`）対応で全 pass | 既存テスト全通過                                             |
+
 ---
 
 ## ファイル配置
@@ -174,11 +212,13 @@
 
 ### sample-front
 
-| ファイル                                                                  | 役割                                                                                                                           |
-| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `sample-front/src/pages/group-detail/ui/NonMemberList.tsx`                | 非メンバー一覧コンポーネント（ページネーション UI 削除・センチネル要素追加・リスト末尾スピナー／エラー表示）                   |
-| `sample-front/src/pages/group-detail/api/fetch-non-group-members.ts`      | GET /api/v1/groups/:id/non-members 呼び出し（limit=100 に変更）                                                                |
-| `sample-front/src/pages/group-detail/model/useNonMemberList.ts`           | 非メンバー一覧取得・無限スクロールカスタムフック（`displayedCount`・`isFetchingMore` 追加・ページネーション状態削除）           |
+| ファイル                                                                        | 役割                                                                                                                                     |
+| ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `sample-front/src/pages/group-detail/ui/AddMemberSheet.tsx`                     | メンバー追加シート。ユーザーリスト部分を `<table>` + `<thead>` + `<tbody>` 形式に変換。列構成: □選択 / 姓名。UserAvatar 削除。センチネル要素・スピナー・エラー表示・一括追加機能を維持 |
+| `sample-front/src/pages/group-detail/ui/AddMemberSheet.styles.ts`               | テーブル用スタイル定数（`tableRoot`, `tableHeader`, `tableHeaderCell`, `tableHeaderCellCheckbox`, `tableRow`, `tableRowLast`, `tableCellCheckbox`, `tableCellName` 等）。エラーテキストは `appColors.error` を使用 |
+| `sample-front/src/pages/group-detail/ui/__tests__/AddMemberSheet.test.tsx`      | テーブル形式向け更新（列ヘッダー確認・アバターなし確認）                                                                                 |
+| `sample-front/src/pages/group-detail/api/fetch-non-group-members.ts`            | GET /api/v1/groups/:id/non-members 呼び出し（変更なし）                                                                                  |
+| `sample-front/src/pages/group-detail/model/useNonMemberList.ts`                 | 非メンバー一覧取得・無限スクロールカスタムフック（変更なし）                                                                             |
 
 ---
 
@@ -207,6 +247,11 @@
 16. キーワード入力後 300ms デバウンスで再取得する（キャッシュクリア・`offset=0` リセットあり）
 17. UI から Previous/Next ボタンおよび件数セレクタ（20/50/100）を削除する
 18. `currentPage` / `totalPages` / `perPage` / `handlePerPageChange` の状態を削除する
+19. AddMemberSheet のユーザーリストが `<table>` 形式（`<table>` + `<thead>` + `<tbody>`）で表示される
+20. `<thead>` に空の `<th>`（チェックボックス列、`aria-label="選択"`）と `<th>姓名</th>` の 2 列ヘッダーが存在する
+21. アバターアイコン（イニシャル円形）を表示しない（各ユーザー行に `UserAvatar` は使用しない）
+22. `columnheader` ロールで `姓名` が取得できる
+23. `AddMemberSheet.styles.ts` に MemberList と同パターンのテーブル用スタイル定数が定義されている
 
 ---
 
