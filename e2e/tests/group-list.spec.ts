@@ -10,9 +10,9 @@ test.describe("グループ一覧ページ", () => {
     const heading = page.getByRole("heading", { name: "Groups", level: 1 });
     await expect(heading).toBeVisible();
 
-    const cards = page.getByRole("button");
-    await expect(cards.first()).toBeVisible();
-    expect(await cards.count()).toBeGreaterThanOrEqual(1);
+    const rows = page.locator('tbody tr');
+    await expect(rows.first()).toBeVisible();
+    expect(await rows.count()).toBeGreaterThanOrEqual(1);
   });
 
   test("カードをクリックするとグループ詳細ページに遷移する", async ({
@@ -22,7 +22,7 @@ test.describe("グループ一覧ページ", () => {
     await page.waitForLoadState("networkidle");
 
     await page
-      .getByRole("button")
+      .locator('tbody tr')
       .filter({ hasText: /Group \d+/ })
       .first()
       .click();
@@ -35,7 +35,7 @@ test.describe("グループ一覧ページ", () => {
     await page.goto("/");
     await page.waitForLoadState("networkidle");
 
-    const allCards = await page.getByRole("button").count();
+    const allRows = await page.locator('tbody tr').count();
 
     const searchBox = page.getByPlaceholder("Search by name or description");
     await searchBox.fill("Group 001");
@@ -43,9 +43,9 @@ test.describe("グループ一覧ページ", () => {
     // Wait for filtering to take effect
     await page.waitForTimeout(500);
 
-    const filteredCards = await page.getByRole("button").count();
-    expect(filteredCards).toBeLessThanOrEqual(allCards);
-    expect(filteredCards).toBeGreaterThanOrEqual(1);
+    const filteredRows = await page.locator('tbody tr').count();
+    expect(filteredRows).toBeLessThanOrEqual(allRows);
+    expect(filteredRows).toBeGreaterThanOrEqual(1);
   });
 
   test("全 30 グループが初期表示に含まれる", async ({ page }) => {
@@ -53,9 +53,9 @@ test.describe("グループ一覧ページ", () => {
     await page.waitForLoadState("networkidle");
 
     // DISPLAY_STEP=50 shows first 50 items; seed has 30 groups → all visible without scrolling
-    const groupCards = page.getByRole("button").filter({ hasText: /Group \d+/ });
-    await expect(groupCards.first()).toBeVisible();
-    const count = await groupCards.count();
+    const groupRows = page.locator('tbody tr').filter({ hasText: /Group \d+/ });
+    await expect(groupRows.first()).toBeVisible();
+    const count = await groupRows.count();
     expect(count).toBe(30);
   });
 
@@ -92,7 +92,7 @@ test.describe("グループ一覧ページ", () => {
     await page.waitForTimeout(500);
 
     const filteredCount = await page
-      .getByRole("button")
+      .locator('tbody tr')
       .filter({ hasText: /Group \d+/ })
       .count();
     expect(filteredCount).toBeGreaterThanOrEqual(1);
@@ -136,7 +136,7 @@ test.describe("グループ一覧ページ", () => {
 
     // Wait for at least one group card to appear (max 5 seconds)
     await expect(
-      page.getByRole("button").filter({ hasText: /Group \d+/ }).first(),
+      page.locator('tbody tr').filter({ hasText: /Group \d+/ }).first(),
     ).toBeVisible({
       timeout: 5000,
     });
@@ -194,6 +194,17 @@ test.describe("グループ一覧ページ", () => {
     }
   });
 
+  test("グループ一覧テーブルに ID/グループ名/説明/メンバー数 の 4 列ヘッダーが表示される", async ({ page }) => {
+    await page.goto("/");
+    await page.waitForLoadState("networkidle");
+
+    // 4列ヘッダーが columnheader ロールで取得できること
+    await expect(page.getByRole("columnheader", { name: "ID" })).toBeVisible();
+    await expect(page.getByRole("columnheader", { name: "グループ名" })).toBeVisible();
+    await expect(page.getByRole("columnheader", { name: "説明" })).toBeVisible();
+    await expect(page.getByRole("columnheader", { name: "メンバー数" })).toBeVisible();
+  });
+
   test("グループ一覧: 追加フェッチ失敗時にインラインエラーが表示され既存グループが維持される", async ({
     page,
   }) => {
@@ -231,7 +242,7 @@ test.describe("グループ一覧ページ", () => {
 
     // Verify initial groups are displayed
     await expect(
-      page.getByRole("button", { name: /Mock Group 001/ }).first(),
+      page.locator('tbody tr').filter({ hasText: /Mock Group 001/ }).first(),
     ).toBeVisible();
 
     // Scroll to bottom to trigger IntersectionObserver sentinel
@@ -247,7 +258,7 @@ test.describe("グループ一覧ページ", () => {
 
     // Existing groups must still be visible after fetch more error
     await expect(
-      page.getByRole("button", { name: /Mock Group 001/ }).first(),
+      page.locator('tbody tr').filter({ hasText: /Mock Group 001/ }).first(),
     ).toBeVisible();
   });
 });

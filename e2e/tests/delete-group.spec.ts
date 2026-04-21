@@ -158,7 +158,7 @@ test.describe("グループ削除", () => {
       await searchBox.fill("Group 001");
       await page.waitForTimeout(500);
       await page
-        .getByRole("button")
+        .locator('tbody tr')
         .filter({ hasText: "Group 001" })
         .first()
         .click();

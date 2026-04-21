@@ -16,8 +16,8 @@ type GroupService interface {
 	GetByID(ctx context.Context, id uint64) (domain.Group, error)
 	ListGroupMembers(ctx context.Context, id uint64, limit, offset int, q string) ([]domain.User, int, error)
 	Store(ctx context.Context, name, description string, userID uint64) (domain.Group, error)
-	Update(ctx context.Context, id int64, name, description string, userID uint64) (*domain.Group, error)
-	Delete(ctx context.Context, id int64, userID uint64) error
+	Update(ctx context.Context, id uint64, name, description string, userID uint64) (*domain.Group, error)
+	Delete(ctx context.Context, id uint64, userID uint64) error
 	ListNonGroupMembers(ctx context.Context, groupID uint64, limit, offset int, q string) ([]domain.User, int, error)
 	AddGroupMembers(ctx context.Context, groupID uint64, userIDs []uint64) ([]domain.User, error)
 	RemoveGroupMembers(ctx context.Context, groupID uint64, userIDs []uint64) error
@@ -120,7 +120,7 @@ func (h *GroupHandler) Update(c echo.Context) error {
 		return c.JSON(http.StatusUnauthorized, ResponseError{Message: "Unauthorized"})
 	}
 
-	result, err := h.Service.Update(ctx, int64(id), req.Name, req.Description, authUser.ID) //nolint:gosec
+	result, err := h.Service.Update(ctx, id, req.Name, req.Description, authUser.ID)
 	if err != nil {
 		return c.JSON(getStatusCode(err), ResponseError{Message: err.Error()})
 	}
@@ -142,7 +142,7 @@ func (h *GroupHandler) Delete(c echo.Context) error {
 		return c.JSON(http.StatusUnauthorized, ResponseError{Message: "Unauthorized"})
 	}
 
-	if err := h.Service.Delete(ctx, int64(id), authUser.ID); err != nil { //nolint:gosec
+	if err := h.Service.Delete(ctx, id, authUser.ID); err != nil {
 		return c.JSON(getStatusCode(err), ResponseError{Message: err.Error()})
 	}
 

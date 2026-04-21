@@ -10,7 +10,7 @@ async function goToHomeAndShowGroup001(
   await searchBox.fill("Group 001");
   await page.waitForTimeout(500);
   await expect(
-    page.getByRole("button").filter({ hasText: "Group 001" }).first(),
+    page.locator('tbody tr').filter({ hasText: "Group 001" }).first(),
   ).toBeVisible();
 }
 
@@ -19,7 +19,7 @@ test.describe("シートナビゲーション", () => {
     await goToHomeAndShowGroup001(page);
 
     await page
-      .getByRole("button")
+      .locator('tbody tr')
       .filter({ hasText: "Group 001" })
       .first()
       .click();
@@ -32,7 +32,7 @@ test.describe("シートナビゲーション", () => {
     await goToHomeAndShowGroup001(page);
 
     await page
-      .getByRole("button")
+      .locator('tbody tr')
       .filter({ hasText: "Group 001" })
       .first()
       .click();
@@ -49,7 +49,7 @@ test.describe("シートナビゲーション", () => {
     await goToHomeAndShowGroup001(page);
 
     await page
-      .getByRole("button")
+      .locator('tbody tr')
       .filter({ hasText: "Group 001" })
       .first()
       .click();
@@ -69,7 +69,7 @@ test.describe("シートナビゲーション", () => {
     await goToHomeAndShowGroup001(page);
 
     await page
-      .getByRole("button")
+      .locator('tbody tr')
       .filter({ hasText: "Group 001" })
       .first()
       .click();
@@ -88,7 +88,7 @@ test.describe("シートナビゲーション", () => {
     await goToHomeAndShowGroup001(page);
 
     await page
-      .getByRole("button")
+      .locator('tbody tr')
       .filter({ hasText: "Group 001" })
       .first()
       .click();
@@ -108,7 +108,7 @@ test.describe("シートナビゲーション", () => {
     await goToHomeAndShowGroup001(page);
 
     await page
-      .getByRole("button")
+      .locator('tbody tr')
       .filter({ hasText: "Group 001" })
       .first()
       .click();
@@ -124,7 +124,7 @@ test.describe("シートナビゲーション", () => {
     await goToHomeAndShowGroup001(page);
 
     await page
-      .getByRole("button")
+      .locator('tbody tr')
       .filter({ hasText: "Group 001" })
       .first()
       .click();
@@ -150,7 +150,7 @@ test.describe("シートナビゲーション", () => {
     await goToHomeAndShowGroup001(page);
 
     await page
-      .getByRole("button")
+      .locator('tbody tr')
       .filter({ hasText: "Group 001" })
       .first()
       .click();
@@ -181,7 +181,7 @@ test.describe("シートナビゲーション", () => {
     await goToHomeAndShowGroup001(page);
 
     await page
-      .getByRole("button")
+      .locator('tbody tr')
       .filter({ hasText: "Group 001" })
       .first()
       .click();
@@ -238,7 +238,7 @@ test.describe("シートナビゲーション", () => {
     await goToHomeAndShowGroup001(page);
 
     await page
-      .getByRole("button")
+      .locator('tbody tr')
       .filter({ hasText: "Group 001" })
       .first()
       .click();
@@ -261,7 +261,7 @@ test.describe("シートナビゲーション", () => {
     await searchBox.fill("Group 001");
     await page.waitForTimeout(500);
 
-    await page.getByRole("button").filter({ hasText: "Group 001" }).first().click();
+    await page.locator('tbody tr').filter({ hasText: "Group 001" }).first().click();
     await page.waitForSelector('[role="dialog"]');
     await expect(page.getByRole("dialog")).toBeVisible();
 
@@ -272,13 +272,13 @@ test.describe("シートナビゲーション", () => {
     // 再度検索すればグループが表示されることを確認する
     await searchBox.fill("Group 001");
     await page.waitForTimeout(500);
-    await expect(page.getByRole("button").filter({ hasText: "Group 001" }).first()).toBeVisible();
+    await expect(page.locator('tbody tr').filter({ hasText: "Group 001" }).first()).toBeVisible();
   });
 
   test("シートが開いた状態で URL が /groups/:id になる（sheet presentation）", async ({ page }) => {
     await goToHomeAndShowGroup001(page);
 
-    await page.getByRole("button").filter({ hasText: "Group 001" }).first().click();
+    await page.locator('tbody tr').filter({ hasText: "Group 001" }).first().click();
     await page.waitForSelector('[role="dialog"]');
     await expect(page.getByRole("dialog")).toBeVisible();
 
@@ -293,9 +293,9 @@ test.describe("シートナビゲーション", () => {
     const searchBox = page.getByPlaceholder("Search by name or description");
     await searchBox.fill("Group 002");
     await page.waitForTimeout(500);
-    await expect(page.getByRole("button").filter({ hasText: "Group 002" }).first()).toBeVisible();
+    await expect(page.locator('tbody tr').filter({ hasText: "Group 002" }).first()).toBeVisible();
 
-    await page.getByRole("button").filter({ hasText: "Group 002" }).first().click();
+    await page.locator('tbody tr').filter({ hasText: "Group 002" }).first().click();
     await page.waitForSelector('[role="dialog"]');
 
     const dialog = page.getByRole("dialog");
@@ -307,7 +307,7 @@ test.describe("シートナビゲーション", () => {
   test("GroupDetailSheet 内でメンバー検索 → Yamada で絞り込みが機能する", async ({ page }) => {
     await goToHomeAndShowGroup001(page);
 
-    await page.getByRole("button").filter({ hasText: "Group 001" }).first().click();
+    await page.locator('tbody tr').filter({ hasText: "Group 001" }).first().click();
     await page.waitForSelector('[role="dialog"]');
 
     const dialog = page.getByRole("dialog");
@@ -324,7 +324,7 @@ test.describe("シートナビゲーション", () => {
   test("GroupDetailSheet 内でメンバー検索 0 件時に空状態とページネーション非表示", async ({ page }) => {
     await goToHomeAndShowGroup001(page);
 
-    await page.getByRole("button").filter({ hasText: "Group 001" }).first().click();
+    await page.locator('tbody tr').filter({ hasText: "Group 001" }).first().click();
     await page.waitForSelector('[role="dialog"]');
 
     const dialog = page.getByRole("dialog");
@@ -343,7 +343,7 @@ test.describe("シートナビゲーション", () => {
   test("GroupDetailSheet 内で検索クリア後に全メンバーが再表示される", async ({ page }) => {
     await goToHomeAndShowGroup001(page);
 
-    await page.getByRole("button").filter({ hasText: "Group 001" }).first().click();
+    await page.locator('tbody tr').filter({ hasText: "Group 001" }).first().click();
     await page.waitForSelector('[role="dialog"]');
 
     const dialog = page.getByRole("dialog");
@@ -369,7 +369,7 @@ test.describe("シートナビゲーション", () => {
     const searchBox = page.getByPlaceholder("Search by name or description");
     await searchBox.fill("Group 001");
     await page.waitForTimeout(500);
-    await page.getByRole("button").filter({ hasText: "Group 001" }).first().click();
+    await page.locator('tbody tr').filter({ hasText: "Group 001" }).first().click();
     await page.waitForSelector('[role="dialog"]');
     await expect(page.getByRole("dialog")).toBeVisible();
 
@@ -381,15 +381,15 @@ test.describe("シートナビゲーション", () => {
     await searchBox.fill("Group 002");
     await page.waitForTimeout(500);
 
-    await expect(page.getByRole("button").filter({ hasText: "Group 002" }).first()).toBeVisible();
-    expect(await page.getByRole("button").filter({ hasText: "Group 001" }).count()).toBe(0);
+    await expect(page.locator('tbody tr').filter({ hasText: "Group 002" }).first()).toBeVisible();
+    expect(await page.locator('tbody tr').filter({ hasText: "Group 001" }).count()).toBe(0);
   });
 
   test("GroupDetailSheet ヘッダーに ↔ ボタンが表示される", async ({ page }) => {
     await goToHomeAndShowGroup001(page);
 
     await page
-      .getByRole("button")
+      .locator('tbody tr')
       .filter({ hasText: "Group 001" })
       .first()
       .click();
@@ -405,7 +405,7 @@ test.describe("シートナビゲーション", () => {
     await goToHomeAndShowGroup001(page);
 
     await page
-      .getByRole("button")
+      .locator('tbody tr')
       .filter({ hasText: "Group 001" })
       .first()
       .click();
@@ -428,7 +428,7 @@ test.describe("シートナビゲーション", () => {
     await goToHomeAndShowGroup001(page);
 
     await page
-      .getByRole("button")
+      .locator('tbody tr')
       .filter({ hasText: "Group 001" })
       .first()
       .click();
@@ -457,7 +457,7 @@ test.describe("シートナビゲーション", () => {
     await searchBox.fill("Group 001");
     await page.waitForTimeout(500);
     await page
-      .getByRole("button")
+      .locator('tbody tr')
       .filter({ hasText: "Group 001" })
       .first()
       .click();

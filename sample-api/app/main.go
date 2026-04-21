@@ -102,7 +102,7 @@ func main() {
 	apiGroup := e.Group("/api/v1")
 	aSvc := authSvc.NewService(userRepo)
 	apiGroup.Use(rest.AuthMiddleware(appEnv, aSvc))
-	rest.NewAuthHandler(apiGroup, aSvc)
+	rest.NewAuthHandler(apiGroup)
 	rest.NewGroupHandler(apiGroup, gSvc)
 	rest.NewUserHandler(apiGroup, uSvc)
 

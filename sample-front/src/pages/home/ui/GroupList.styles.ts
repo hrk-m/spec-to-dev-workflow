@@ -2,8 +2,6 @@ import { appColors } from "@/shared/ui";
 
 const colors = {
   separator: appColors.separator,
-  accent: appColors.accent,
-  background: appColors.background,
   surfaceRaised: appColors.surfaceRaised,
   errorBackground: appColors.errorBackground,
   errorBorder: appColors.errorBorder,
@@ -16,14 +14,6 @@ const colors = {
 } as const;
 
 export const styles = {
-  container: {
-    width: "100%",
-    padding: "22px 16px 36px",
-  },
-  content: {
-    maxWidth: 720,
-    margin: "0 auto",
-  },
   heroSection: {
     paddingBottom: 6,
   },

@@ -2,18 +2,14 @@ import { appColors } from "@/shared/ui";
 
 const colors = {
   separator: appColors.separator,
-  accent: appColors.accent,
-  background: appColors.background,
   surfaceRaised: appColors.surfaceRaised,
   errorBackground: appColors.errorBackground,
   errorBorder: appColors.errorBorder,
   error: appColors.error,
   textPrimary: appColors.textPrimary,
   textSecondary: appColors.textSecondary,
-  textSubtle: appColors.textSubtle,
   textTertiary: appColors.textTertiary,
   searchBackground: appColors.searchBackground,
-  accentSoft: appColors.accentSoft,
 } as const;
 
 export const styles = {

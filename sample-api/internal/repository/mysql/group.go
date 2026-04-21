@@ -141,7 +141,7 @@ func (r *GroupRepository) Store(ctx context.Context, name, description string, u
 }
 
 // Update modifies a group's name, description, and updated_by, then returns the updated entity.
-func (r *GroupRepository) Update(ctx context.Context, id int64, name, description string, userID uint64) (*domain.Group, error) {
+func (r *GroupRepository) Update(ctx context.Context, id uint64, name, description string, userID uint64) (*domain.Group, error) {
 	query := "UPDATE `groups` SET name = ?, description = ?, updated_by = ? WHERE id = ? AND deleted_at IS NULL"
 
 	result, err := r.db.ExecContext(ctx, query, name, description, userID, id)
@@ -158,7 +158,7 @@ func (r *GroupRepository) Update(ctx context.Context, id int64, name, descriptio
 		return nil, domain.ErrNotFound
 	}
 
-	g, err := r.GetByID(ctx, uint64(id)) //nolint:gosec
+	g, err := r.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +167,7 @@ func (r *GroupRepository) Update(ctx context.Context, id int64, name, descriptio
 }
 
 // Delete soft-deletes a group by setting deleted_at and updated_by.
-func (r *GroupRepository) Delete(ctx context.Context, id int64, userID uint64) error {
+func (r *GroupRepository) Delete(ctx context.Context, id uint64, userID uint64) error {
 	query := "UPDATE `groups` SET deleted_at = NOW(), updated_by = ? WHERE id = ? AND deleted_at IS NULL"
 
 	result, err := r.db.ExecContext(ctx, query, userID, id)

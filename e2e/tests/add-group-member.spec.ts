@@ -93,7 +93,7 @@ test.describe("グループメンバー追加", () => {
       await waitForNonMemberList(page);
       const dialog = page.getByRole("dialog");
       await dialog
-        .getByRole("button")
+        .locator('tbody tr')
         .filter({ hasText: "Tanaka Jiro" })
         .click();
       await expect(
@@ -116,7 +116,7 @@ test.describe("グループメンバー追加", () => {
       await searchBox.fill("Group 001");
       await page.waitForTimeout(500);
       await page
-        .getByRole("button")
+        .locator('tbody tr')
         .filter({ hasText: "Group 001" })
         .first()
         .click();
@@ -176,7 +176,7 @@ test.describe("グループメンバー追加", () => {
 
       const dialog = page.getByRole("dialog");
       await dialog
-        .getByRole("button")
+        .locator('tbody tr')
         .filter({ hasText: "Tanaka Jiro" })
         .click();
       await dialog.getByRole("button", { name: "一括追加" }).click();
@@ -199,11 +199,11 @@ test.describe("グループメンバー追加", () => {
       await waitForNonMemberList(page);
       const dialog = page.getByRole("dialog");
       await dialog
-        .getByRole("button")
+        .locator('tbody tr')
         .filter({ hasText: "Tanaka Jiro" })
         .click();
       await dialog
-        .getByRole("button")
+        .locator('tbody tr')
         .filter({ hasText: "Sato Yuki" })
         .click();
       await expect(
@@ -309,7 +309,7 @@ test.describe("グループメンバー追加", () => {
       await waitForNonMemberList(page);
       const dialog = page.getByRole("dialog");
       await dialog
-        .getByRole("button")
+        .locator('tbody tr')
         .filter({ hasText: "Tanaka Jiro" })
         .click();
       await dialog.getByRole("button", { name: "一括追加" }).click();
@@ -381,7 +381,7 @@ test.describe("グループメンバー追加", () => {
 
       // Tanaka Jiro を選択して「一括追加」
       await dialog
-        .getByRole("button")
+        .locator('tbody tr')
         .filter({ hasText: "Tanaka Jiro" })
         .click();
       await dialog.getByRole("button", { name: "一括追加" }).click();

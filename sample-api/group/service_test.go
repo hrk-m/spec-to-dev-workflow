@@ -400,7 +400,7 @@ func TestService_Update_OK(t *testing.T) {
 	svc := group.NewService(repo, userRepo)
 
 	expected := &domain.Group{ID: 1, Name: "Updated Group", Description: "New desc", MemberCount: 3}
-	repo.On("Update", mock.Anything, int64(1), "Updated Group", "New desc", uint64(10)).Return(expected, nil)
+	repo.On("Update", mock.Anything, uint64(1), "Updated Group", "New desc", uint64(10)).Return(expected, nil)
 
 	result, err := svc.Update(context.Background(), 1, "Updated Group", "New desc", uint64(10))
 
@@ -415,7 +415,7 @@ func TestService_Update_TrimsName(t *testing.T) {
 	svc := group.NewService(repo, userRepo)
 
 	expected := &domain.Group{ID: 1, Name: "Trimmed", Description: "", MemberCount: 0}
-	repo.On("Update", mock.Anything, int64(1), "Trimmed", "", uint64(10)).Return(expected, nil)
+	repo.On("Update", mock.Anything, uint64(1), "Trimmed", "", uint64(10)).Return(expected, nil)
 
 	result, err := svc.Update(context.Background(), 1, "  Trimmed  ", "", uint64(10))
 
@@ -430,7 +430,7 @@ func TestService_Update_UserIDPropagated(t *testing.T) {
 	svc := group.NewService(repo, userRepo)
 
 	expected := &domain.Group{ID: 1, Name: "Group", Description: "", MemberCount: 0}
-	repo.On("Update", mock.Anything, int64(1), "Group", "", uint64(42)).Return(expected, nil)
+	repo.On("Update", mock.Anything, uint64(1), "Group", "", uint64(42)).Return(expected, nil)
 
 	result, err := svc.Update(context.Background(), 1, "Group", "", uint64(42))
 
@@ -493,7 +493,7 @@ func TestService_Update_RepositoryError(t *testing.T) {
 	userRepo := new(mocks.MockUserRepository)
 	svc := group.NewService(repo, userRepo)
 
-	repo.On("Update", mock.Anything, int64(1), "Valid", "desc", uint64(1)).
+	repo.On("Update", mock.Anything, uint64(1), "Valid", "desc", uint64(1)).
 		Return((*domain.Group)(nil), domain.ErrInternalServerError)
 
 	_, err := svc.Update(context.Background(), 1, "Valid", "desc", uint64(1))
@@ -519,7 +519,7 @@ func TestService_Delete_OK(t *testing.T) {
 	userRepo := new(mocks.MockUserRepository)
 	svc := group.NewService(repo, userRepo)
 
-	repo.On("Delete", mock.Anything, int64(1), uint64(42)).Return(nil)
+	repo.On("Delete", mock.Anything, uint64(1), uint64(42)).Return(nil)
 
 	err := svc.Delete(context.Background(), 1, uint64(42))
 
@@ -533,7 +533,7 @@ func TestService_Delete_NotFound(t *testing.T) {
 	userRepo := new(mocks.MockUserRepository)
 	svc := group.NewService(repo, userRepo)
 
-	repo.On("Delete", mock.Anything, int64(9999), uint64(1)).Return(domain.ErrNotFound)
+	repo.On("Delete", mock.Anything, uint64(9999), uint64(1)).Return(domain.ErrNotFound)
 
 	err := svc.Delete(context.Background(), 9999, uint64(1))
 
@@ -547,7 +547,7 @@ func TestService_Delete_RepositoryError(t *testing.T) {
 	userRepo := new(mocks.MockUserRepository)
 	svc := group.NewService(repo, userRepo)
 
-	repo.On("Delete", mock.Anything, int64(1), uint64(1)).Return(domain.ErrInternalServerError)
+	repo.On("Delete", mock.Anything, uint64(1), uint64(1)).Return(domain.ErrInternalServerError)
 
 	err := svc.Delete(context.Background(), 1, uint64(1))
 

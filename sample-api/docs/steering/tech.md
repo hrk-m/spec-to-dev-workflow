@@ -40,7 +40,7 @@ db/seed/                    →  Seed data (DML only)
 - `internal/rest/auth.go` に `AuthService` インターフェース・`AuthHandler`・`AuthMiddleware` を定義
   - `AuthMiddleware` は `APP_ENV=development` のとき `DEV_USER_UUID` 環境変数から UUID を読み取り、`svc.GetByUUID` でユーザーを取得してコンテキストにセットする
   - `APP_ENV` が `development` 以外の場合は起動時に `log.Fatal` で終了する（本番向け認証は未実装）
-- `GET /api/v1/me` はコンテキストから `authUser` を取得して返す（`AuthMiddleware` が事前にセット）
+- `GET /api/v1/me` はコンテキストから `authUser` を取得して返す（`AuthMiddleware` が事前にセット）。`AuthHandler` は `AuthService` を保持せず、`internal/rest/auth.go` の `NewAuthHandler(g *echo.Group)` はルート登録のみを行う
 - `mysql.UserRepository` は `auth.UserRepository`（`GetByUUID`）も実装する
 
 ### エラーハンドリング
@@ -78,8 +78,8 @@ type GroupService interface {
     GetByID(ctx context.Context, id uint64) (domain.Group, error)
     ListGroupMembers(ctx context.Context, id uint64, limit, offset int, q string) ([]domain.User, int, error)
     Store(ctx context.Context, name, description string, userID uint64) (domain.Group, error)
-    Update(ctx context.Context, id int64, name, description string, userID uint64) (*domain.Group, error)
-    Delete(ctx context.Context, id int64, userID uint64) error
+    Update(ctx context.Context, id uint64, name, description string, userID uint64) (*domain.Group, error)
+    Delete(ctx context.Context, id uint64, userID uint64) error
     ListNonGroupMembers(ctx context.Context, groupID uint64, limit, offset int, q string) ([]domain.User, int, error)
     AddGroupMembers(ctx context.Context, groupID uint64, userIDs []uint64) ([]domain.User, error)
     RemoveGroupMembers(ctx context.Context, groupID uint64, userIDs []uint64) error
@@ -96,7 +96,7 @@ type AuthService interface {
 }
 ```
 
-`Update` は ID（`int64`）・name・description・`userID`（操作者の `domain.User.ID`）を受け取り、更新後の `*domain.Group` を返す。`Delete` は ID（`int64`）と `userID` を受け取り、soft delete を実行する（成功時は `nil`、対象未存在時は `ErrNotFound`）。`userID` は `groups.updated_by` カラムに記録される（`20260417130000_add_updated_by_to_groups.up.sql` で追加）。
+`Update` は ID（`uint64`）・name・description・`userID`（操作者の `domain.User.ID`）を受け取り、更新後の `*domain.Group` を返す。`Delete` は ID（`uint64`）と `userID` を受け取り、soft delete を実行する（成功時は `nil`、対象未存在時は `ErrNotFound`）。`userID` は `groups.updated_by` カラムに記録される（`20260417130000_add_updated_by_to_groups.up.sql` で追加）。
 
 `Update` および `Delete` は、`GetByID` や `ListGroupMembers` と同様に、service 層で `id < minID`（`minID = 1`）のバリデーションを行い、不正な ID には `ErrBadParamInput` を返す（repository は呼び出さない）。`userID` は handler 層でコンテキストから取得した `authUser.ID` を渡す。
 
@@ -117,8 +117,8 @@ type GroupRepository interface {
     GetByID(ctx context.Context, id uint64) (domain.Group, error)
     ListGroupMembers(ctx context.Context, id uint64, limit, offset int, q string) ([]domain.User, int, error)
     Store(ctx context.Context, name, description string, userID uint64) (domain.Group, error)
-    Update(ctx context.Context, id int64, name, description string, userID uint64) (*domain.Group, error)
-    Delete(ctx context.Context, id int64, userID uint64) error
+    Update(ctx context.Context, id uint64, name, description string, userID uint64) (*domain.Group, error)
+    Delete(ctx context.Context, id uint64, userID uint64) error
     ListNonGroupMembers(ctx context.Context, groupID uint64, limit, offset int, q string) ([]domain.User, int, error)
     AddGroupMembers(ctx context.Context, groupID uint64, userIDs []uint64) ([]domain.User, error)
     RemoveGroupMembers(ctx context.Context, groupID uint64, userIDs []uint64) error

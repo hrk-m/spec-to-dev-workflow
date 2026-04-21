@@ -771,7 +771,7 @@ func TestGroupHandler_Update_OK(t *testing.T) {
 
 	svc := new(mocks.MockGroupService)
 	resp := &domain.Group{ID: 1, Name: "Updated", Description: "New Desc", MemberCount: 5}
-	svc.On("Update", mock.Anything, int64(1), "Updated", "New Desc", uint64(1)).Return(resp, nil)
+	svc.On("Update", mock.Anything, uint64(1), "Updated", "New Desc", uint64(1)).Return(resp, nil)
 
 	h := &rest.GroupHandler{Service: svc}
 	err := h.Update(c)
@@ -868,7 +868,7 @@ func TestGroupHandler_Update_ServiceBadParam(t *testing.T) {
 	c.Set("authUser", domain.User{ID: 1, FirstName: "Taro", LastName: "Yamada"})
 
 	svc := new(mocks.MockGroupService)
-	svc.On("Update", mock.Anything, int64(1), "", "Desc", uint64(1)).
+	svc.On("Update", mock.Anything, uint64(1), "", "Desc", uint64(1)).
 		Return((*domain.Group)(nil), domain.ErrBadParamInput)
 
 	h := &rest.GroupHandler{Service: svc}
@@ -896,7 +896,7 @@ func TestGroupHandler_Update_ServiceNotFound(t *testing.T) {
 	c.Set("authUser", domain.User{ID: 1, FirstName: "Taro", LastName: "Yamada"})
 
 	svc := new(mocks.MockGroupService)
-	svc.On("Update", mock.Anything, int64(9999), "Updated", "Desc", uint64(1)).
+	svc.On("Update", mock.Anything, uint64(9999), "Updated", "Desc", uint64(1)).
 		Return((*domain.Group)(nil), domain.ErrNotFound)
 
 	h := &rest.GroupHandler{Service: svc}
@@ -924,7 +924,7 @@ func TestGroupHandler_Update_ServiceInternalError(t *testing.T) {
 	c.Set("authUser", domain.User{ID: 1, FirstName: "Taro", LastName: "Yamada"})
 
 	svc := new(mocks.MockGroupService)
-	svc.On("Update", mock.Anything, int64(1), "Updated", "Desc", uint64(1)).
+	svc.On("Update", mock.Anything, uint64(1), "Updated", "Desc", uint64(1)).
 		Return((*domain.Group)(nil), domain.ErrInternalServerError)
 
 	h := &rest.GroupHandler{Service: svc}
@@ -951,7 +951,7 @@ func TestGroupHandler_Delete_OK(t *testing.T) {
 	c.Set("authUser", domain.User{ID: 42, FirstName: "Taro", LastName: "Yamada"})
 
 	svc := new(mocks.MockGroupService)
-	svc.On("Delete", mock.Anything, int64(1), uint64(42)).Return(nil)
+	svc.On("Delete", mock.Anything, uint64(1), uint64(42)).Return(nil)
 
 	h := &rest.GroupHandler{Service: svc}
 	err := h.Delete(c)
@@ -1038,7 +1038,7 @@ func TestGroupHandler_Delete_ServiceNotFound(t *testing.T) {
 	c.Set("authUser", domain.User{ID: 1, FirstName: "Taro", LastName: "Yamada"})
 
 	svc := new(mocks.MockGroupService)
-	svc.On("Delete", mock.Anything, int64(9999), uint64(1)).Return(domain.ErrNotFound)
+	svc.On("Delete", mock.Anything, uint64(9999), uint64(1)).Return(domain.ErrNotFound)
 
 	h := &rest.GroupHandler{Service: svc}
 	err := h.Delete(c)
@@ -1064,7 +1064,7 @@ func TestGroupHandler_Delete_ServiceInternalError(t *testing.T) {
 	c.Set("authUser", domain.User{ID: 1, FirstName: "Taro", LastName: "Yamada"})
 
 	svc := new(mocks.MockGroupService)
-	svc.On("Delete", mock.Anything, int64(1), uint64(1)).Return(domain.ErrInternalServerError)
+	svc.On("Delete", mock.Anything, uint64(1), uint64(1)).Return(domain.ErrInternalServerError)
 
 	h := &rest.GroupHandler{Service: svc}
 	err := h.Delete(c)

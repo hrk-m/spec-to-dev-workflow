@@ -26,8 +26,8 @@ type GroupRepository interface {
 	GetByID(ctx context.Context, id uint64) (domain.Group, error)
 	ListGroupMembers(ctx context.Context, id uint64, limit, offset int, q string) ([]domain.User, int, error)
 	Store(ctx context.Context, name, description string, userID uint64) (domain.Group, error)
-	Update(ctx context.Context, id int64, name, description string, userID uint64) (*domain.Group, error)
-	Delete(ctx context.Context, id int64, userID uint64) error
+	Update(ctx context.Context, id uint64, name, description string, userID uint64) (*domain.Group, error)
+	Delete(ctx context.Context, id uint64, userID uint64) error
 	ListNonGroupMembers(ctx context.Context, groupID uint64, limit, offset int, q string) ([]domain.User, int, error)
 	AddGroupMembers(ctx context.Context, groupID uint64, userIDs []uint64) ([]domain.User, error)
 	RemoveGroupMembers(ctx context.Context, groupID uint64, userIDs []uint64) error
@@ -95,7 +95,7 @@ func (s *Service) Store(ctx context.Context, name, description string, userID ui
 }
 
 // Update updates a group's name and description by ID.
-func (s *Service) Update(ctx context.Context, id int64, name, description string, userID uint64) (*domain.Group, error) {
+func (s *Service) Update(ctx context.Context, id uint64, name, description string, userID uint64) (*domain.Group, error) {
 	if id < minID {
 		return nil, domain.ErrBadParamInput
 	}
@@ -109,7 +109,7 @@ func (s *Service) Update(ctx context.Context, id int64, name, description string
 }
 
 // Delete soft-deletes a group by ID.
-func (s *Service) Delete(ctx context.Context, id int64, userID uint64) error {
+func (s *Service) Delete(ctx context.Context, id uint64, userID uint64) error {
 	if id < minID {
 		return domain.ErrBadParamInput
 	}

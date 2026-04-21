@@ -24,7 +24,7 @@ type AuthHandler struct {
 }
 
 // NewAuthHandler registers the auth routes on the given Echo instance.
-func NewAuthHandler(g *echo.Group, svc AuthService) {
+func NewAuthHandler(g *echo.Group) {
 	h := &AuthHandler{}
 	g.GET("/me", h.GetMe)
 }

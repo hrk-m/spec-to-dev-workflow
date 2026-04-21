@@ -34,13 +34,13 @@ func (m *MockGroupService) Store(ctx context.Context, name, description string, 
 	return args.Get(0).(domain.Group), args.Error(1)
 }
 
-func (m *MockGroupService) Update(ctx context.Context, id int64, name, description string, userID uint64) (*domain.Group, error) {
+func (m *MockGroupService) Update(ctx context.Context, id uint64, name, description string, userID uint64) (*domain.Group, error) {
 	args := m.Called(ctx, id, name, description, userID)
 	g, _ := args.Get(0).(*domain.Group)
 	return g, args.Error(1)
 }
 
-func (m *MockGroupService) Delete(ctx context.Context, id int64, userID uint64) error {
+func (m *MockGroupService) Delete(ctx context.Context, id uint64, userID uint64) error {
 	args := m.Called(ctx, id, userID)
 	return args.Error(0)
 }

@@ -36,7 +36,7 @@ sample-api/
 │       ├── auth_test.go         # AuthMiddleware・AuthHandler のテスト
 │       └── mocks/             # テスト用 mock（手動保守）
 │           ├── {feature}_service_mock.go
-│           └── auth_user_repository_mock.go  # MockAuthService（rest.AuthService インターフェースのモック）
+│           └── auth_service_mock.go  # MockAuthService（rest.AuthService インターフェースのモック）
 ├── .env.local               # 環境変数（ローカル用、git ignore）
 ├── .env.local.example       # ローカル環境変数のサンプル
 ├── .env.docker.example      # Docker 用環境変数のサンプル
@@ -84,7 +84,7 @@ uSvc := user.NewService(userRepo)
 apiGroup := e.Group("/api/v1")
 aSvc := auth.NewService(userRepo)  // userRepo を共有
 apiGroup.Use(rest.AuthMiddleware(appEnv, aSvc))
-rest.NewAuthHandler(apiGroup, aSvc)
+rest.NewAuthHandler(apiGroup)  // AuthHandler は AuthService を保持しない
 rest.NewGroupHandler(apiGroup, gSvc)
 rest.NewUserHandler(apiGroup, uSvc)
 ```
