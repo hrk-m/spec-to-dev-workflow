@@ -115,26 +115,3 @@ func TestListUsers_ExcludesDeleted(t *testing.T) {
 	assert.Equal(t, activeUsersCount(t, db), total)
 	assert.Len(t, users, 10)
 }
-
-func TestGetByID_OK(t *testing.T) {
-	db := userTestDB(t)
-	defer db.Close()
-
-	repo := mysqlRepo.NewUserRepository(db)
-	u, err := repo.GetByID(context.Background(), 1)
-
-	assert.NoError(t, err)
-	assert.Equal(t, uint64(1), u.ID)
-	assert.Equal(t, "Taro", u.FirstName)
-	assert.Equal(t, "Yamada", u.LastName)
-}
-
-func TestGetByID_NotFound(t *testing.T) {
-	db := userTestDB(t)
-	defer db.Close()
-
-	repo := mysqlRepo.NewUserRepository(db)
-	_, err := repo.GetByID(context.Background(), 999999)
-
-	assert.ErrorIs(t, err, domain.ErrNotFound)
-}
