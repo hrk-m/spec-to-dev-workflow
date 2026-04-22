@@ -10,7 +10,7 @@ services:
       MYSQL_ROOT_PASSWORD: password
       MYSQL_DATABASE: sample
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-u", "root", "-ppassword"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-ppassword"]
       interval: 5s
       timeout: 3s
       retries: 10
