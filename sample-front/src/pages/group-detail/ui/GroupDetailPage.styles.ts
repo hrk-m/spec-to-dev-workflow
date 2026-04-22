@@ -14,15 +14,16 @@ export const styles = {
     width: "100%",
   },
   backButton: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: 500,
-    color: colors.accent,
+    color: colors.textSecondary,
     cursor: "pointer",
     background: "none",
     border: "none",
     padding: "4px 0",
     display: "inline-flex",
     alignItems: "center",
+    height: 32,
     gap: 4,
   },
   sectionCard: {

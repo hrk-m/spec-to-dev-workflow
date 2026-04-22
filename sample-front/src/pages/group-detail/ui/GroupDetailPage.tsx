@@ -28,7 +28,7 @@ export function GroupDetailPage() {
           style={styles.backButton}
           onClick={() => navigate("/")}
         >
-          <FaChevronLeft aria-hidden="true" />
+          <FaChevronLeft size={14} aria-hidden="true" />
           Groups
         </button>
       }

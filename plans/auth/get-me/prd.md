@@ -108,6 +108,7 @@
 | `sample-front/src/shared/auth/auth.tsx`                         | AuthContext・useAuth・AuthProvider  |
 | `sample-front/src/shared/auth/index.ts`                         | auth barrel export                  |
 | `sample-front/src/shared/api/client.ts`                         | apiFetch・HttpError 定義            |
+| `sample-front/src/shared/api/index.ts`                          | shared/api barrel export            |
 
 ---
 
