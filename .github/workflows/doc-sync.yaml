@@ -20,13 +20,13 @@ jobs:
     steps:
       - name: Generate token
         id: generate_token
-        uses: actions/create-github-app-token@v1
+        uses: actions/create-github-app-token@v2
         with:
           app-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.PRIVATE_KEY }}
           owner: hrk-m
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: recursive
           token: ${{ steps.generate_token.outputs.token }}
@@ -44,7 +44,7 @@ jobs:
           github_token: ${{ steps.generate_token.outputs.token }}
           claude_args: "--max-turns 30"
           prompt: |
-            E2Eテストがpassしました。以下の3つのスキルを順番に実行してください。
+            以下の3つのスキルを順番に実行してください。
             AskUserQuestion は使わないでください。すべて自律的に判断して実行してください。
 
             1. `.claude/skills/plan-writer/references/api-sync/SKILL.md` を Read して実行する
@@ -58,7 +58,7 @@ jobs:
             - 変更がない場合はそのまま終了する
 
       - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@v7
         with:
           token: ${{ steps.generate_token.outputs.token }}
           commit-message: "auto sync docs after E2E pass"
