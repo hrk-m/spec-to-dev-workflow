@@ -18,11 +18,11 @@
 
 #### リクエスト仕様
 
-| フィールド | 型              | 必須 | 説明                                                 |
-| ---------- | --------------- | ---- | ---------------------------------------------------- |
-| `id`       | integer (path)  | ✓    | グループの ID。正の整数                              |
-| `limit`    | integer (query) | —    | 取得件数上限。1〜500（デフォルト: 500）              |
-| `offset`   | integer (query) | —    | 取得開始位置。0 以上（デフォルト: 0）                |
+| フィールド | 型              | 必須 | 説明                                                           |
+| ---------- | --------------- | ---- | -------------------------------------------------------------- |
+| `id`       | integer (path)  | ✓    | グループの ID。正の整数                                        |
+| `limit`    | integer (query) | —    | 取得件数上限。1〜500（デフォルト: 500）                        |
+| `offset`   | integer (query) | —    | 取得開始位置。0 以上（デフォルト: 0）                          |
 | `q`        | string (query)  | —    | 検索キーワード。search_key LIKE 検索（姓名・名姓順両方向対応） |
 
 #### バリデーション一覧
@@ -39,77 +39,93 @@
 
 ---
 
-## 確認ステップ 5-2: 処理フロー
+## 確認ステップ 5-2: バックエンド処理フロー
 
 ### エンドポイント: `GET /api/v1/groups/:id/members`
 
-#### フロントエンド 処理フロー
+凡例: `→` は条件分岐・次ステップ、`終了` はフロー終端を示す
+
+#### バックエンド処理フロー
 
 ```
 1. 開始
-2. GroupDetailPage コンポーネントがマウントされる
-3. GroupDetailPage → API クライアント: GET /api/v1/groups/:id/members?limit=100&offset=0 を送信
-4. レスポンスは成功？
-   - Yes（200）→
-      5. 取得したメンバー一覧（最大 100 件）と total を state にキャッシュ
-      6. 取得した全件をテーブル形式で表示（thead: □選択 / id / 姓名, tbody: 各メンバー行）
-      7. テーブル末尾にセンチネル要素を追加（IntersectionObserver で監視）
-      8. 終了
-   - No（4xx・5xx）→
-      5. エラーメッセージを画面に表示
-      6. 終了
-9. センチネル要素が viewport に入る
-10. lastBatchSize === 100 →
-        isFetchingMore = true（テーブル末尾にスピナー表示）
-        GET /api/v1/groups/:id/members?limit=100&offset=N を送信
-        - 成功 → キャッシュに追加（全件表示）、isFetchingMore = false
-        - 失敗 → isFetchingMore = false、テーブル末尾にエラーメッセージ表示
-11. ユーザーが検索キーワードを入力
-12. GroupDetailPage → API クライアント:
-    GET /api/v1/groups/:id/members?limit=100&offset=0&q={keyword} を送信
-13. 手順 4 と同様（キャッシュをクリアして再キャッシュ）
-```
-
-#### バックエンド 処理フロー
-
-```
-1. 開始
-2. クライアントから HTTP リクエスト（GET /api/v1/groups/:id/members）を受信
-3. パスパラメータ id を c.Param("id") で取得、クエリパラメータを取得
-4. id を整数にパース
-   - パース失敗の場合
-      - 400 Bad Request { "message": "given param is not valid" } を返す
-      - 終了
-5. id < 1 の場合
-   - 400 Bad Request { "message": "given param is not valid" } を返す
-   - 終了
-6. limit が指定されている場合はパース・バリデーション
-   - 整数でない / 1 未満 / 500 超の場合 → 400 Bad Request
-7. offset が指定されている場合はパース・バリデーション
-   - 整数でない / 0 未満の場合 → 400 Bad Request
-8. Service.ListGroupMembers(ctx, id, limit, offset, q) を呼び出す
-9. Repository.GetByID(ctx, id) でグループ存在確認
-   - 存在しない（ErrNotFound）→
-      - 404 Not Found { "message": "your requested item is not found" } を返す
-      - 終了
-10. Repository.ListGroupMembers(ctx, id, limit, offset, q) を呼び出す
-11. DB: group_members JOIN users WHERE group_id = :id
-    - q が指定されている場合: search_key LIKE '%q%'（searchKeyLikeClause 定数を使用）
-    - LIMIT :limit OFFSET :offset
-    - total: q フィルターを適用したメンバー件数を COUNT で取得（q 未指定時は全メンバー数と等しい）
-12. DB エラーの場合
-    - 500 Internal Server Error { "message": "internal server error" } を返す
-    - 終了
-13. 成功の場合
-    - 200 OK + GroupMemberListResponse を返す
-    - 終了
+2. パスパラメータ id を取得してパースする
+   - パース失敗または 0 以下の場合 → 400 Bad Request { "message": "given param is not valid" } → 終了
+3. limit が指定されている場合はパースしてバリデーションを行う
+   - 整数でない / 1 未満 / 500 超の場合 → 400 Bad Request { "message": "given param is not valid" } → 終了
+4. offset が指定されている場合はパースしてバリデーションを行う
+   - 整数でない / 0 未満の場合 → 400 Bad Request { "message": "given param is not valid" } → 終了
+5. メンバー一覧取得をサービス層に委譲する
+6. サービス層で id が 1 未満かどうかを確認する
+   - 1 未満の場合 → 400 Bad Request → 終了
+7. サービス層で limit の範囲を再確認する
+   - 1 未満または 500 超の場合 → 400 Bad Request → 終了
+8. グループの存在を確認する
+   - 存在しない場合 → 404 Not Found { "message": "your requested item is not found" } → 終了
+9. q フィルターを適用したメンバー件数を先行取得する
+   - 件数が 0 の場合 → 200 OK + members=[] + total=0 → 終了
+10. グループメンバー一覧を取得する（id ASC 順）
+    - q が指定されている場合: search_key の部分一致で絞り込む
+    - DB エラーの場合 → 500 Internal Server Error { "message": "internal server error" } → 終了
+11. 200 OK + メンバー一覧と total を含む JSON を返す → 終了
 ```
 
 ---
 
-## 確認ステップ 5-3: DB 操作
+## 確認ステップ 5-2-FE: フロントエンド処理フロー
 
-→ [plans/schema.md](../../schema.md) を参照。
+### エンドポイント: `GET /api/v1/groups/:id/members`
+
+凡例: `→` = 次の処理へ進む / 終了 = 処理終了
+
+```
+1. 開始
+2. GroupDetailPage コンポーネントがマウントされる（useMemberList フックが動作する）
+3. GET /api/v1/groups/:id/members?limit=100&offset=0 を送信する
+4. レスポンス受信
+   - 成功（200）→ 取得したメンバー一覧（最大 100 件）と total をキャッシュする → テーブル形式で全件表示する（thead: □選択 / id / 姓名） → テーブル末尾にセンチネル要素を設置する → 終了
+   - 失敗（4xx・5xx）→ エラーメッセージを画面に表示する → 終了
+5. センチネル要素が viewport に入る
+   - lastBatchSize === 100 → テーブル末尾にスピナーを表示する
+   - GET /api/v1/groups/:id/members?limit=100&offset=N を送信する
+     - 成功 → キャッシュに追加して全件表示する → スピナーを非表示にする → 終了
+     - 失敗 → スピナーを非表示にする → テーブル末尾にエラーメッセージを表示する → 終了
+6. ユーザーが検索キーワードを入力する
+   - 300ms デバウンス後にキャッシュをクリアして offset=0 でリセットする
+   - GET /api/v1/groups/:id/members?limit=100&offset=0&q={keyword} を送信する
+   - 手順 4 と同様に受信・表示する → 終了
+```
+
+---
+
+## 確認ステップ 5-3: ファイル配置
+
+**原則: 関与した全ファイルを列挙し、役割は具体的に書く。**
+
+### sample-api
+
+| 対応ステップ  | パス                                                        | 役割                                                                                                                            |
+| ------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| 5-2           | `sample-api/domain/group.go`                                | Group Entity・GroupMember Entity（id, first_name, last_name）                                                                   |
+| 5-2           | `sample-api/group/service.go`                               | GroupRepository interface に ListGroupMembers 追加・ListGroupMembers ビジネスロジック                                           |
+| 5-5           | `sample-api/group/service_test.go`                          | Service ユニットテスト（ListGroupMembers）                                                                                      |
+| 5-5           | `sample-api/group/mocks/group_repository_mock.go`           | GroupRepository の手動 mock（ListGroupMembers 追加）                                                                            |
+| 5-1, 5-2, 5-4 | `sample-api/internal/rest/group.go`                         | HTTP Handler（ListGroupMembers）・GroupService interface に ListGroupMembers 追加・ルート登録（GET /api/v1/groups/:id/members） |
+| 5-5           | `sample-api/internal/rest/group_test.go`                    | Handler ユニットテスト（ListGroupMembers）                                                                                      |
+| 5-5           | `sample-api/internal/rest/mocks/group_service_mock.go`      | GroupService の手動 mock（ListGroupMembers 追加）                                                                               |
+| 5-3           | `sample-api/internal/repository/mysql/group.go`             | MySQL 実装（ListGroupMembers）                                                                                                  |
+| 5-3           | `sample-api/db/migrate/20260403120000_create_tables.up.sql` | テーブル定義・マイグレーション（golang-migrate。groups / users / group_members を統合管理）                                     |
+
+### sample-front
+
+| 対応ステップ | パス                                                                   | 役割                                                                                                                                                                                                          |
+| ------------ | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 5-2-FE       | `sample-front/src/pages/group-detail/ui/MemberList.tsx`                | メンバー一覧コンポーネント（`<table>` + `<thead>` + `<tbody>` 形式に変換。列構成: □選択 / id / 姓名。アバター削除。センチネル要素・スピナー・エラー表示維持）。MemberRow に `data-testid="member-row"` を付与 |
+| 5-2-FE       | `sample-front/src/pages/group-detail/ui/MemberList.styles.ts`          | テーブル用スタイル定数を追加（`tableRoot`, `tableHeader`, `tableHeaderCell`, `tableHeaderCellCheckbox`, `tableRow`, `tableRowLast`, `tableCellId`, `tableCellName`, `tableCellCheckbox`）                     |
+| 5-5          | `sample-front/src/pages/group-detail/ui/__tests__/MemberList.test.tsx` | テーブル形式向け更新（列ヘッダー確認・アバターなし確認）                                                                                                                                                      |
+| 5-2-FE       | `sample-front/src/pages/group-detail/api/fetch-group-members.ts`       | GET /api/v1/groups/:id/members 呼び出し（limit=100 に変更）                                                                                                                                                   |
+| 5-2-FE       | `sample-front/src/pages/group-detail/model/member-list.ts`             | メンバー一覧取得・無限スクロールカスタムフック（`useMemberList` を export。`displayedCount`・`isFetchingMore` 追加・ページネーション状態削除）                                                                |
+| 5-5          | `e2e/tests/group-detail.spec.ts`                                       | メンバー 0 件検索 E2E テスト（ページネーション UI 非存在確認に更新）                                                                                                                                          |
 
 ---
 
@@ -155,29 +171,41 @@
 
 ### エンドポイント: `GET /api/v1/groups/:id/members`
 
-| #   | 観点     | テスト内容                             | 入力例                 | 期待結果                      |
-| --- | -------- | -------------------------------------- | ---------------------- | ----------------------------- |
-| 1   | 正常系   | メンバーが存在するグループのリスト取得 | `id=1, limit=500`      | 200 OK + members 配列 + total |
-| 2   | 正常系   | 検索キーワードでメンバー絞り込み       | `id=1, q="山田"`       | 200 OK + 該当メンバーのみ     |
-| 3   | 正常系   | offset 指定で次の 500 件を取得         | `id=1, offset=500`     | 200 OK + 次の 500 件          |
-| 4   | 正常系   | メンバーが 0 人のグループ              | `id=2`（メンバー 0）   | 200 OK + members=[] + total=0 |
-| 5   | 異常系   | 存在しないグループ ID                  | `id=9999`              | 404 Not Found                 |
-| 6   | 異常系   | id が文字列                            | `id="abc"`             | 400 Bad Request               |
-| 7   | 境界値   | limit=500（上限）                      | `limit=500`            | 200 OK                        |
-| 8   | 境界値   | limit=501（上限超え）                  | `limit=501`            | 400 Bad Request               |
-| 9   | 境界値   | limit=0                                | `limit=0`              | 400 Bad Request               |
-| 10  | 境界値   | offset=0（最小値）                     | `offset=0`             | 200 OK                        |
-| 11  | 境界値   | offset=-1（最小値未満）                | `offset=-1`            | 400 Bad Request               |
-| 12  | 例外処理 | DB 接続エラー発生時                    | DB mock がエラーを返す | 500 Internal Server Error     |
-| 13  | 外部依存 | Service をモックで切り分け             | mockGroupService       | Handler 単体でテスト可能      |
-| 14  | 外部依存 | Repository をモックで切り分け          | mockGroupRepository    | Service 単体でテスト可能      |
+**Handler テスト** (`internal/rest/group_test.go`):
+
+| #   | 観点     | テスト内容                               | 入力例                      | 期待結果                      |
+| --- | -------- | ---------------------------------------- | --------------------------- | ----------------------------- |
+| 1   | 正常系   | メンバーが存在するグループのリスト取得   | `id=1, limit=500, offset=0` | 200 OK + members 配列 + total |
+| 2   | 正常系   | パラメータなしでデフォルト値が適用される | `id=1`（パラメータなし）    | 200 OK + members=[] + total=0 |
+| 3   | 正常系   | 検索キーワードでメンバー絞り込み         | `id=1, q=Yamada`            | 200 OK + 該当メンバーのみ     |
+| 4   | 異常系   | id が文字列                              | `id=abc`                    | 400 Bad Request               |
+| 5   | 境界値   | limit=501（上限超え）                    | `limit=501`                 | 400 Bad Request               |
+| 6   | 境界値   | limit=0                                  | `limit=0`                   | 400 Bad Request               |
+| 7   | 境界値   | offset=-1（最小値未満）                  | `offset=-1`                 | 400 Bad Request               |
+| 8   | 異常系   | 存在しないグループ ID                    | `id=9999`                   | 404 Not Found                 |
+| 9   | 例外処理 | DB 接続エラー発生時                      | DB mock がエラーを返す      | 500 Internal Server Error     |
+| 10  | 境界値   | limit=500（上限）                        | `limit=500`                 | 200 OK                        |
+| 11  | 境界値   | offset=0（最小値）                       | `offset=0`                  | 200 OK                        |
+
+**Service テスト** (`group/service_test.go`):
+
+| #   | 観点     | テスト内容                             | 入力例                            | 期待結果               |
+| --- | -------- | -------------------------------------- | --------------------------------- | ---------------------- |
+| 12  | 正常系   | メンバーが存在するグループのリスト取得 | `id=1, limit=500, offset=0, q=""` | members + total        |
+| 13  | 正常系   | 検索キーワードでメンバー絞り込み       | `id=1, q=Yamada`                  | 該当メンバーのみ       |
+| 14  | 異常系   | 存在しないグループ ID                  | `id=9999`                         | ErrNotFound            |
+| 15  | 境界値   | id=0（最小境界外）                     | `id=0`                            | ErrBadParamInput       |
+| 16  | 境界値   | limit=0（下限未満）                    | `limit=0`                         | ErrBadParamInput       |
+| 17  | 境界値   | limit=501（上限超え）                  | `limit=501`                       | ErrBadParamInput       |
+| 18  | 例外処理 | Repository がエラーを返す              | repo mock がエラーを返す          | ErrInternalServerError |
+| 19  | 正常系   | メンバーが 0 人のグループ              | `id=1`（返値が空）                | members=[] + total=0   |
 
 **フロントエンドテスト** (`MemberList.test.tsx`):
 
-| #   | 観点         | テスト内容                                                   | 期待結果                                                     |
-| --- | ------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| 15  | 列ヘッダー   | `id`・`姓名` の列ヘッダーが存在する                         | `columnheader` ロールで `id` / `姓名` が取得できる           |
-| 16  | アバターなし | アバターアイコン（イニシャル円形）が存在しない              | `MemberAvatar` に相当する要素が DOM に存在しない             |
+| #   | 観点         | テスト内容                                                                           | 期待結果                                                     |
+| --- | ------------ | ------------------------------------------------------------------------------------ | ------------------------------------------------------------ |
+| 15  | 列ヘッダー   | `id`・`姓名` の列ヘッダーが存在する                                                  | `columnheader` ロールで `id` / `姓名` が取得できる           |
+| 16  | アバターなし | アバターアイコン（イニシャル円形）が存在しない                                       | `MemberAvatar` に相当する要素が DOM に存在しない             |
 | 17  | 既存テスト   | メンバー名表示・空状態・検索・チェックボックス等の既存テストがテーブル形式で通過する | 既存 19 ケースがテーブル形式（`<tr>` / `<td>`）対応で全 pass |
 
 ---
@@ -186,42 +214,13 @@
 
 ### エンドポイント: メンバー一覧・検索 0 件時の UI 挙動
 
-| #   | 観点   | テスト内容                                                    | 操作手順                                                                        | 期待結果                                      |
-| --- | ------ | ------------------------------------------------------------- | ------------------------------------------------------------------------------- | --------------------------------------------- |
-| 1   | 正常系 | メンバー検索 0 件時に空状態メッセージが表示される             | `/groups/1` → networkidle → メンバー検索欄に `ZZZZNONEXISTENT` → 500ms 待機     | `"No members found."` が表示される            |
-| 2   | 正常系 | メンバー検索 0 件時にページネーション UI が存在しない         | `/groups/1` → networkidle → メンバー検索欄に `ZZZZNONEXISTENT` → 500ms 待機     | Previous / Next ボタン・件数セレクタが DOM に存在しない |
-| 3   | 正常系 | メンバー検索 0 件時にメンバー行が表示されない                 | `/groups/1` → networkidle → メンバー検索欄に `ZZZZNONEXISTENT` → 500ms 待機     | `data-testid="member-row"` 要素が 0 件        |
+| #   | 観点   | テスト内容                                            | 操作手順                                                                    | 期待結果                                                |
+| --- | ------ | ----------------------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------- |
+| 1   | 正常系 | メンバー検索 0 件時に空状態メッセージが表示される     | `/groups/1` → networkidle → メンバー検索欄に `ZZZZNONEXISTENT` → 500ms 待機 | `"No members found."` が表示される                      |
+| 2   | 正常系 | メンバー検索 0 件時にページネーション UI が存在しない | `/groups/1` → networkidle → メンバー検索欄に `ZZZZNONEXISTENT` → 500ms 待機 | Previous / Next ボタン・件数セレクタが DOM に存在しない |
+| 3   | 正常系 | メンバー検索 0 件時にメンバー行が表示されない         | `/groups/1` → networkidle → メンバー検索欄に `ZZZZNONEXISTENT` → 500ms 待機 | `data-testid="member-row"` 要素が 0 件                  |
 
 > **備考**: MemberRow コンポーネントに `data-testid="member-row"` を追加し、E2E テストのセレクターを安定化させる。`total` は API 側でフィルターなし全件数を返す設計のため、フロントエンドは `cachedMembers.length`（実際の取得件数）を使用して空状態表示・追加フェッチトリガーを制御する。
-
----
-
-## ファイル配置
-
-### sample-api
-
-| ファイル                                                    | 役割                                                                                                                            |
-| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `sample-api/domain/group.go`                                | Group Entity・GroupMember Entity（id, first_name, last_name）                                                                   |
-| `sample-api/group/service.go`                               | GroupRepository interface に ListGroupMembers 追加・ListGroupMembers ビジネスロジック                                           |
-| `sample-api/group/service_test.go`                          | Service ユニットテスト（ListGroupMembers）                                                                                      |
-| `sample-api/group/mocks/group_repository_mock.go`           | GroupRepository の手動 mock（ListGroupMembers 追加）                                                                            |
-| `sample-api/internal/rest/group.go`                         | HTTP Handler（ListGroupMembers）・GroupService interface に ListGroupMembers 追加・ルート登録（GET /api/v1/groups/:id/members） |
-| `sample-api/internal/rest/group_test.go`                    | Handler ユニットテスト（ListGroupMembers）                                                                                      |
-| `sample-api/internal/rest/mocks/group_service_mock.go`      | GroupService の手動 mock（ListGroupMembers 追加）                                                                               |
-| `sample-api/internal/repository/mysql/group.go`             | MySQL 実装（ListGroupMembers）                                                                                                  |
-| `sample-api/db/migrate/20260403120000_create_tables.up.sql` | テーブル定義・マイグレーション（golang-migrate。groups / users / group_members を統合管理）                                     |
-
-### sample-front
-
-| ファイル                                                         | 役割                                                               |
-| ---------------------------------------------------------------- | ------------------------------------------------------------------ |
-| `sample-front/src/pages/group-detail/ui/MemberList.tsx`          | メンバー一覧コンポーネント（`<table>` + `<thead>` + `<tbody>` 形式に変換。列構成: □選択 / id / 姓名。アバター削除。センチネル要素・スピナー・エラー表示維持）。MemberRow に `data-testid="member-row"` を付与 |
-| `sample-front/src/pages/group-detail/ui/MemberList.styles.ts`    | テーブル用スタイル定数を追加（`tableRoot`, `tableHeader`, `tableHeaderCell`, `tableHeaderCellCheckbox`, `tableRow`, `tableRowLast`, `tableCellId`, `tableCellName`, `tableCellCheckbox`）|
-| `sample-front/src/pages/group-detail/ui/__tests__/MemberList.test.tsx` | テーブル形式向け更新（列ヘッダー確認・アバターなし確認）|
-| `sample-front/src/pages/group-detail/api/fetch-group-members.ts` | GET /api/v1/groups/:id/members 呼び出し（limit=100 に変更）                                               |
-| `sample-front/src/pages/group-detail/model/useMemberList.ts`     | メンバー一覧取得・無限スクロールカスタムフック（`displayedCount`・`isFetchingMore` 追加・ページネーション状態削除）|
-| `e2e/tests/group-detail.spec.ts`                                  | メンバー 0 件検索 E2E テスト（ページネーション UI 非存在確認に更新）                                       |
 
 ---
 

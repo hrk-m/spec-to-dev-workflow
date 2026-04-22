@@ -100,7 +100,7 @@
       - `{その他条件}` を満たしていること
    4. バリデーション通過？
       - No →
-         - 400 Bad Request `{ "error": "VALIDATION_ERROR" }` を返す
+         - 400 Bad Request `{"message": "..."}` を返す
          - 終了
       - Yes →
          5. ビジネスロジックを実行（リクエスト内容に基づいた処理）
@@ -108,7 +108,7 @@
          7. DB への `{SQL操作}` を実行（対象テーブル: `{table_name}`）
          8. DB 操作成功？
             - No →
-               - 500 Internal Server Error `{ "error": "INTERNAL_ERROR" }` を返す
+               - 500 Internal Server Error `{"message": "..."}` を返す
                - 終了
             - Yes →
                9. DB の結果を、上位の処理層に返却
@@ -122,11 +122,9 @@
 
    ---
 
-   **確認ステップ 5-3: DB 操作（DB 変更がある場合のみ）**（対象エンドポイント名を明示）
+   **確認ステップ 5-3: ファイル配置**（対象エンドポイント名を明示）
 
-   DB 変更がない場合はこのステップを **スキップ** し、即座に 5-4 へ進む。
-   DB 変更がある場合は対象テーブル・SQL 操作（INSERT / UPDATE / SELECT など）をチャットに提示する。
-   一覧系クエリがある場合は以下も確認する：インデックスの有無・N+1 の回避策（JOIN / IN 句 / バッチロード）・ページネーション戦略（OFFSET / カーソルベース）。
+   実装に関与するファイルを sample-api / sample-front それぞれについてチャットに提示する。
    → `AskUserQuestion` で「このまま進む / 修正がある」を確認する。
    → 合意が取れてから **5-4 へ進む**。
 
@@ -145,10 +143,10 @@
 
    ### エラーケース一覧
    ```
-   - バリデーション失敗 → 400 Bad Request `{ "error": "VALIDATION_ERROR" }`
-   - 未認証 → 401 Unauthorized `{ "error": "UNAUTHORIZED" }`
-   - リソース未存在 → 404 Not Found `{ "error": "NOT_FOUND" }`
-   - 想定外エラー → 500 Internal Server Error `{ "error": "INTERNAL_ERROR" }`
+   - バリデーション失敗 → 400 Bad Request `{"message": "..."}`
+   - 未認証 → 401 Unauthorized `{"message": "..."}`
+   - リソース未存在 → 404 Not Found `{"message": "..."}`
+   - 想定外エラー → 500 Internal Server Error `{"message": "..."}`
    ```
    ````
 

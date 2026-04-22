@@ -9,16 +9,16 @@
 | RDBMS            | MySQL                                                                                                   |
 | バージョン       | {要確認}（Docker Compose で管理）                                                                       |
 | ドキュメント種別 | 手書き                                                                                                  |
-| 最終更新日       | 2026-04-17                                                                                              |
+| 最終更新日       | 2026-04-22                                                                                              |
 
 ---
 
 ## テーブル一覧
 
-| テーブル名      | 概要                                                                 | 集約単位                     |
-| --------------- | -------------------------------------------------------------------- | ---------------------------- |
-| `groups`        | グループを表すルートエンティティ。名前・説明・最終操作者を持ちソフトデリート運用 | グループ集約のルート         |
-| `group_members` | グループとユーザーの中間テーブル。group_id と user_id で紐付く       | グループ集約の子エンティティ |
+| テーブル名      | 概要                                                                                  | 集約単位                     |
+| --------------- | ------------------------------------------------------------------------------------- | ---------------------------- |
+| `groups`        | グループを表すルートエンティティ。名前・説明・最終操作者を持ちソフトデリート運用      | グループ集約のルート         |
+| `group_members` | グループとユーザーの中間テーブル。group_id と user_id で紐付く                        | グループ集約の子エンティティ |
 | `users`         | ユーザーを表すエンティティ。名（first_name）・姓（last_name）を持ちソフトデリート運用 | ユーザー集約のルート         |
 
 ---
@@ -33,26 +33,26 @@
 
 #### カラム
 
-| カラム名      | データ型          | NULL     | デフォルト     | 説明                                          |
-| ------------- | ----------------- | -------- | -------------- | --------------------------------------------- |
-| `id`          | `BIGINT UNSIGNED` | NOT NULL | AUTO_INCREMENT | グループの識別子（主キー）                    |
-| `name`        | `VARCHAR(255)`    | NOT NULL | なし           | グループ名                                    |
-| `description` | `TEXT`            | NOT NULL | なし           | グループの説明                                |
+| カラム名      | データ型          | NULL     | デフォルト     | 説明                                                                                     |
+| ------------- | ----------------- | -------- | -------------- | ---------------------------------------------------------------------------------------- |
+| `id`          | `BIGINT UNSIGNED` | NOT NULL | AUTO_INCREMENT | グループの識別子（主キー）                                                               |
+| `name`        | `VARCHAR(255)`    | NOT NULL | なし           | グループ名                                                                               |
+| `description` | `TEXT`            | NOT NULL | なし           | グループの説明                                                                           |
 | `updated_by`  | `BIGINT UNSIGNED` | NOT NULL | なし           | グループの最終操作者のユーザー ID（FK → `users.id`）。作成・更新・削除のたびに更新される |
-| `deleted_at`  | `DATETIME`        | NULL     | なし           | 論理削除日時。NULL = 有効、非 NULL = 削除済み |
+| `deleted_at`  | `DATETIME`        | NULL     | なし           | 論理削除日時。NULL = 有効、非 NULL = 削除済み                                            |
 
 #### 制約
 
-| 種別        | 名前                   | 対象カラム                    | 説明                                     |
-| ----------- | ---------------------- | ----------------------------- | ---------------------------------------- |
-| PRIMARY KEY | `PRIMARY`              | `id`                          | グループの一意識別子                     |
-| FOREIGN KEY | `fk_groups_updated_by` | `updated_by` → `users(id)`    | 最終操作者ユーザーへの参照整合性を保証   |
+| 種別        | 名前                   | 対象カラム                 | 説明                                   |
+| ----------- | ---------------------- | -------------------------- | -------------------------------------- |
+| PRIMARY KEY | `PRIMARY`              | `id`                       | グループの一意識別子                   |
+| FOREIGN KEY | `fk_groups_updated_by` | `updated_by` → `users(id)` | 最終操作者ユーザーへの参照整合性を保証 |
 
 #### インデックス
 
-| インデックス名      | 対象カラム           | 種別    | 用途                                        |
-| ------------------- | -------------------- | ------- | ------------------------------------------- |
-| `PRIMARY`           | `id`                 | PRIMARY | 主キーアクセス                              |
+| インデックス名      | 対象カラム         | 種別    | 用途                                                |
+| ------------------- | ------------------ | ------- | --------------------------------------------------- |
+| `PRIMARY`           | `id`               | PRIMARY | 主キーアクセス                                      |
 | `idx_groups_active` | `(deleted_at, id)` | INDEX   | 有効グループ取得の高速化（deleted_at IS NULL 検索） |
 
 ---
@@ -75,20 +75,20 @@
 
 #### 制約
 
-| 種別        | 名前                           | 対象カラム                | 説明                                                   |
-| ----------- | ------------------------------ | ------------------------- | ------------------------------------------------------ |
-| PRIMARY KEY | `PRIMARY`                      | `id`                      | 中間テーブルの一意識別子                               |
-| FOREIGN KEY | `fk_group_members_group_id`    | `group_id` → `groups(id)` | 所属グループの参照整合性を保証                         |
-| FOREIGN KEY | `fk_group_members_user_id`     | `user_id` → `users(id)`   | 所属ユーザーの参照整合性を保証                         |
-| UNIQUE      | `uq_group_members_group_user`  | `(group_id, user_id)`     | 同一グループへの重複メンバー登録を防止（重複 INSERT → 409） |
+| 種別        | 名前                          | 対象カラム                | 説明                                                        |
+| ----------- | ----------------------------- | ------------------------- | ----------------------------------------------------------- |
+| PRIMARY KEY | `PRIMARY`                     | `id`                      | 中間テーブルの一意識別子                                    |
+| FOREIGN KEY | `fk_group_members_group_id`   | `group_id` → `groups(id)` | 所属グループの参照整合性を保証                              |
+| FOREIGN KEY | `fk_group_members_user_id`    | `user_id` → `users(id)`   | 所属ユーザーの参照整合性を保証                              |
+| UNIQUE      | `uq_group_members_group_user` | `(group_id, user_id)`     | 同一グループへの重複メンバー登録を防止（重複 INSERT → 409） |
 
 #### インデックス
 
-| インデックス名                  | 対象カラム          | 種別    | 用途                                                                                           |
-| ------------------------------- | ------------------- | ------- | ---------------------------------------------------------------------------------------------- |
-| `PRIMARY`                       | `id`                | PRIMARY | 主キーアクセス                                                                                 |
-| `uq_group_members_group_user`   | `(group_id, user_id)` | UNIQUE | 重複防止 + `group_id` leftmost prefix でグループ別メンバー取得の高速化も兼ねる               |
-| `idx_group_members_user_id`     | `user_id`           | INDEX   | ユーザー別グループ取得の高速化                                                                 |
+| インデックス名                | 対象カラム            | 種別    | 用途                                                                           |
+| ----------------------------- | --------------------- | ------- | ------------------------------------------------------------------------------ |
+| `PRIMARY`                     | `id`                  | PRIMARY | 主キーアクセス                                                                 |
+| `uq_group_members_group_user` | `(group_id, user_id)` | UNIQUE  | 重複防止 + `group_id` leftmost prefix でグループ別メンバー取得の高速化も兼ねる |
+| `idx_group_members_user_id`   | `user_id`             | INDEX   | ユーザー別グループ取得の高速化                                                 |
 
 > **注意**: `idx_group_members_group_id` は `uq_group_members_group_user` の leftmost prefix と重複するため作成されていない。
 
@@ -102,32 +102,32 @@
 
 #### カラム
 
-| カラム名     | データ型          | NULL     | デフォルト                                        | 説明                                                                                   |
-| ------------ | ----------------- | -------- | ------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `id`         | `BIGINT UNSIGNED` | NOT NULL | AUTO_INCREMENT                                    | ユーザーの識別子（主キー）                                                             |
-| `uuid`       | `VARCHAR(36)`     | NOT NULL | なし                                              | ユーザーの UUID。外部公開用識別子（`GET /api/v1/me` の `sub` クレームに対応）          |
-| `first_name` | `VARCHAR(255)`    | NOT NULL | なし                                              | 名                                                                                     |
-| `last_name`  | `VARCHAR(255)`    | NOT NULL | なし                                              | 姓                                                                                     |
-| `created_at` | `DATETIME`        | NOT NULL | CURRENT_TIMESTAMP                                 | 作成日時                                                                               |
-| `updated_at` | `DATETIME`        | NOT NULL | CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP     | 更新日時                                                                               |
-| `deleted_at` | `DATETIME`        | NULL     | なし                                              | 論理削除日時。NULL = 有効、非 NULL = 削除済み                                          |
-| `search_key` | `VARCHAR(510)`    | —        | GENERATED                                         | 検索用仮想カラム。`CONCAT(first_name, last_name, last_name, first_name)` で自動生成。名前・姓順の両方向検索に対応 |
+| カラム名     | データ型          | NULL     | デフォルト                                    | 説明                                                                                                              |
+| ------------ | ----------------- | -------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `id`         | `BIGINT UNSIGNED` | NOT NULL | AUTO_INCREMENT                                | ユーザーの識別子（主キー）                                                                                        |
+| `uuid`       | `VARCHAR(36)`     | NOT NULL | なし                                          | ユーザーの UUID。外部公開用識別子（`GET /api/v1/me` の `sub` クレームに対応）                                     |
+| `first_name` | `VARCHAR(255)`    | NOT NULL | なし                                          | 名                                                                                                                |
+| `last_name`  | `VARCHAR(255)`    | NOT NULL | なし                                          | 姓                                                                                                                |
+| `created_at` | `DATETIME`        | NOT NULL | CURRENT_TIMESTAMP                             | 作成日時                                                                                                          |
+| `updated_at` | `DATETIME`        | NOT NULL | CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP | 更新日時                                                                                                          |
+| `deleted_at` | `DATETIME`        | NULL     | なし                                          | 論理削除日時。NULL = 有効、非 NULL = 削除済み                                                                     |
+| `search_key` | `VARCHAR(510)`    | —        | GENERATED                                     | 検索用仮想カラム。`CONCAT(first_name, last_name, last_name, first_name)` で自動生成。名前・姓順の両方向検索に対応 |
 
 > **`search_key` VIRTUAL GENERATED COLUMN**: 実際にはストレージに保存されず、SELECT 時にのみ計算される。`search_key LIKE '%q%'` で姓名・名姓の両方向検索が可能。将来的に検索対象カラムを追加する場合は、マイグレーションで式を更新する。
 
 #### 制約
 
-| 種別        | 名前             | 対象カラム | 説明                         |
-| ----------- | ---------------- | ---------- | ---------------------------- |
-| PRIMARY KEY | `PRIMARY`        | `id`       | ユーザーの一意識別子         |
-| UNIQUE      | `uq_users_uuid`  | `uuid`     | UUID の一意性を保証          |
+| 種別        | 名前            | 対象カラム | 説明                 |
+| ----------- | --------------- | ---------- | -------------------- |
+| PRIMARY KEY | `PRIMARY`       | `id`       | ユーザーの一意識別子 |
+| UNIQUE      | `uq_users_uuid` | `uuid`     | UUID の一意性を保証  |
 
 #### インデックス
 
-| インデックス名    | 対象カラム          | 種別    | 用途                                      |
-| ----------------- | ------------------- | ------- | ----------------------------------------- |
-| `PRIMARY`         | `id`                | PRIMARY | 主キーアクセス                            |
-| `uq_users_uuid`   | `uuid`              | UNIQUE  | `GetByUUID` での高速検索                  |
+| インデックス名     | 対象カラム         | 種別    | 用途                                                |
+| ------------------ | ------------------ | ------- | --------------------------------------------------- |
+| `PRIMARY`          | `id`               | PRIMARY | 主キーアクセス                                      |
+| `uq_users_uuid`    | `uuid`             | UNIQUE  | `GetByUUID` での高速検索                            |
 | `idx_users_active` | `(deleted_at, id)` | INDEX   | 有効ユーザー取得の高速化（deleted_at IS NULL 検索） |
 
 ---
@@ -161,21 +161,21 @@
 
 ## データのソース・ユースケース
 
-| テーブル        | データソース                                                               | 主なユースケース                                                                                          |
-| --------------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `groups`        | API 経由（ユーザー操作） / シードデータ（`db/seed/seed.sql`） | `GET /api/v1/groups` — グループ一覧取得 / `GET /api/v1/groups/:id` — グループ詳細取得                     |
-| `group_members` | API 経由（ユーザー操作） / シードデータ（`db/seed/seed.sql`） | `GET /api/v1/groups` — メンバー数集計 / `GET /api/v1/groups/:id/members` — メンバー一覧取得（users JOIN） |
+| テーブル        | データソース                                                  | 主なユースケース                                                                                                                                                                                                                                                                                         |
+| --------------- | ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `groups`        | API 経由（ユーザー操作） / シードデータ（`db/seed/seed.sql`） | `GET /api/v1/groups` — グループ一覧取得 / `GET /api/v1/groups/:id` — グループ詳細取得 / `POST /api/v1/groups` — グループ作成 / `PUT /api/v1/groups/:id` — グループ更新 / `DELETE /api/v1/groups/:id` — グループ論理削除                                                                                  |
+| `group_members` | API 経由（ユーザー操作） / シードデータ（`db/seed/seed.sql`） | `GET /api/v1/groups` — メンバー数集計 / `GET /api/v1/groups/:id/members` — メンバー一覧取得（users JOIN） / `POST /api/v1/groups/:id/members` — メンバー追加 / `DELETE /api/v1/groups/:id/members` — メンバー削除                                                                                        |
 | `users`         | API 経由（ユーザー操作） / シードデータ（`db/seed/seed.sql`） | `GET /api/v1/me` — 認証ユーザー取得（`uuid` による `GetByUUID`）<br>`GET /api/v1/users` — ユーザー一覧取得（`search_key LIKE` 検索）<br>`GET /api/v1/groups/:id/members` — メンバー情報取得（group_members JOIN）<br>`GET /api/v1/groups/:id/non-members` — 未所属ユーザー取得（`search_key LIKE` 検索） |
 
 ---
 
 ## 更新ポリシー
 
-| テーブル        | 更新方式               | 備考                                                        |
-| --------------- | ---------------------- | ----------------------------------------------------------- |
-| `groups`        | オンライン（API 経由） | SELECT / INSERT / UPDATE / DELETE（論理削除）すべて実装済み |
-| `group_members` | オンライン（API 経由） | SELECT（JOIN）と `POST /api/v1/groups/:id/members` による INSERT が実装済み |
-| `users`         | オンライン（API 経由） | `GET /api/v1/users` による SELECT 実装済み。直接の INSERT / UPDATE / DELETE API は未実装 |
+| テーブル        | 更新方式               | 備考                                                                                                                     |
+| --------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `groups`        | オンライン（API 経由） | SELECT / INSERT / UPDATE / DELETE（論理削除）すべて実装済み                                                              |
+| `group_members` | オンライン（API 経由） | SELECT（JOIN）・`POST /api/v1/groups/:id/members`（INSERT）・`DELETE /api/v1/groups/:id/members`（DELETE）すべて実装済み |
+| `users`         | オンライン（API 経由） | `GET /api/v1/users` による SELECT 実装済み。直接の INSERT / UPDATE / DELETE API は未実装                                 |
 
 ---
 
@@ -191,18 +191,18 @@
 
 ### マイグレーションファイル一覧
 
-| ファイル                                                                         | 内容                                                                           |
-| -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| `sample-api/db/migrate/20260403120000_create_tables.up.sql`                      | `groups` / `users` / `group_members` テーブル定義（統合）                      |
-| `sample-api/db/migrate/20260411120000_add_search_key_to_users.up.sql`            | `users` テーブルへの `search_key` VIRTUAL GENERATED COLUMN 追加（add-group-member） |
-| `sample-api/db/migrate/20260415120000_add_uuid_to_users.up.sql`                  | `users` テーブルへの `uuid` カラム追加・既存レコードへ UUID 自動生成（auth/login） |
-| `sample-api/db/migrate/20260417130000_add_updated_by_to_groups.up.sql`           | `groups` テーブルへの `updated_by` カラム + FK 追加（updated_by 対応）             |
+| ファイル                                                               | 内容                                                                                |
+| ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `sample-api/db/migrate/20260403120000_create_tables.up.sql`            | `groups` / `users` / `group_members` テーブル定義（統合）                           |
+| `sample-api/db/migrate/20260411120000_add_search_key_to_users.up.sql`  | `users` テーブルへの `search_key` VIRTUAL GENERATED COLUMN 追加（add-group-member） |
+| `sample-api/db/migrate/20260415120000_add_uuid_to_users.up.sql`        | `users` テーブルへの `uuid` カラム追加・既存レコードへ UUID 自動生成（auth/login）  |
+| `sample-api/db/migrate/20260417130000_add_updated_by_to_groups.up.sql` | `groups` テーブルへの `updated_by` カラム + FK 追加（updated_by 対応）              |
 
 ### シードデータファイル一覧
 
-| ファイル                        | 内容                                                           |
-| ------------------------------- | -------------------------------------------------------------- |
-| `sample-api/db/seed/seed.sql`   | groups / users / group_members のシードデータ（FK 依存順に記載） |
+| ファイル                      | 内容                                                             |
+| ----------------------------- | ---------------------------------------------------------------- |
+| `sample-api/db/seed/seed.sql` | groups / users / group_members のシードデータ（FK 依存順に記載） |
 
 ---
 

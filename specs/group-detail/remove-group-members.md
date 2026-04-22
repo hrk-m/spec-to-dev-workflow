@@ -101,4 +101,4 @@ DELETE リクエストが 4xx・5xx を返す
 
 ## 対応する API 仕様
 
-→ `plans/group/remove-group-members/prd.md`
+→ `plans/group/delete-group-members/prd.md`

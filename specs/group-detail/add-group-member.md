@@ -98,4 +98,4 @@
 
 ## 対応する API 仕様
 
-→ `plans/group/add-group-member/prd.md`
+→ `plans/group/add-group-members/prd.md`
