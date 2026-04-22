@@ -22,7 +22,7 @@ WORKDIR /app
 
 COPY --from=builder /app/bin/api .
 COPY --from=builder /app/db ./db
-COPY e2e/entrypoint.sh .
+COPY sample-api/entrypoint.sh .
 RUN chmod +x /app/entrypoint.sh
 
 EXPOSE 8080
