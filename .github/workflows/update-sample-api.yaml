@@ -1,0 +1,36 @@
+name: Update sample-api Pull Request
+on:
+  repository_dispatch:
+    types: [update-apis]
+  workflow_dispatch:
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate token
+        id: generate_token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.PRIVATE_KEY }}
+          owner: hrk-m
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ steps.generate_token.outputs.token }}
+      - name: Set token from GitHub App
+        run: git config --global url."https://x-access-token:${{ steps.generate_token.outputs.token }}@github.com/".insteadOf "https://github.com/"
+      - name: Update sample-api submodule
+        run: git submodule update --remote sample-api
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          title: Update sample-api
+          labels: auto-pr
+          branch: auto-pr/update-sample-api
+          branch-suffix: timestamp
+          commit-message: auto update sample-api
+          base: main
+          delete-branch: true
+          token: ${{ steps.generate_token.outputs.token }}
