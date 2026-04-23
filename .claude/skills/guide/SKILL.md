@@ -62,6 +62,7 @@ allowed-tools: Read, AskUserQuestion
 | 9 | `front-context` | **フロントエンドの実装前**（主にエージェントが自動ロード）。FSD v2.1 の規約を確認する |
 | 10 | `skill-link` | **新しいスキルを api-context / front-context に登録したいとき** |
 | 11 | `spec-update` | **通常フロー外で docs だけを直したいとき**。`plans-sync` は `plans/` の例外回復、`spec-knowledge` / `spec-screenshot` は `specs/` の手動再同期に限定して使う |
+| 12 | `git-ops` | **ブランチ作成またはコミット・PR 作成・サブモジュール更新**。3 リポジトリ横断の git 操作を一括処理する |
 
 ---
 
@@ -82,6 +83,7 @@ allowed-tools: Read, AskUserQuestion
      9. `front-context` — フロントエンドの実装規約を確認する
      10. `skill-link` — スキルを api-context / front-context にリンクする
      11. `spec-update` — docs の例外・補助更新を行う
+     12. `git-ops` — A: ブランチ作成 + コミット + プッシュ / B: PR 作成 + サブモジュール更新 を 3 リポジトリ横断で処理する
 
 2. 選択に応じて返信候補をチャットに提示する。
 
@@ -135,3 +137,4 @@ allowed-tools: Read, AskUserQuestion
    | `front-context` | `次のステップは /front-context を実行してください。` | 返信のみ |
    | `skill-link` | `api / front のスキルを繋げる` | `.claude/skills/skill-link/SKILL.md` を Read して実行 |
    | `spec-update` | （返信候補なし） | `.claude/skills/spec-update/SKILL.md` を Read して実行 |
+   | `git-ops` | （返信候補なし） | `.claude/skills/git-ops/SKILL.md` を Read して実行 |
