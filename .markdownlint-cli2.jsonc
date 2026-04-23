@@ -23,6 +23,9 @@
     "sample-api/**",
     "sample-front/**",
     // ralph-loop 用のプロンプトファイルは通常の文書ではないため lint 対象から外す
-    "plans/**/.ralph-*.md"
+    "plans/**/.ralph-*.md",
+    // エントリーポイント・ループ用プロンプトはヘッダー不要な特殊ファイル
+    "AGENTS.md",
+    "e2e/.ralph-e2e-gen.md"
   ]
 }

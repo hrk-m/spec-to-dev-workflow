@@ -58,6 +58,9 @@ jobs:
             - スクリーンショットの撮影（spec-screenshot）は実行しない
             - 変更がない場合はそのまま終了する
 
+      - name: Fix markdown lint
+        run: bun run lint:md:fix || true
+
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v6
         with:
