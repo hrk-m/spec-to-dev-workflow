@@ -11,6 +11,9 @@ on:
 jobs:
   sync-docs:
     runs-on: ubuntu-latest
+    concurrency:
+      group: doc-sync
+      cancel-in-progress: false
     # doc-sync 自身のコミットで再トリガーされた場合はスキップ
     if: |
       !startsWith(github.event.head_commit.message, 'auto sync docs')
@@ -41,23 +44,42 @@ jobs:
       - name: Install Claude Code
         run: npm install -g @anthropic-ai/claude-code
 
+      - name: Setup branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          BRANCH="auto-pr/doc-sync"
+          if git ls-remote --heads origin "$BRANCH" | grep -q "$BRANCH"; then
+            git fetch origin "$BRANCH"
+            git checkout "$BRANCH"
+            if ! git merge origin/main --no-edit; then
+              git merge --abort
+              git reset --hard origin/main
+            fi
+          else
+            git checkout -b "$BRANCH"
+          fi
+          git submodule update --init --recursive
+
       - name: Sync docs with Claude
         env:
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
+          BEFORE_SHA: ${{ github.event.before }}
+          AFTER_SHA: ${{ github.event.after }}
         run: |
-          cat > /tmp/prompt.txt << 'EOF'
+          cat > /tmp/prompt.txt << EOF
           以下の3つのスキルを順番に実行してください。
           AskUserQuestion は使わないでください。すべて自律的に判断して実行してください。
 
           ## 前提
           - update-sample-api / update-sample-front のサブモジュール更新をトリガーに起動している
           - 処理対象は「今回の更新で追加・変更されたファイル」のみ。変更のないファイルは触らない
-          - 対象ファイルは `git diff HEAD~1 HEAD -- sample-api/ sample-front/` で特定する
+          - 対象ファイルは `git diff $BEFORE_SHA $AFTER_SHA -- sample-api/ sample-front/` で特定する
 
           ## 実行手順
 
-          1. `git diff HEAD~1 HEAD -- sample-api/ sample-front/` を実行し、今回の差分ファイルを特定する
+          1. `git diff $BEFORE_SHA $AFTER_SHA -- sample-api/ sample-front/` を実行し、今回の差分ファイルを特定する
           2. `.claude/skills/plan-writer/references/api-sync/SKILL.md` を Read して、差分ファイルに含まれるエンドポイントのみを対象に実行する
           3. `.claude/skills/plan-writer/references/schema-sync/SKILL.md` を Read して、差分にマイグレーション変更がある場合のみ実行する
           4. `.claude/skills/spec-update/references/spec-knowledge/SKILL.md` を Read して、差分ファイルに対応する画面・機能のみを対象に実行する
@@ -70,16 +92,29 @@ jobs:
           EOF
           claude --dangerously-skip-permissions -p "$(cat /tmp/prompt.txt)"
 
-      - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ steps.generate_token.outputs.token }}
-          commit-message: "auto sync docs"
-          title: "[doc-sync] サブモジュール更新後のドキュメント自動同期"
-          branch: auto-pr/doc-sync
-          branch-suffix: timestamp
-          base: main
-          delete-branch: true
-          add-paths: |
-            specs/
-            plans/
+      - name: Commit and push changes
+        id: commit
+        run: |
+          git add specs/ plans/
+          if ! git diff --staged --quiet; then
+            git commit -m "auto sync docs"
+            git push --force-with-lease origin auto-pr/doc-sync
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No changes to sync"
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create PR if not exists
+        if: steps.commit.outputs.has_changes == 'true'
+        env:
+          GH_TOKEN: ${{ steps.generate_token.outputs.token }}
+        run: |
+          BRANCH="auto-pr/doc-sync"
+          if ! gh pr view "$BRANCH" --json state -q '.state' 2>/dev/null | grep -q "OPEN"; then
+            gh pr create \
+              --title "[doc-sync] サブモジュール更新後のドキュメント自動同期" \
+              --body "サブモジュール更新後の自動ドキュメント同期" \
+              --base main \
+              --head "$BRANCH"
+          fi
