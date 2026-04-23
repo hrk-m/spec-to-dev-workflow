@@ -9,31 +9,33 @@
 
 ## ドメイン用語
 
-| 用語                   | 定義                                                                                                     | 補足・使用例                                                                                       |
-| ---------------------- | -------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| グループ               | ユーザーをまとめる単位                                                                                   | API では `group`                                                                                   |
-| メンバー               | グループに所属するユーザー                                                                               | API では `member`。姓（`last_name`）と名（`first_name`）を持つ                                     |
-| メンバー数             | グループに所属するユーザーの人数                                                                         | `member_count`                                                                                     |
-| 検索                   | キーワードによる一覧の絞り込み操作                                                                       | 「絞り込み」「フィルター」は使わない                                                               |
-| 無限スクロール         | リスト末尾のセンチネル要素が viewport に入ったとき、次バッチを自動フェッチして一覧を継続表示する方式     | IntersectionObserver + sentinelRef で実装。グループ一覧・メンバー一覧・ユーザー一覧で採用          |
-| センチネル要素         | 無限スクロールの追加フェッチをトリガーするためにリスト末尾に配置する不可視の div 要素                    | `sentinelRef` で参照。IntersectionObserver が viewport への入場を検知して `doFetchMore` を呼び出す |
-| クライアントキャッシュ | サーバーから一括取得したデータをクライアント側で保持し、検索クリア後に再フェッチなしで一覧を復元する方式 | グループ一覧・メンバー一覧・ユーザー一覧で採用。FETCH_LIMIT=100 件単位でフェッチする               |
-| イニシャルアバター     | メンバーの姓・名の頭文字を表示する丸形アイコン                                                           | MemberDetailSheet 等で参照される概念。MemberList はテーブル形式に移行済みのため現在は未使用        |
-| シート                 | 右端からスライドインするオーバーレイコンポーネント。背後に前画面が残る                                   | グループ詳細・メンバー詳細で使用。`role="dialog"`                                                  |
-| シートスタック         | 複数のシートを重ねて表示する仕組み                                                                       | GroupDetailSheet の上に MemberDetailSheet を積む等                                                 |
-| GroupDetailSheet       | グループ詳細をシートコンテンツとして表示するコンポーネント                                               | シートモードで使用。groupId と onMemberClick を props で受取                                       |
-| MemberDetailSheet      | メンバー詳細をシートコンテンツとして表示するコンポーネント                                               | GroupDetailSheet の上にスタックされる                                                              |
-| AlertDialog            | 操作確認のためのモーダルダイアログ。ユーザーに操作の意図を確認させる                                     | Radix UI AlertDialog を使用。`role="alertdialog"`                                                  |
-| ソフトデリート         | レコードを物理削除せず `deleted_at` に現在時刻を設定して論理削除する方式                                 | グループ削除で採用。API 操作後も DB のレコードは残る                                               |
-| AddMemberSheet         | グループ未所属のユーザーを検索・選択してグループに一括追加するシートコンポーネント                       | グループ詳細の「メンバー追加」ボタンから開く。`role="dialog"`                                      |
-| 非メンバー             | あるグループにまだ所属していないユーザー。AddMemberSheet の一覧対象                                      | API では `non-members`                                                                             |
-| 一括追加               | チェックボックスで選択した複数ユーザーを一度のリクエストでグループメンバーに追加する操作                 | AddMemberSheet の「一括追加」ボタンで実行                                                          |
-| ユーザー               | システムに登録されたユーザー。id・first_name・last_name を持つ                                           | API では `user`。グループメンバー（`member`）の上位概念                                            |
-| ユーザー一覧           | `/users` 画面に表示する全ユーザーのリスト。`search_key LIKE '%q%'` で検索できる                          | API では `GET /api/v1/users`                                                                       |
-| 一括削除               | チェックボックスで選択した複数メンバーを一度のリクエストでグループから除名する操作                       | MemberList の「削除」ボタンで実行。API: `DELETE /api/v1/groups/:id/members`                        |
-| ProtectedRoute         | `GET /api/v1/me` を呼び出して認証チェックを行うルートラッパーコンポーネント                              | 成功時は children を描画。失敗時は `/service-unavailable` へリダイレクト                           |
-| ServiceUnavailablePage | API 障害・認証失敗時に表示するメンテナンス画面                                                           | マウント時に `GET /api/v1/me` を再確認し、200 なら `/` へ自動リダイレクト                          |
-| AuthContext            | 認証済みユーザー情報をアプリ全体に提供する React Context                                                 | `useAuth` フックで利用。`id` / `uuid` / `firstName` / `lastName` を保持                            |
-| DEV_USER_UUID          | 開発環境（`APP_ENV=development`）で使用するユーザーの UUID を指定する環境変数                            | この UUID でユーザーを取得し `GET /api/v1/me` が 200 を返す                                        |
-| HttpError              | HTTP エラーステータスを保持する `Error` サブクラス                                                       | `apiFetch` が HTTP エラーを受け取ったときに throw。`err.status` でステータスコードを判別できる     |
-| ユーザー詳細           | `/users/:id` 画面に表示する単一ユーザーの詳細情報（id / uuid / 姓名）                                    | API では `GET /api/v1/users/:id`                                                                   |
+| 用語                   | 定義                                                                                                                              | 補足・使用例                                                                                       |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| グループ               | ユーザーをまとめる単位                                                                                                            | API では `group`                                                                                   |
+| メンバー               | グループに所属するユーザー                                                                                                        | API では `member`。姓（`last_name`）と名（`first_name`）を持つ                                     |
+| メンバー数             | グループに所属するユーザーの人数                                                                                                  | `member_count`                                                                                     |
+| 検索                   | キーワードによる一覧の絞り込み操作                                                                                                | 「絞り込み」「フィルター」は使わない                                                               |
+| 無限スクロール         | リスト末尾のセンチネル要素が viewport に入ったとき、次バッチを自動フェッチして一覧を継続表示する方式                              | IntersectionObserver + sentinelRef で実装。グループ一覧・メンバー一覧・ユーザー一覧で採用          |
+| センチネル要素         | 無限スクロールの追加フェッチをトリガーするためにリスト末尾に配置する不可視の div 要素                                             | `sentinelRef` で参照。IntersectionObserver が viewport への入場を検知して `doFetchMore` を呼び出す |
+| クライアントキャッシュ | サーバーから一括取得したデータをクライアント側で保持し、検索クリア後に再フェッチなしで一覧を復元する方式                          | グループ一覧・メンバー一覧・ユーザー一覧で採用。FETCH_LIMIT=100 件単位でフェッチする               |
+| イニシャルアバター     | メンバーの姓・名の頭文字を表示する丸形アイコン                                                                                    | MemberDetailSheet 等で参照される概念。MemberList はテーブル形式に移行済みのため現在は未使用        |
+| シート                 | 右端からスライドインするオーバーレイコンポーネント。背後に前画面が残る                                                            | グループ詳細・メンバー詳細で使用。`role="dialog"`                                                  |
+| シートスタック         | 複数のシートを重ねて表示する仕組み                                                                                                | GroupDetailSheet の上に MemberDetailSheet を積む等                                                 |
+| GroupDetailSheet       | グループ詳細をシートコンテンツとして表示するコンポーネント                                                                        | シートモードで使用。groupId と onMemberClick を props で受取                                       |
+| MemberDetailSheet      | メンバー詳細をシートコンテンツとして表示するコンポーネント                                                                        | GroupDetailSheet の上にスタックされる                                                              |
+| AlertDialog            | 操作確認のためのモーダルダイアログ。ユーザーに操作の意図を確認させる                                                              | Radix UI AlertDialog を使用。`role="alertdialog"`                                                  |
+| ソフトデリート         | レコードを物理削除せず `deleted_at` に現在時刻を設定して論理削除する方式                                                          | グループ削除で採用。API 操作後も DB のレコードは残る                                               |
+| AddMemberSheet         | グループ未所属のユーザーを検索・選択してグループに一括追加するシートコンポーネント                                                | グループ詳細の「メンバー追加」ボタンから開く。`role="dialog"`                                      |
+| 非メンバー             | あるグループにまだ所属していないユーザー。AddMemberSheet の一覧対象                                                               | API では `non-members`                                                                             |
+| 一括追加               | チェックボックスで選択した複数ユーザーを一度のリクエストでグループメンバーに追加する操作                                          | AddMemberSheet の「一括追加」ボタンで実行                                                          |
+| ユーザー               | システムに登録されたユーザー。id・first_name・last_name を持つ                                                                    | API では `user`。グループメンバー（`member`）の上位概念                                            |
+| ユーザー一覧           | `/users` 画面に表示する全ユーザーのリスト。`search_key LIKE '%q%'` で検索できる                                                   | API では `GET /api/v1/users`                                                                       |
+| 一括削除               | チェックボックスで選択した複数メンバーを一度のリクエストでグループから除名する操作                                                | MemberList の「削除」ボタンで実行。API: `DELETE /api/v1/groups/:id/members`                        |
+| ProtectedRoute         | `GET /api/v1/me` を呼び出して認証チェックを行うルートラッパーコンポーネント                                                       | 成功時は children を描画。失敗時は `/service-unavailable` へリダイレクト                           |
+| ServiceUnavailablePage | API 障害・認証失敗時に表示するメンテナンス画面                                                                                    | マウント時に `GET /api/v1/me` を再確認し、200 なら `/` へ自動リダイレクト                          |
+| AuthContext            | 認証済みユーザー情報をアプリ全体に提供する React Context                                                                          | `useAuth` フックで利用。`id` / `uuid` / `firstName` / `lastName` を保持                            |
+| DEV_USER_UUID          | 開発環境（`APP_ENV=development`）で使用するユーザーの UUID を指定する環境変数                                                     | この UUID でユーザーを取得し `GET /api/v1/me` が 200 を返す                                        |
+| HttpError              | HTTP エラーステータスを保持する `Error` サブクラス                                                                                | `apiFetch` が HTTP エラーを受け取ったときに throw。`err.status` でステータスコードを判別できる     |
+| ユーザー詳細           | `/users/:id` 画面に表示する単一ユーザーの詳細情報（id / uuid / 姓名）                                                             | API では `GET /api/v1/users/:id`                                                                   |
+| 全選択チェックボックス | テーブルヘッダー左端に配置するネイティブ `<input type="checkbox">` 要素。クリックで全行の選択・解除をトグルする                   | `data-testid="header-checkbox"` で識別。AddMemberSheet のヘッダー行で使用                          |
+| indeterminate          | チェックボックスの第三の表示状態。一覧の一部のみ選択されているとき DOM の `.indeterminate` プロパティを `true` に設定して表示する | `useRef` + `useEffect` で DOM を直接操作して反映。checked でも unchecked でもない中間状態          |
