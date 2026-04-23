@@ -37,15 +37,15 @@ GET /api/v1/users/:id が 4xx / 5xx / ネットワークエラーを返す
 
 ## 使用コンポーネント・状態
 
-| 要素 | 種別 | 役割 |
-|---|---|---|
-| `UserDetailPage` | コンポーネント | ユーザー詳細ページのルートコンポーネント |
-| `useUserDetail` | カスタム Hook | API フェッチ・ローディング・エラー・notFound 状態を管理する |
-| `fetchUser` | API 関数 | `GET /api/v1/users/:id` を呼び出す |
-| `user` | state | 取得したユーザー情報（`UserDetail` 型）を保持する。取得前は `null` |
-| `loading` | state | フェッチ中は `true`。スケルトン表示の条件として使用する |
-| `error` | state | エラーメッセージ文字列を保持する。正常時は `null` |
-| `notFound` | state | 404 の場合に `true` になる |
+| 要素             | 種別           | 役割                                                               |
+| ---------------- | -------------- | ------------------------------------------------------------------ |
+| `UserDetailPage` | コンポーネント | ユーザー詳細ページのルートコンポーネント                           |
+| `useUserDetail`  | カスタム Hook  | API フェッチ・ローディング・エラー・notFound 状態を管理する        |
+| `fetchUser`      | API 関数       | `GET /api/v1/users/:id` を呼び出す                                 |
+| `user`           | state          | 取得したユーザー情報（`UserDetail` 型）を保持する。取得前は `null` |
+| `loading`        | state          | フェッチ中は `true`。スケルトン表示の条件として使用する            |
+| `error`          | state          | エラーメッセージ文字列を保持する。正常時は `null`                  |
+| `notFound`       | state          | 404 の場合に `true` になる                                         |
 
 ---
 
@@ -65,9 +65,9 @@ GET /api/v1/users/:id が 4xx / 5xx / ネットワークエラーを返す
 
 ## 使用 API
 
-| エンドポイント | メソッド | 用途 |
-|---|---|---|
-| `/api/v1/users/:id` | GET | ユーザーの id / uuid / first_name / last_name を取得する |
+| エンドポイント      | メソッド | 用途                                                     |
+| ------------------- | -------- | -------------------------------------------------------- |
+| `/api/v1/users/:id` | GET      | ユーザーの id / uuid / first_name / last_name を取得する |
 
 ---
 

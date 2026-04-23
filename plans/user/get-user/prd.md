@@ -83,15 +83,15 @@
 
 ### sample-api
 
-| 対応ステップ  | パス                                                  | 役割                                                         |
-| ------------- | ----------------------------------------------------- | ------------------------------------------------------------ |
-| 5-1, 5-2, 5-4 | `sample-api/internal/rest/user.go`                    | GetUser ハンドラ追加・UserService interface に GetUser 追加  |
+| 対応ステップ  | パス                                                  | 役割                                                               |
+| ------------- | ----------------------------------------------------- | ------------------------------------------------------------------ |
+| 5-1, 5-2, 5-4 | `sample-api/internal/rest/user.go`                    | GetUser ハンドラ追加・UserService interface に GetUser 追加        |
 | 5-2           | `sample-api/user/service.go`                          | GetUser ビジネスロジック・UserRepository interface に GetByID 追加 |
-| 5-2           | `sample-api/internal/repository/mysql/user.go`        | GetByID MySQL 実装追加                                       |
-| 5-5           | `sample-api/internal/rest/user_test.go`               | GetUser Handler ユニットテスト追加                           |
-| 5-5           | `sample-api/internal/rest/mocks/user_service_mock.go` | GetUser モックメソッド追加                                   |
-| 5-5           | `sample-api/user/service_test.go`                     | GetUser Service ユニットテスト追加                           |
-| 5-5           | `sample-api/user/mocks/user_repository_mock.go`       | GetByID モックメソッド追加                                   |
+| 5-2           | `sample-api/internal/repository/mysql/user.go`        | GetByID MySQL 実装追加                                             |
+| 5-5           | `sample-api/internal/rest/user_test.go`               | GetUser Handler ユニットテスト追加                                 |
+| 5-5           | `sample-api/internal/rest/mocks/user_service_mock.go` | GetUser モックメソッド追加                                         |
+| 5-5           | `sample-api/user/service_test.go`                     | GetUser Service ユニットテスト追加                                 |
+| 5-5           | `sample-api/user/mocks/user_repository_mock.go`       | GetByID モックメソッド追加                                         |
 
 ### sample-front
 
@@ -129,11 +129,11 @@
 
 ### エラーケース一覧（バックエンド）
 
-| 条件                                   | 発生レイヤー | ステータス                | レスポンス                                            |
-| -------------------------------------- | ------------ | ------------------------- | ----------------------------------------------------- |
-| `id` が整数でない / 1 未満             | Handler      | 400 Bad Request           | `{ "message": "given param is not valid" }`           |
-| `id` に該当するユーザーが存在しない    | Repository   | 404 Not Found             | `{ "message": "your requested item is not found" }`   |
-| DB エラー                              | Repository   | 500 Internal Server Error | `{ "message": "internal server error" }`              |
+| 条件                                | 発生レイヤー | ステータス                | レスポンス                                          |
+| ----------------------------------- | ------------ | ------------------------- | --------------------------------------------------- |
+| `id` が整数でない / 1 未満          | Handler      | 400 Bad Request           | `{ "message": "given param is not valid" }`         |
+| `id` に該当するユーザーが存在しない | Repository   | 404 Not Found             | `{ "message": "your requested item is not found" }` |
+| DB エラー                           | Repository   | 500 Internal Server Error | `{ "message": "internal server error" }`            |
 
 ### エラーケース一覧（フロントエンド）
 
@@ -152,21 +152,21 @@
 
 **Handler テスト** (`internal/rest/user_test.go`):
 
-| #   | 観点   | テスト内容                                              | 入力例                       | 期待結果                  |
-| --- | ------ | ------------------------------------------------------- | ---------------------------- | ------------------------- |
-| 1   | 正常系 | 存在する ID でユーザーを取得できる                      | `id=1`                       | 200 OK + ユーザー情報     |
-| 2   | 異常系 | id が整数変換不可の場合                                 | `id=abc`                     | 400 Bad Request           |
-| 3   | 異常系 | id = 0 の場合                                           | `id=0`                       | 400 Bad Request           |
-| 4   | 異常系 | 存在しない ID の場合（service が ErrNotFound を返す）   | `id=9999`                    | 404 Not Found             |
-| 5   | 異常系 | service が DB エラーを返す場合                          | service モックがエラーを返す | 500 Internal Server Error |
+| #   | 観点   | テスト内容                                            | 入力例                       | 期待結果                  |
+| --- | ------ | ----------------------------------------------------- | ---------------------------- | ------------------------- |
+| 1   | 正常系 | 存在する ID でユーザーを取得できる                    | `id=1`                       | 200 OK + ユーザー情報     |
+| 2   | 異常系 | id が整数変換不可の場合                               | `id=abc`                     | 400 Bad Request           |
+| 3   | 異常系 | id = 0 の場合                                         | `id=0`                       | 400 Bad Request           |
+| 4   | 異常系 | 存在しない ID の場合（service が ErrNotFound を返す） | `id=9999`                    | 404 Not Found             |
+| 5   | 異常系 | service が DB エラーを返す場合                        | service モックがエラーを返す | 500 Internal Server Error |
 
 **Service テスト** (`user/service_test.go`):
 
-| #   | 観点   | テスト内容                                                  | 入力例                    | 期待結果                      |
-| --- | ------ | ----------------------------------------------------------- | ------------------------- | ----------------------------- |
-| 6   | 正常系 | 存在する ID でユーザーを返せる                              | `id=1`                    | domain.User が返る            |
-| 7   | 異常系 | リポジトリが ErrNotFound を返した場合は ErrNotFound を返す  | repo モックが ErrNotFound を返す | ErrNotFound                |
-| 8   | 異常系 | リポジトリが DB エラーの場合は ErrInternalServerError を伝搬 | repo モックがエラーを返す | ErrInternalServerError を伝搬 |
+| #   | 観点   | テスト内容                                                   | 入力例                           | 期待結果                      |
+| --- | ------ | ------------------------------------------------------------ | -------------------------------- | ----------------------------- |
+| 6   | 正常系 | 存在する ID でユーザーを返せる                               | `id=1`                           | domain.User が返る            |
+| 7   | 異常系 | リポジトリが ErrNotFound を返した場合は ErrNotFound を返す   | repo モックが ErrNotFound を返す | ErrNotFound                   |
+| 8   | 異常系 | リポジトリが DB エラーの場合は ErrInternalServerError を伝搬 | repo モックがエラーを返す        | ErrInternalServerError を伝搬 |
 
 **フロントエンドテスト**:
 
@@ -178,13 +178,13 @@
 
 `UserDetailPage.test.tsx`:
 
-| #   | 観点   | テスト内容                                     | 期待結果                        |
-| --- | ------ | ---------------------------------------------- | ------------------------------- |
-| 10  | 正常系 | ローディング中にスケルトンを表示する           | スケルトン要素が DOM に存在する |
-| 11  | 正常系 | 成功時に id / uuid / 姓名を表示する            | 各値が DOM に表示される         |
-| 12  | 異常系 | 404 時に「ユーザーが見つかりません」を表示する | 該当メッセージが DOM に表示される |
+| #   | 観点   | テスト内容                                     | 期待結果                            |
+| --- | ------ | ---------------------------------------------- | ----------------------------------- |
+| 10  | 正常系 | ローディング中にスケルトンを表示する           | スケルトン要素が DOM に存在する     |
+| 11  | 正常系 | 成功時に id / uuid / 姓名を表示する            | 各値が DOM に表示される             |
+| 12  | 異常系 | 404 時に「ユーザーが見つかりません」を表示する | 該当メッセージが DOM に表示される   |
 | 13  | 異常系 | エラー時にエラーカードを表示する               | エラーカード要素が DOM に表示される |
-| 14  | 正常系 | 戻るボタンクリックで /users へ遷移する         | `/users` 画面に遷移する         |
+| 14  | 正常系 | 戻るボタンクリックで /users へ遷移する         | `/users` 画面に遷移する             |
 
 ---
 
