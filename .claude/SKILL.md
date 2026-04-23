@@ -1,1 +1,0 @@
-/Users/s13993/src/github.com/hrk-m/spec-to-dev-workflow/.agents/skills/prd/SKILL.md
