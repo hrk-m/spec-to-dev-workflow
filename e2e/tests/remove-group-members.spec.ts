@@ -40,7 +40,7 @@ test.describe("グループメンバー削除", () => {
       await page.goto(GROUP_1_URL);
       await page.waitForLoadState("networkidle");
 
-      await page.getByRole("checkbox").first().click();
+      await page.getByTestId("member-checkbox").first().click();
       await page.getByRole("button", { name: "削除" }).click();
 
       const alertDialog = page.getByRole("alertdialog");
@@ -166,7 +166,7 @@ test.describe("グループメンバー削除", () => {
       await page.goto(GROUP_1_URL);
       await page.waitForLoadState("networkidle");
 
-      const checkboxes = await page.getByRole("checkbox").all();
+      const checkboxes = await page.getByTestId("member-checkbox").all();
       for (const checkbox of checkboxes) {
         await checkbox.click();
       }

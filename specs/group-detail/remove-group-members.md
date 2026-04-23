@@ -2,7 +2,7 @@
 
 ## 概要
 
-グループ詳細画面のメンバー一覧で、各行のチェックボックスを使って 1 件または複数件のメンバーを選択し、「削除」ボタンで一括してグループから除名できる。削除後はメンバー数と一覧が自動的に更新される。
+グループ詳細画面のメンバー一覧で、各行のチェックボックスまたはヘッダーの全選択チェックボックスを使って 1 件または複数件のメンバーを選択し、「削除」ボタンで一括してグループから除名できる。削除後はメンバー数と一覧が自動的に更新される。
 
 ---
 
@@ -63,6 +63,9 @@ DELETE リクエストが 4xx・5xx を返す
 | `GroupDetailContent`   | コンポーネント | `onRefetch` props 経由で `useGroupDetail.refetch()` を `MemberList` に渡す                    |
 | `deleteGroupMembers`   | API 関数       | `DELETE /api/v1/groups/:id/members` を呼び出す                                                |
 | `selectedIds`          | state          | チェックされたメンバー ID の集合（`Set<number>`）。「削除」ボタンの enabled / disabled を制御 |
+| `isAllSelected`        | 派生 state     | 全メンバーが選択されているかを示すフラグ。ヘッダーチェックボックスの checked 状態に連動       |
+| `isSomeSelected`       | 派生 state     | 一部のみ選択されているかを示すフラグ。ヘッダーチェックボックスの indeterminate 状態に連動     |
+| `headerCheckboxRef`    | ref            | ヘッダー `<input type="checkbox">` への参照。`useEffect` で indeterminate を DOM に直接設定   |
 | `isDeleteDialogOpen`   | state          | 削除確認 AlertDialog の開閉状態                                                               |
 | `deleteError`          | state          | 削除 API のエラーメッセージ                                                                   |
 | `clearMemberListCache` | 関数           | メンバー一覧のクライアントキャッシュをクリアして再フェッチをトリガーする                      |
@@ -72,9 +75,13 @@ DELETE リクエストが 4xx・5xx を返す
 ## 確認観点
 
 ```
+- [ ] メンバー一覧のヘッダーに全選択チェックボックスが表示される
 - [ ] メンバー一覧の各行にチェックボックスが表示される
 - [ ] 0 件選択状態では「削除」ボタンが disabled
 - [ ] 1 件以上選択すると「削除」ボタンが enabled になる
+- [ ] ヘッダーチェックボックスをクリックすると全メンバーが一括選択される
+- [ ] 全選択時にヘッダーチェックボックスをクリックすると全解除される
+- [ ] 一部選択時はヘッダーチェックボックスが indeterminate 表示になる
 - [ ] 「削除」ボタンをクリックすると AlertDialog が表示され、選択件数が文言に反映される
 - [ ] ダイアログの「削除する」をクリックすると DELETE リクエストが送信される
 - [ ] リクエスト body に選択した user_ids が含まれる
