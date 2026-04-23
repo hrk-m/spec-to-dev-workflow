@@ -36,3 +36,4 @@
 | AuthContext | 認証済みユーザー情報をアプリ全体に提供する React Context | `useAuth` フックで利用。`id` / `uuid` / `firstName` / `lastName` を保持 |
 | DEV_USER_UUID | 開発環境（`APP_ENV=development`）で使用するユーザーの UUID を指定する環境変数 | この UUID でユーザーを取得し `GET /api/v1/me` が 200 を返す |
 | HttpError | HTTP エラーステータスを保持する `Error` サブクラス | `apiFetch` が HTTP エラーを受け取ったときに throw。`err.status` でステータスコードを判別できる |
+| ユーザー詳細 | `/users/:id` 画面に表示する単一ユーザーの詳細情報（id / uuid / 姓名）| API では `GET /api/v1/users/:id` |

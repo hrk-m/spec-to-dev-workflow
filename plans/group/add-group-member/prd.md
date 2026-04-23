@@ -372,11 +372,11 @@
 10. グループ詳細画面の MemberList ヘッダーに「メンバー追加」ボタンが表示される
 11. ボタン押下で AddMemberSheet（シート形式）が表示される
 12. シート内の構成（上から順）：検索入力 → 「一括追加」ボタン（検索フォーム直下・コンテンツ幅・右端揃え・soft スタイル・radius full・size 2）→ チェックボックス付きユーザー一覧。下部に「一括追加」ボタンは存在しない
-17. 「一括追加」ボタンは選択ユーザーが 1 件以上かつ送信中でないときのみ活性化する
-13. 追加成功後にシートを閉じ、MemberList と member_count（GroupDetail）を再取得する
-14. 409 エラー時はシート内にエラーメッセージを表示する
-15. `AddMemberSheet` がマウントされるたびに `clearNonMemberListCache(groupId)` を呼び出し、非メンバーリストのキャッシュをクリアする（他ユーザーの変更も反映される）
-16. `clearNonMemberListCache` は `groupId?: number` を受け取り、指定時は該当グループのキャッシュのみクリアする
+13. 「一括追加」ボタンは選択ユーザーが 1 件以上かつ送信中でないときのみ活性化する
+14. 追加成功後にシートを閉じ、MemberList と member_count（GroupDetail）を再取得する
+15. 409 エラー時はシート内にエラーメッセージを表示する
+16. `AddMemberSheet` がマウントされるたびに `clearNonMemberListCache(groupId)` を呼び出し、非メンバーリストのキャッシュをクリアする（他ユーザーの変更も反映される）
+17. `clearNonMemberListCache` は `groupId?: number` を受け取り、指定時は該当グループのキャッシュのみクリアする
 
 ---
 
