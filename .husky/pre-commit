@@ -1,1 +1,1 @@
-bun run lint:md
+bun run format:md:check

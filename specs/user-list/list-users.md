@@ -54,23 +54,23 @@
 
 ## 使用コンポーネント・状態
 
-| 要素 | 種別 | 役割 |
-|---|---|---|
-| `UsersPage` | コンポーネント | ユーザー一覧ページのルートコンポーネント |
-| `UserList` | コンポーネント | ネイティブ HTML テーブル（id / uuid / 姓名 の 3 列）形式のユーザー一覧。検索・無限スクロール（センチネル要素）・スケルトン・空状態表示付き。アバターアイコンなし |
-| `useUserList` | カスタム Hook | fetch・検索・無限スクロール・キャッシュの状態と処理を管理する |
-| `fetchUsers` | API 関数 | `GET /api/v1/users?q=&limit=&offset=` を呼び出す |
-| `cachedUsers` | state | サーバーから取得したユーザーをキャッシュする（100 件単位でフェッチ） |
-| `total` | state | ユーザーの総件数を保持する（q フィルターなしの全件数） |
-| `searchQuery` | state | 検索キーワードを保持する |
-| `debouncedQuery` | state | 300ms デバウンス済みの検索キーワード（API リクエストに使用） |
-| `isFetchingMore` | state | センチネルトリガーによる追加フェッチ中かどうか |
-| `fetchMoreError` | state | 追加フェッチのエラーメッセージ（null なら正常） |
-| `lastBatchSize` | state | 直前のフェッチで取得した件数（FETCH_LIMIT 未満なら末尾到達と判定） |
-| `fetchedOffset` | state | サーバーから取得済みのオフセット位置を保持する |
-| `sentinelRef` | ref | リスト末尾のセンチネル要素への参照。IntersectionObserver に渡す |
-| `isEmptyResult` | derived | ローディング終了後に表示件数が 0 の場合 true になる |
-| `effectiveTotal` | derived | 検索中は cachedUsers.length、非検索時は API の total を使用する |
+| 要素             | 種別           | 役割                                                                                                                                                             |
+| ---------------- | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `UsersPage`      | コンポーネント | ユーザー一覧ページのルートコンポーネント                                                                                                                         |
+| `UserList`       | コンポーネント | ネイティブ HTML テーブル（id / uuid / 姓名 の 3 列）形式のユーザー一覧。検索・無限スクロール（センチネル要素）・スケルトン・空状態表示付き。アバターアイコンなし |
+| `useUserList`    | カスタム Hook  | fetch・検索・無限スクロール・キャッシュの状態と処理を管理する                                                                                                    |
+| `fetchUsers`     | API 関数       | `GET /api/v1/users?q=&limit=&offset=` を呼び出す                                                                                                                 |
+| `cachedUsers`    | state          | サーバーから取得したユーザーをキャッシュする（100 件単位でフェッチ）                                                                                             |
+| `total`          | state          | ユーザーの総件数を保持する（q フィルターなしの全件数）                                                                                                           |
+| `searchQuery`    | state          | 検索キーワードを保持する                                                                                                                                         |
+| `debouncedQuery` | state          | 300ms デバウンス済みの検索キーワード（API リクエストに使用）                                                                                                     |
+| `isFetchingMore` | state          | センチネルトリガーによる追加フェッチ中かどうか                                                                                                                   |
+| `fetchMoreError` | state          | 追加フェッチのエラーメッセージ（null なら正常）                                                                                                                  |
+| `lastBatchSize`  | state          | 直前のフェッチで取得した件数（FETCH_LIMIT 未満なら末尾到達と判定）                                                                                               |
+| `fetchedOffset`  | state          | サーバーから取得済みのオフセット位置を保持する                                                                                                                   |
+| `sentinelRef`    | ref            | リスト末尾のセンチネル要素への参照。IntersectionObserver に渡す                                                                                                  |
+| `isEmptyResult`  | derived        | ローディング終了後に表示件数が 0 の場合 true になる                                                                                                              |
+| `effectiveTotal` | derived        | 検索中は cachedUsers.length、非検索時は API の total を使用する                                                                                                  |
 
 ---
 
@@ -96,9 +96,9 @@
 
 ## 使用 API
 
-| エンドポイント | メソッド | 用途 |
-|---|---|---|
-| `/api/v1/users?limit=N&offset=N&q=keyword` | GET | ユーザー一覧（id, uuid, first_name, last_name）と total を取得する |
+| エンドポイント                             | メソッド | 用途                                                               |
+| ------------------------------------------ | -------- | ------------------------------------------------------------------ |
+| `/api/v1/users?limit=N&offset=N&q=keyword` | GET      | ユーザー一覧（id, uuid, first_name, last_name）と total を取得する |
 
 ---
 

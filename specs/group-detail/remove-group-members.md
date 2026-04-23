@@ -57,15 +57,15 @@ DELETE リクエストが 4xx・5xx を返す
 
 ## 使用コンポーネント・状態
 
-| 要素                    | 種別           | 役割                                                                                           |
-| ----------------------- | -------------- | ---------------------------------------------------------------------------------------------- |
-| `MemberList`            | コンポーネント | 各行にチェックボックスを表示し、「削除」ボタンと削除確認 AlertDialog を内包する               |
-| `GroupDetailContent`    | コンポーネント | `onRefetch` props 経由で `useGroupDetail.refetch()` を `MemberList` に渡す                    |
-| `deleteGroupMembers`    | API 関数       | `DELETE /api/v1/groups/:id/members` を呼び出す                                                 |
-| `selectedIds`           | state          | チェックされたメンバー ID の集合（`Set<number>`）。「削除」ボタンの enabled / disabled を制御 |
-| `isDeleteDialogOpen`    | state          | 削除確認 AlertDialog の開閉状態                                                                |
-| `deleteError`           | state          | 削除 API のエラーメッセージ                                                                    |
-| `clearMemberListCache`  | 関数           | メンバー一覧のクライアントキャッシュをクリアして再フェッチをトリガーする                       |
+| 要素                   | 種別           | 役割                                                                                          |
+| ---------------------- | -------------- | --------------------------------------------------------------------------------------------- |
+| `MemberList`           | コンポーネント | 各行にチェックボックスを表示し、「削除」ボタンと削除確認 AlertDialog を内包する               |
+| `GroupDetailContent`   | コンポーネント | `onRefetch` props 経由で `useGroupDetail.refetch()` を `MemberList` に渡す                    |
+| `deleteGroupMembers`   | API 関数       | `DELETE /api/v1/groups/:id/members` を呼び出す                                                |
+| `selectedIds`          | state          | チェックされたメンバー ID の集合（`Set<number>`）。「削除」ボタンの enabled / disabled を制御 |
+| `isDeleteDialogOpen`   | state          | 削除確認 AlertDialog の開閉状態                                                               |
+| `deleteError`          | state          | 削除 API のエラーメッセージ                                                                   |
+| `clearMemberListCache` | 関数           | メンバー一覧のクライアントキャッシュをクリアして再フェッチをトリガーする                      |
 
 ---
 
@@ -91,11 +91,11 @@ DELETE リクエストが 4xx・5xx を返す
 
 ## 使用 API
 
-| エンドポイント                  | メソッド | 用途                                                                       |
-| ------------------------------- | -------- | -------------------------------------------------------------------------- |
-| `/api/v1/groups/:id/members`    | DELETE   | 選択したメンバーをグループから一括削除する。body: `{ user_ids: number[] }` |
-| `/api/v1/groups/:id/members`    | GET      | 削除後のメンバー一覧を再取得する                                           |
-| `/api/v1/groups/:id`            | GET      | 削除後の member_count を反映したグループ詳細を再取得する                  |
+| エンドポイント               | メソッド | 用途                                                                       |
+| ---------------------------- | -------- | -------------------------------------------------------------------------- |
+| `/api/v1/groups/:id/members` | DELETE   | 選択したメンバーをグループから一括削除する。body: `{ user_ids: number[] }` |
+| `/api/v1/groups/:id/members` | GET      | 削除後のメンバー一覧を再取得する                                           |
+| `/api/v1/groups/:id`         | GET      | 削除後の member_count を反映したグループ詳細を再取得する                   |
 
 ---
 

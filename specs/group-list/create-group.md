@@ -41,13 +41,13 @@ API エラー（500 など）
 
 ## 使用コンポーネント・状態
 
-| 要素 | 種別 | 役割 |
-|---|---|---|
-| `CreateGroupDialog` | コンポーネント | Radix UI Dialog を使ったグループ作成モーダル |
-| `useCreateGroup` | カスタム Hook | フォーム状態・バリデーション・API 呼び出し・遷移を管理 |
-| `isLoading` | state | API 送信中の状態。true のとき Create ボタンを disabled にする |
-| `error` | state | API エラーメッセージ。モーダル内に表示する |
-| `nameError` | state | name フィールドのインラインバリデーションエラー |
+| 要素                | 種別           | 役割                                                          |
+| ------------------- | -------------- | ------------------------------------------------------------- |
+| `CreateGroupDialog` | コンポーネント | Radix UI Dialog を使ったグループ作成モーダル                  |
+| `useCreateGroup`    | カスタム Hook  | フォーム状態・バリデーション・API 呼び出し・遷移を管理        |
+| `isLoading`         | state          | API 送信中の状態。true のとき Create ボタンを disabled にする |
+| `error`             | state          | API エラーメッセージ。モーダル内に表示する                    |
+| `nameError`         | state          | name フィールドのインラインバリデーションエラー               |
 
 ---
 

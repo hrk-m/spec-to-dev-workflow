@@ -54,20 +54,20 @@
 
 ## 使用コンポーネント・状態
 
-| 要素 | 種別 | 役割 |
-|---|---|---|
-| `GroupList` | コンポーネント | グループ一覧リスト・無限スクロール（センチネル要素）を表示する |
-| `useGroupList` | カスタム Hook | fetch・検索・無限スクロール・キャッシュの状態と処理を管理する |
-| `cachedGroups` | state | サーバーから取得したグループをキャッシュする（100 件単位でフェッチ） |
-| `total` | state | グループの総件数を保持する |
-| `searchQuery` | state | 検索キーワードを保持する |
-| `debouncedQuery` | state | 300ms デバウンス済みの検索キーワード（API リクエストに使用） |
-| `isFetchingMore` | state | センチネルトリガーによる追加フェッチ中かどうか |
-| `fetchMoreError` | state | 追加フェッチのエラーメッセージ（null なら正常） |
-| `lastBatchSize` | state | 直前のフェッチで取得した件数（FETCH_LIMIT 未満なら末尾到達と判定） |
-| `fetchedOffset` | state | サーバーから取得済みのオフセット位置を保持する |
-| `sentinelRef` | ref | リスト末尾のセンチネル要素への参照。IntersectionObserver に渡す |
-| `effectiveTotal` | derived | 検索中は cachedGroups.length、非検索時は API の total を使用する |
+| 要素             | 種別           | 役割                                                                 |
+| ---------------- | -------------- | -------------------------------------------------------------------- |
+| `GroupList`      | コンポーネント | グループ一覧リスト・無限スクロール（センチネル要素）を表示する       |
+| `useGroupList`   | カスタム Hook  | fetch・検索・無限スクロール・キャッシュの状態と処理を管理する        |
+| `cachedGroups`   | state          | サーバーから取得したグループをキャッシュする（100 件単位でフェッチ） |
+| `total`          | state          | グループの総件数を保持する                                           |
+| `searchQuery`    | state          | 検索キーワードを保持する                                             |
+| `debouncedQuery` | state          | 300ms デバウンス済みの検索キーワード（API リクエストに使用）         |
+| `isFetchingMore` | state          | センチネルトリガーによる追加フェッチ中かどうか                       |
+| `fetchMoreError` | state          | 追加フェッチのエラーメッセージ（null なら正常）                      |
+| `lastBatchSize`  | state          | 直前のフェッチで取得した件数（FETCH_LIMIT 未満なら末尾到達と判定）   |
+| `fetchedOffset`  | state          | サーバーから取得済みのオフセット位置を保持する                       |
+| `sentinelRef`    | ref            | リスト末尾のセンチネル要素への参照。IntersectionObserver に渡す      |
+| `effectiveTotal` | derived        | 検索中は cachedGroups.length、非検索時は API の total を使用する     |
 
 ---
 
@@ -91,9 +91,9 @@
 
 ## 使用 API
 
-| エンドポイント | メソッド | 用途 |
-|---|---|---|
-| `/api/v1/groups?offset=N&limit=N&q=keyword` | GET | グループ一覧を取得する |
+| エンドポイント                              | メソッド | 用途                   |
+| ------------------------------------------- | -------- | ---------------------- |
+| `/api/v1/groups?offset=N&limit=N&q=keyword` | GET      | グループ一覧を取得する |
 
 ---
 

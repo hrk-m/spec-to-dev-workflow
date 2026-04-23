@@ -9,8 +9,18 @@ on:
       - main
 
 jobs:
-  e2e:
+  e2e-test:
+    name: E2E Test (shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shardIndex: [1, 2, 3]
+        shardTotal: [3]
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-shard-${{ matrix.shardIndex }}
+      cancel-in-progress: true
+    timeout-minutes: 30
     steps:
       - name: Generate token
         id: generate_token
@@ -31,17 +41,65 @@ jobs:
       - name: Install dependencies
         run: bun install
 
+      - name: Start services
+        run: docker compose -f docker-compose.e2e.yml up --build -d --wait mysql api front
+
+      - name: Install Playwright browsers
+        run: cd e2e && bunx playwright install --with-deps chromium
+
       - name: Run E2E tests
-        run: make e2e
+        run: cd e2e && BASE_URL=http://localhost:13000 bunx playwright test --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
 
       - name: Dump container logs on failure
         if: failure()
         run: docker compose -f docker-compose.e2e.yml logs --no-color
 
-      - name: Upload Playwright report
-        if: failure()
+      - name: Stop services
+        if: always()
+        run: docker compose -f docker-compose.e2e.yml down -v --remove-orphans
+
+      - name: Upload blob report
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
+          name: blob-report-${{ matrix.shardIndex }}
+          path: e2e/blob-report/
+          retention-days: 1
+
+  merge-reports:
+    name: Merge Reports
+    needs: e2e-test
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Download blob reports from all shards
+        uses: actions/download-artifact@v4
+        with:
+          path: e2e/all-blob-reports
+          pattern: blob-report-*
+          merge-multiple: true
+
+      - name: Merge reports
+        run: |
+          cd e2e
+          if [ -d "all-blob-reports" ] && [ "$(find all-blob-reports -name '*.zip' | wc -l)" -gt 0 ]; then
+            bunx playwright merge-reports --reporter html ./all-blob-reports
+          else
+            mkdir -p playwright-report
+            echo "<html><body><h1>No test reports available</h1></body></html>" > playwright-report/index.html
+          fi
+
+      - name: Upload merged report
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-merged-report
           path: e2e/playwright-report/
           retention-days: 7

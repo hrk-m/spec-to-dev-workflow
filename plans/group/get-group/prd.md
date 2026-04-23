@@ -97,18 +97,18 @@
 
 ### sample-front
 
-| 対応ステップ | パス                                                              | 役割                                                         |
-| ------------ | ----------------------------------------------------------------- | ------------------------------------------------------------ |
-| 5-2-FE       | `sample-front/package.json`                                       | react-router v7 依存追加                                     |
-| 5-2-FE       | `sample-front/src/app/router.tsx`                                 | ルーター設定（/ → HomePage, /groups/:id → GroupDetailPage）  |
-| 5-2-FE       | `sample-front/src/app/App.tsx`                                    | RouterProvider への切り替え                                  |
-| 5-2-FE       | `sample-front/src/pages/group-detail/index.ts`                    | Public API（barrel export）                                  |
-| 5-2-FE       | `sample-front/src/pages/group-detail/ui/GroupDetailPage.tsx`      | ルーターエントリポイント（GroupDetailView にレンダリング委譲）|
-| 5-2-FE       | `sample-front/src/pages/group-detail/ui/GroupDetailView.tsx`      | グループ詳細表示コンポーネント（useGroupDetail フック使用）  |
-| 5-2-FE       | `sample-front/src/pages/group-detail/api/fetch-group.ts`          | GET /api/v1/groups/:id 呼び出し                              |
-| 5-2-FE       | `sample-front/src/pages/group-detail/model/group-detail.ts`       | GroupDetail 型定義                                           |
-| 5-2-FE       | `sample-front/src/pages/group-detail/model/group-detail-state.ts` | グループ詳細取得カスタムフック（`useGroupDetail` を export） |
-| 5-2-FE       | `sample-front/src/pages/home/ui/GroupList.tsx`                    | 行クリックで /groups/:id へ遷移する onClick 追加             |
+| 対応ステップ | パス                                                              | 役割                                                           |
+| ------------ | ----------------------------------------------------------------- | -------------------------------------------------------------- |
+| 5-2-FE       | `sample-front/package.json`                                       | react-router v7 依存追加                                       |
+| 5-2-FE       | `sample-front/src/app/router.tsx`                                 | ルーター設定（/ → HomePage, /groups/:id → GroupDetailPage）    |
+| 5-2-FE       | `sample-front/src/app/App.tsx`                                    | RouterProvider への切り替え                                    |
+| 5-2-FE       | `sample-front/src/pages/group-detail/index.ts`                    | Public API（barrel export）                                    |
+| 5-2-FE       | `sample-front/src/pages/group-detail/ui/GroupDetailPage.tsx`      | ルーターエントリポイント（GroupDetailView にレンダリング委譲） |
+| 5-2-FE       | `sample-front/src/pages/group-detail/ui/GroupDetailView.tsx`      | グループ詳細表示コンポーネント（useGroupDetail フック使用）    |
+| 5-2-FE       | `sample-front/src/pages/group-detail/api/fetch-group.ts`          | GET /api/v1/groups/:id 呼び出し                                |
+| 5-2-FE       | `sample-front/src/pages/group-detail/model/group-detail.ts`       | GroupDetail 型定義                                             |
+| 5-2-FE       | `sample-front/src/pages/group-detail/model/group-detail-state.ts` | グループ詳細取得カスタムフック（`useGroupDetail` を export）   |
+| 5-2-FE       | `sample-front/src/pages/home/ui/GroupList.tsx`                    | 行クリックで /groups/:id へ遷移する onClick 追加               |
 
 ---
 

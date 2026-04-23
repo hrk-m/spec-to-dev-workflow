@@ -2,13 +2,13 @@
 
 ## 概要
 
-| 項目         | 内容                                                                                                                |
-| ------------ | ------------------------------------------------------------------------------------------------------------------- |
-| 機能名       | `add-group-member`                                                                                                  |
-| 目的         | グループ詳細画面からユーザーをグループに追加できるようにする                                                        |
+| 項目         | 内容                                                                                                                        |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| 機能名       | `add-group-member`                                                                                                          |
+| 目的         | グループ詳細画面からユーザーをグループに追加できるようにする                                                                |
 | API          | `GET /api/v1/groups/:id/non-members`（グループ未所属ユーザー一覧取得）<br>`POST /api/v1/groups/:id/members`（メンバー追加） |
-| 認証         | 必要（AuthMiddleware）                                                                                              |
-| データソース | MySQL (`sample-api/internal/repository/mysql`)                                                                      |
+| 認証         | 必要（AuthMiddleware）                                                                                                      |
+| データソース | MySQL (`sample-api/internal/repository/mysql`)                                                                              |
 
 ---
 
@@ -18,12 +18,12 @@
 
 #### リクエスト仕様
 
-| フィールド | 型              | 必須 | 説明                                                              |
-| ---------- | --------------- | ---- | ----------------------------------------------------------------- |
-| `id`       | integer (path)  | ✓    | グループの ID。正の整数                                           |
-| `q`        | string (query)  | —    | 検索キーワード。`search_key LIKE '%q%'` で絞り込み               |
-| `limit`    | integer (query) | —    | 取得件数上限。1〜500（デフォルト: 500）                          |
-| `offset`   | integer (query) | —    | 取得開始位置。0 以上（デフォルト: 0）                            |
+| フィールド | 型              | 必須 | 説明                                               |
+| ---------- | --------------- | ---- | -------------------------------------------------- |
+| `id`       | integer (path)  | ✓    | グループの ID。正の整数                            |
+| `q`        | string (query)  | —    | 検索キーワード。`search_key LIKE '%q%'` で絞り込み |
+| `limit`    | integer (query) | —    | 取得件数上限。1〜500（デフォルト: 500）            |
+| `offset`   | integer (query) | —    | 取得開始位置。0 以上（デフォルト: 0）              |
 
 #### バリデーション一覧
 
@@ -43,22 +43,22 @@
 
 #### リクエスト仕様
 
-| フィールド | 型             | 必須 | 説明                                              |
-| ---------- | -------------- | ---- | ------------------------------------------------- |
-| `id`       | integer (path) | ✓    | グループの ID。正の整数                           |
-| `user_ids` | array (body)   | ✓    | 追加するユーザー ID の配列。1 件以上であること    |
+| フィールド | 型             | 必須 | 説明                                           |
+| ---------- | -------------- | ---- | ---------------------------------------------- |
+| `id`       | integer (path) | ✓    | グループの ID。正の整数                        |
+| `user_ids` | array (body)   | ✓    | 追加するユーザー ID の配列。1 件以上であること |
 
 #### バリデーション一覧
 
-| #   | 対象フィールド | ルール                                             | エラー時の挙動  |
-| --- | -------------- | -------------------------------------------------- | --------------- |
-| 1   | `id`           | 整数に変換できること                               | 400 Bad Request |
-| 2   | `id`           | 1 以上（正の整数）であること                       | 400 Bad Request |
-| 3   | `id`           | DB 上に該当グループが存在すること                  | 404 Not Found   |
-| 4   | `user_ids`     | リクエストボディに含まれること                     | 400 Bad Request |
-| 5   | `user_ids`     | 空配列でないこと（1 件以上）                       | 400 Bad Request |
-| 6   | `user_ids`     | 各 user_id が DB 上に存在すること                  | 404 Not Found   |
-| 7   | `user_ids`     | いずれかの user_id がすでにグループメンバーでないこと | 409 Conflict  |
+| #   | 対象フィールド | ルール                                                | エラー時の挙動  |
+| --- | -------------- | ----------------------------------------------------- | --------------- |
+| 1   | `id`           | 整数に変換できること                                  | 400 Bad Request |
+| 2   | `id`           | 1 以上（正の整数）であること                          | 400 Bad Request |
+| 3   | `id`           | DB 上に該当グループが存在すること                     | 404 Not Found   |
+| 4   | `user_ids`     | リクエストボディに含まれること                        | 400 Bad Request |
+| 5   | `user_ids`     | 空配列でないこと（1 件以上）                          | 400 Bad Request |
+| 6   | `user_ids`     | 各 user_id が DB 上に存在すること                     | 404 Not Found   |
+| 7   | `user_ids`     | いずれかの user_id がすでにグループメンバーでないこと | 409 Conflict    |
 
 ---
 
@@ -269,17 +269,17 @@
 
 #### エラーケース一覧
 
-| 条件                                            | 発生レイヤー                       | ステータス                | レスポンス                                               |
-| ----------------------------------------------- | ---------------------------------- | ------------------------- | -------------------------------------------------------- |
-| `id` が整数に変換不可                           | Handler                            | 400 Bad Request           | `{ "message": "given param is not valid" }`              |
-| `id` が 1 未満                                  | Handler                            | 400 Bad Request           | `{ "message": "given param is not valid" }`              |
-| `user_ids` が存在しない / 空配列                | Handler                            | 400 Bad Request           | `{ "message": "given param is not valid" }`              |
-| 対象グループが存在しない                        | Service / Repository               | 404 Not Found             | `{ "message": "your requested item is not found" }`      |
-| `user_ids` 内に存在しないユーザー ID がある     | Service / Repository               | 404 Not Found             | `{ "message": "your requested item is not found" }`      |
-| `user_ids` 内にすでにメンバーの user_id がある  | Service / Repository               | 409 Conflict              | `{ "message": "your requested item already exists" }`    |
-| UNIQUE 制約エラー（並行リクエスト）             | Repository                         | 409 Conflict              | `{ "message": "your requested item already exists" }`    |
-| DB エラー                                       | Repository                         | 500 Internal Server Error | `{ "message": "internal server error" }`                 |
-| ネットワークエラー                              | フロントエンド: API クライアント層 | —                         | エラーメッセージ表示                                     |
+| 条件                                           | 発生レイヤー                       | ステータス                | レスポンス                                            |
+| ---------------------------------------------- | ---------------------------------- | ------------------------- | ----------------------------------------------------- |
+| `id` が整数に変換不可                          | Handler                            | 400 Bad Request           | `{ "message": "given param is not valid" }`           |
+| `id` が 1 未満                                 | Handler                            | 400 Bad Request           | `{ "message": "given param is not valid" }`           |
+| `user_ids` が存在しない / 空配列               | Handler                            | 400 Bad Request           | `{ "message": "given param is not valid" }`           |
+| 対象グループが存在しない                       | Service / Repository               | 404 Not Found             | `{ "message": "your requested item is not found" }`   |
+| `user_ids` 内に存在しないユーザー ID がある    | Service / Repository               | 404 Not Found             | `{ "message": "your requested item is not found" }`   |
+| `user_ids` 内にすでにメンバーの user_id がある | Service / Repository               | 409 Conflict              | `{ "message": "your requested item already exists" }` |
+| UNIQUE 制約エラー（並行リクエスト）            | Repository                         | 409 Conflict              | `{ "message": "your requested item already exists" }` |
+| DB エラー                                      | Repository                         | 500 Internal Server Error | `{ "message": "internal server error" }`              |
+| ネットワークエラー                             | フロントエンド: API クライアント層 | —                         | エラーメッセージ表示                                  |
 
 ---
 
@@ -287,44 +287,44 @@
 
 ### エンドポイント 1: `GET /api/v1/groups/:id/non-members`
 
-| #   | 観点     | テスト内容                               | 入力例                       | 期待結果                           |
-| --- | -------- | ---------------------------------------- | ---------------------------- | ---------------------------------- |
-| 1   | 正常系   | q なしで未所属ユーザー全件取得           | `id=1`                       | 200 OK + users 配列 + total        |
-| 2   | 正常系   | q ありで search_key フィルタリング       | `id=1, q="山田"`             | 200 OK + 該当ユーザーのみ          |
-| 3   | 正常系   | 全員グループ参加済みの場合               | `id=1`（全員加入済み）       | 200 OK + users=[] + total=0        |
-| 4   | 異常系   | 存在しないグループ ID                    | `id=9999`                    | 404 Not Found                      |
-| 5   | 外部依存 | Service をモックで切り分け               | mockGroupService             | Handler 単体でテスト可能           |
-| 6   | 外部依存 | Repository をモックで切り分け            | mockGroupRepository          | Service 単体でテスト可能           |
+| #   | 観点     | テスト内容                         | 入力例                 | 期待結果                    |
+| --- | -------- | ---------------------------------- | ---------------------- | --------------------------- |
+| 1   | 正常系   | q なしで未所属ユーザー全件取得     | `id=1`                 | 200 OK + users 配列 + total |
+| 2   | 正常系   | q ありで search_key フィルタリング | `id=1, q="山田"`       | 200 OK + 該当ユーザーのみ   |
+| 3   | 正常系   | 全員グループ参加済みの場合         | `id=1`（全員加入済み） | 200 OK + users=[] + total=0 |
+| 4   | 異常系   | 存在しないグループ ID              | `id=9999`              | 404 Not Found               |
+| 5   | 外部依存 | Service をモックで切り分け         | mockGroupService       | Handler 単体でテスト可能    |
+| 6   | 外部依存 | Repository をモックで切り分け      | mockGroupRepository    | Service 単体でテスト可能    |
 
 ---
 
 ### エンドポイント 2: `POST /api/v1/groups/:id/members`
 
-| #   | 観点     | テスト内容                                  | 入力例                             | 期待結果                        |
-| --- | -------- | ------------------------------------------- | ---------------------------------- | ------------------------------- |
-| 1   | 正常系   | 正常にメンバー追加                          | `id=1, user_ids=[2,3]`             | 201 Created + members 配列      |
-| 2   | 異常系   | グループ未存在                              | `id=9999, user_ids=[1]`            | 404 Not Found                   |
-| 3   | 異常系   | user_id が存在しない                        | `id=1, user_ids=[9999]`            | 404 Not Found                   |
-| 4   | 異常系   | すでにメンバーの user_id を含む             | `id=1, user_ids=[1]`（1 は既存）   | 409 Conflict                    |
-| 5   | 外部依存 | Service をモックで切り分け                  | mockGroupService                   | Handler 単体でテスト可能        |
-| 6   | 外部依存 | Repository をモックで切り分け               | mockGroupRepository                | Service 単体でテスト可能        |
+| #   | 観点     | テスト内容                      | 入力例                           | 期待結果                   |
+| --- | -------- | ------------------------------- | -------------------------------- | -------------------------- |
+| 1   | 正常系   | 正常にメンバー追加              | `id=1, user_ids=[2,3]`           | 201 Created + members 配列 |
+| 2   | 異常系   | グループ未存在                  | `id=9999, user_ids=[1]`          | 404 Not Found              |
+| 3   | 異常系   | user_id が存在しない            | `id=1, user_ids=[9999]`          | 404 Not Found              |
+| 4   | 異常系   | すでにメンバーの user_id を含む | `id=1, user_ids=[1]`（1 は既存） | 409 Conflict               |
+| 5   | 外部依存 | Service をモックで切り分け      | mockGroupService                 | Handler 単体でテスト可能   |
+| 6   | 外部依存 | Repository をモックで切り分け   | mockGroupRepository              | Service 単体でテスト可能   |
 
 ---
 
 ### フロントエンド テストケース
 
-| #   | 観点   | テスト内容                                    | 期待結果                                                   |
-| --- | ------ | --------------------------------------------- | ---------------------------------------------------------- |
-| 1   | 正常系 | 「メンバー追加」ボタンで AddMemberSheet が開く | シートが表示され未所属ユーザー一覧が描画される             |
-| 2   | 正常系 | 検索入力で未所属ユーザーが絞り込まれる        | q パラメータつき API が呼ばれ、一覧が更新される            |
-| 3   | 正常系 | 追加成功後に MemberList が再取得される        | シートが閉じ、MemberList と member_count が更新される      |
-| 4   | 異常系 | 409 エラー時にエラーメッセージを表示          | 「選択したユーザーはすでにメンバーです」が表示される       |
-| 5   | 正常系 | AddMemberSheet がマウントされたとき           | `clearNonMemberListCache(groupId)` が呼ばれる              |
+| #   | 観点   | テスト内容                                                         | 期待結果                                                         |
+| --- | ------ | ------------------------------------------------------------------ | ---------------------------------------------------------------- |
+| 1   | 正常系 | 「メンバー追加」ボタンで AddMemberSheet が開く                     | シートが表示され未所属ユーザー一覧が描画される                   |
+| 2   | 正常系 | 検索入力で未所属ユーザーが絞り込まれる                             | q パラメータつき API が呼ばれ、一覧が更新される                  |
+| 3   | 正常系 | 追加成功後に MemberList が再取得される                             | シートが閉じ、MemberList と member_count が更新される            |
+| 4   | 異常系 | 409 エラー時にエラーメッセージを表示                               | 「選択したユーザーはすでにメンバーです」が表示される             |
+| 5   | 正常系 | AddMemberSheet がマウントされたとき                                | `clearNonMemberListCache(groupId)` が呼ばれる                    |
 | 6   | 正常系 | 「一括追加」ボタンが検索フォームの下・ユーザー一覧の上に表示される | DOM 順でボタンが検索フォームより後、ユーザー一覧より前に存在する |
-| 7   | 正常系 | シート初期表示時のボタン状態                  | 選択ゼロのため disabled                                    |
-| 8   | 正常系 | チェックボックスを 1 件選択したとき           | ボタンが活性化される（disabled 解除）                      |
-| 9   | 正常系 | 全チェックを外したとき                        | ボタンが disabled に戻る                                   |
-| 10  | 正常系 | 下部に「一括追加」ボタンが存在しない          | DOM 内に「一括追加」ボタンが 1 つだけ存在する              |
+| 7   | 正常系 | シート初期表示時のボタン状態                                       | 選択ゼロのため disabled                                          |
+| 8   | 正常系 | チェックボックスを 1 件選択したとき                                | ボタンが活性化される（disabled 解除）                            |
+| 9   | 正常系 | 全チェックを外したとき                                             | ボタンが disabled に戻る                                         |
+| 10  | 正常系 | 下部に「一括追加」ボタンが存在しない                               | DOM 内に「一括追加」ボタンが 1 つだけ存在する                    |
 
 ---
 
@@ -332,29 +332,29 @@
 
 ### sample-api
 
-| ファイル                                                             | 役割                                                                                              |
-| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `sample-api/domain/user.go`                                          | User Entity（id, first_name, last_name）定義                                                      |
-| `sample-api/group/service.go`                                        | GroupRepository interface に `ListNonGroupMembers` / `AddGroupMembers` 追加・UserRepository interface（`GetByID`）追加 |
-| `sample-api/group/service_test.go`                                   | Service ユニットテスト（各メソッド）                                                              |
-| `sample-api/group/mocks/group_repository_mock.go`                    | GroupRepository の手動 mock 更新                                                                  |
-| `sample-api/group/mocks/user_repository_mock.go`                     | UserRepository の手動 mock（group パッケージ用）                                                  |
-| `sample-api/internal/rest/group.go`                                  | HTTP Handler（`ListNonGroupMembers` / `AddGroupMembers`）・GroupService interface 追加            |
-| `sample-api/internal/rest/group_test.go`                             | Handler ユニットテスト                                                                            |
-| `sample-api/internal/rest/mocks/group_service_mock.go`               | GroupService の手動 mock 更新                                                                     |
-| `sample-api/internal/repository/mysql/group.go`                      | MySQL 実装（`ListNonGroupMembers` / `AddGroupMembers`）                                           |
-| `sample-api/internal/repository/mysql/user.go`                       | UserRepository 実装（`GetByID`）。group サービスの UserRepository IF を満たす                     |
-| `sample-api/db/migrate/20260411120000_add_search_key_to_users.up.sql` | `users` テーブルへの `search_key` VIRTUAL GENERATED COLUMN 追加マイグレーション                  |
+| ファイル                                                              | 役割                                                                                                                   |
+| --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `sample-api/domain/user.go`                                           | User Entity（id, first_name, last_name）定義                                                                           |
+| `sample-api/group/service.go`                                         | GroupRepository interface に `ListNonGroupMembers` / `AddGroupMembers` 追加・UserRepository interface（`GetByID`）追加 |
+| `sample-api/group/service_test.go`                                    | Service ユニットテスト（各メソッド）                                                                                   |
+| `sample-api/group/mocks/group_repository_mock.go`                     | GroupRepository の手動 mock 更新                                                                                       |
+| `sample-api/group/mocks/user_repository_mock.go`                      | UserRepository の手動 mock（group パッケージ用）                                                                       |
+| `sample-api/internal/rest/group.go`                                   | HTTP Handler（`ListNonGroupMembers` / `AddGroupMembers`）・GroupService interface 追加                                 |
+| `sample-api/internal/rest/group_test.go`                              | Handler ユニットテスト                                                                                                 |
+| `sample-api/internal/rest/mocks/group_service_mock.go`                | GroupService の手動 mock 更新                                                                                          |
+| `sample-api/internal/repository/mysql/group.go`                       | MySQL 実装（`ListNonGroupMembers` / `AddGroupMembers`）                                                                |
+| `sample-api/internal/repository/mysql/user.go`                        | UserRepository 実装（`GetByID`）。group サービスの UserRepository IF を満たす                                          |
+| `sample-api/db/migrate/20260411120000_add_search_key_to_users.up.sql` | `users` テーブルへの `search_key` VIRTUAL GENERATED COLUMN 追加マイグレーション                                        |
 
 ### sample-front
 
-| ファイル                                                              | 役割                                                                               |
-| --------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| `sample-front/src/pages/group-detail/api/fetch-non-members.ts`        | `GET /api/v1/groups/:id/non-members` 呼び出し                                      |
-| `sample-front/src/pages/group-detail/api/add-group-members.ts`        | `POST /api/v1/groups/:id/members` 呼び出し                                         |
-| `sample-front/src/pages/group-detail/model/useNonMemberList.ts`       | `clearNonMemberListCache(groupId?: number)` のシグネチャ変更（引数追加）。指定時は `nonMemberListCache.delete(groupId)` で単一エントリのみクリア、未指定時は `nonMemberListCache.clear()` で全クリア |
-| `sample-front/src/pages/group-detail/ui/AddMemberSheet.tsx`           | マウント時 `useEffect` 追加・「一括追加」ボタンを検索フォームの直下（ユーザー一覧の上）に配置・`variant="soft"` / `radius="full"` / `size="2"` スタイル・右端揃え（`justifyContent: "flex-end"`）・下部ボタンを削除 |
-| `sample-front/src/pages/group-detail/ui/GroupDetailContent.tsx`       | 「メンバー追加」ボタン追加・AddMemberSheet の開閉状態管理                                                                                                                                               |
+| ファイル                                                        | 役割                                                                                                                                                                                                                |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sample-front/src/pages/group-detail/api/fetch-non-members.ts`  | `GET /api/v1/groups/:id/non-members` 呼び出し                                                                                                                                                                       |
+| `sample-front/src/pages/group-detail/api/add-group-members.ts`  | `POST /api/v1/groups/:id/members` 呼び出し                                                                                                                                                                          |
+| `sample-front/src/pages/group-detail/model/useNonMemberList.ts` | `clearNonMemberListCache(groupId?: number)` のシグネチャ変更（引数追加）。指定時は `nonMemberListCache.delete(groupId)` で単一エントリのみクリア、未指定時は `nonMemberListCache.clear()` で全クリア                |
+| `sample-front/src/pages/group-detail/ui/AddMemberSheet.tsx`     | マウント時 `useEffect` 追加・「一括追加」ボタンを検索フォームの直下（ユーザー一覧の上）に配置・`variant="soft"` / `radius="full"` / `size="2"` スタイル・右端揃え（`justifyContent: "flex-end"`）・下部ボタンを削除 |
+| `sample-front/src/pages/group-detail/ui/GroupDetailContent.tsx` | 「メンバー追加」ボタン追加・AddMemberSheet の開閉状態管理                                                                                                                                                           |
 
 ---
 
