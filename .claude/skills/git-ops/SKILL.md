@@ -26,6 +26,16 @@ allowed-tools: Bash, AskUserQuestion
 
 選択に応じてフロー A またはフロー B へ進む。
 
+## 0-1. 対象リポジトリの選択
+
+`AskUserQuestion`（複数選択）で処理対象のリポジトリを確認する。
+
+- **spec-to-dev-workflow**（親リポジトリ）
+- **sample-api**（サブモジュール）
+- **sample-front**（サブモジュール）
+
+選択されたリポジトリのみを以降のステップで処理する。選択されなかったリポジトリは完全にスキップする。
+
 ---
 
 ## フロー A: ブランチ作成 + コミット + プッシュ + PR 作成
@@ -43,17 +53,16 @@ git -C sample-api branch -a
 git -C sample-front branch -a
 ```
 
-### A-2. 対象リポジトリの自動検出
+### A-2. 対象リポジトリの変更状態確認
 
-3 リポジトリの変更状態を確認し、変更があるリポジトリだけをブランチ作成・コミット対象とする。
+0-1 で選択されたリポジトリの変更状態を確認する。変更がないリポジトリはスキップ対象として明示する。
 
 ```bash
-git -C . status --short
-git -C sample-api status --short
-git -C sample-front status --short
+# 選択されたリポジトリのみ実行する
+git -C . status --short            # spec-to-dev-workflow が選択された場合
+git -C sample-api status --short   # sample-api が選択された場合
+git -C sample-front status --short # sample-front が選択された場合
 ```
-
-変更があるリポジトリを一覧で提示する（変更なしのリポジトリはスキップ対象として明示する）。
 
 ### A-3. ブランチ作成
 
@@ -191,27 +200,27 @@ EOF
 
 ### B-1. 現在のブランチ確認
 
-3 リポジトリのブランチ状態を確認する。
+0-1 で選択されたリポジトリのブランチ状態を確認する。
 
 ```bash
-git -C . branch --show-current
-git -C sample-api branch --show-current
-git -C sample-front branch --show-current
+# 選択されたリポジトリのみ実行する
+git -C . branch --show-current            # spec-to-dev-workflow が選択された場合
+git -C sample-api branch --show-current   # sample-api が選択された場合
+git -C sample-front branch --show-current # sample-front が選択された場合
 ```
 
-**停止条件**: いずれかのリポジトリが `main` にいる かつ そのリポジトリに変更がある場合は即停止し、フロー A を先に実行するよう案内する。
+**停止条件**: 選択されたリポジトリのいずれかが `main` にいる かつ そのリポジトリに変更がある場合は即停止し、フロー A を先に実行するよう案内する。
 
-### B-2. 対象リポジトリの自動検出
+### B-2. 対象リポジトリの変更状態確認
 
-3 リポジトリの変更状態を確認し、変更があるリポジトリだけをコミット対象とする。
+0-1 で選択されたリポジトリの変更状態を確認する。変更がないリポジトリはスキップ対象として明示する。
 
 ```bash
-git -C . status --short
-git -C sample-api status --short
-git -C sample-front status --short
+# 選択されたリポジトリのみ実行する
+git -C . status --short            # spec-to-dev-workflow が選択された場合
+git -C sample-api status --short   # sample-api が選択された場合
+git -C sample-front status --short # sample-front が選択された場合
 ```
-
-変更があるリポジトリを一覧で提示する（変更なしのリポジトリはスキップ対象として明示する）。
 
 ### B-3. コミットメッセージの自動生成 + コミット + プッシュ
 

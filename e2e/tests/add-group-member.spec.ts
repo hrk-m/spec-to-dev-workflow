@@ -331,6 +331,128 @@ test.describe("グループメンバー追加", () => {
     await expect(dialog.getByText("Suzuki Hanako")).not.toBeVisible();
   });
 
+  // TC-12: ヘッダーチェックボックスで全非メンバーを全選択し一括追加できる
+  test("[TC-12] ヘッダーチェックボックスで全非メンバーを全選択し一括追加できる", async ({
+    page,
+  }) => {
+    await mockAddMembersPost(page, 201, {
+      members: [
+        { id: 3, first_name: "Jiro", last_name: "Tanaka" },
+        { id: 4, first_name: "Yuki", last_name: "Sato" },
+      ],
+    });
+    await openAddMemberSheetOnFullPage(page);
+    await waitForNonMemberList(page);
+    const dialog = page.getByRole("dialog");
+
+    // ヘッダーチェックボックスをクリックして全選択
+    await dialog.getByTestId("header-checkbox").click();
+
+    // 一括追加ボタンが活性化されていることを確認
+    await expect(dialog.getByRole("button", { name: "一括追加" })).toBeEnabled();
+
+    // 一括追加をクリック
+    await dialog.getByRole("button", { name: "一括追加" }).click();
+
+    // シートが閉じることを確認
+    await expect(dialog).not.toBeVisible({ timeout: 5000 });
+
+    // リグレッション: 既存メンバーが正常表示されること
+    await expect(page.getByText("Yamada Taro")).toBeVisible();
+  });
+
+  // TC-17: ヘッダークリックで全選択→再クリックで全解除（トグル動作）
+  test("[TC-17] ヘッダークリックで全選択→再クリックで全解除（トグル動作）", async ({
+    page,
+  }) => {
+    await openAddMemberSheetOnFullPage(page);
+    await waitForNonMemberList(page);
+    const dialog = page.getByRole("dialog");
+    const rows = dialog.locator("tbody tr");
+
+    // 1回目クリック: 全選択
+    await dialog.getByTestId("header-checkbox").click();
+    // 一括追加ボタンが活性化
+    await expect(dialog.getByRole("button", { name: "一括追加" })).toBeEnabled();
+    // 全行が選択状態
+    const rowCount = await rows.count();
+    for (let i = 0; i < rowCount; i++) {
+      await expect(rows.nth(i).locator('[role="checkbox"]')).toHaveAttribute(
+        "aria-checked",
+        "true",
+      );
+    }
+
+    // 2回目クリック: 全解除
+    await dialog.getByTestId("header-checkbox").click();
+    // 一括追加ボタンが非活性
+    await expect(dialog.getByRole("button", { name: "一括追加" })).toBeDisabled();
+    // 全行が解除状態
+    for (let i = 0; i < rowCount; i++) {
+      await expect(rows.nth(i).locator('[role="checkbox"]')).toHaveAttribute(
+        "aria-checked",
+        "false",
+      );
+    }
+  });
+
+  // TC-18: indeterminate 状態でヘッダークリックすると全選択される
+  test("[TC-18] indeterminate 状態でヘッダークリックすると全選択される", async ({
+    page,
+  }) => {
+    await openAddMemberSheetOnFullPage(page);
+    await waitForNonMemberList(page);
+    const dialog = page.getByRole("dialog");
+
+    // 1件だけ選択して indeterminate 状態にする
+    await dialog.locator("tbody tr").first().click();
+    // 一括追加ボタンが活性化（1件選択）
+    await expect(dialog.getByRole("button", { name: "一括追加" })).toBeEnabled();
+
+    // ヘッダーチェックボックスが indeterminate 状態であることを確認
+    const isIndeterminate = await dialog
+      .getByTestId("header-checkbox")
+      .evaluate((el: HTMLInputElement) => el.indeterminate);
+    expect(isIndeterminate).toBe(true);
+
+    // ヘッダーチェックボックスをクリックして全選択
+    await dialog.getByTestId("header-checkbox").click();
+
+    // 全行が選択状態
+    const rows = dialog.locator("tbody tr");
+    const rowCount = await rows.count();
+    for (let i = 0; i < rowCount; i++) {
+      await expect(rows.nth(i).locator('[role="checkbox"]')).toHaveAttribute(
+        "aria-checked",
+        "true",
+      );
+    }
+  });
+
+  // TC-19: 非メンバー 0 件時にヘッダー checkbox が disabled で操作不可
+  test("[TC-19] 非メンバー 0 件時にヘッダー checkbox が disabled で操作不可", async ({
+    page,
+  }) => {
+    // 非メンバー一覧 API をモック: 空リストを返す（クエリパラメータ付き URL に対応するため末尾に ** を追加）
+    await page.route("**/api/v1/groups/1/non-members**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ users: [], total: 0 }),
+      });
+    });
+
+    await openAddMemberSheetOnFullPage(page);
+    const dialog = page.getByRole("dialog");
+    // 空状態メッセージが表示されるまで待機
+    await expect(
+      dialog.getByText("追加できるユーザーがいません。"),
+    ).toBeVisible({ timeout: 5000 });
+
+    // ヘッダー checkbox が disabled であることを確認
+    await expect(dialog.getByTestId("header-checkbox")).toBeDisabled();
+  });
+
   // TC-16: メンバー追加後に AddMemberSheet を再度開くと追加済みユーザーが非メンバーリストに表示されない
   test("[TC-16] メンバー追加後に AddMemberSheet を再度開くと追加済みユーザーが非メンバーリストに表示されない（キャッシュクリア確認）", async ({
     page,
