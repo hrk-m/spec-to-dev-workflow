@@ -124,16 +124,33 @@ test.describe("グループメンバー削除", () => {
   test(
     "[TC-05] 2 件一括削除 → member_count が 0 になる",
     async ({ page }) => {
+      let deleteDone = false;
+
       await page.route(GROUP_1_MEMBERS_API, async (route) => {
         const method = route.request().method();
         if (method === "DELETE") {
+          deleteDone = true;
           await route.fulfill({ status: 204 });
         } else if (method === "GET") {
-          await route.fulfill({
-            status: 200,
-            contentType: "application/json",
-            body: JSON.stringify({ members: [], total: 0 }),
-          });
+          if (deleteDone) {
+            await route.fulfill({
+              status: 200,
+              contentType: "application/json",
+              body: JSON.stringify({ members: [], total: 0 }),
+            });
+          } else {
+            await route.fulfill({
+              status: 200,
+              contentType: "application/json",
+              body: JSON.stringify({
+                members: [
+                  { id: 1, first_name: "Taro", last_name: "Yamada" },
+                  { id: 2, first_name: "Hanako", last_name: "Suzuki" },
+                ],
+                total: 2,
+              }),
+            });
+          }
         } else {
           await route.continue();
         }
@@ -251,7 +268,7 @@ test.describe("グループメンバー削除", () => {
       expect(capturedRequest!.method).toBe("DELETE");
       expect(
         (capturedRequest!.body as { user_ids: number[] }).user_ids,
-      ).toContain(1);
+      ).toContain(2);
     },
   );
 
