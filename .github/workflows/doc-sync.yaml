@@ -43,6 +43,7 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ steps.generate_token.outputs.token }}
           claude_args: "--max-turns 30"
+          allowed_bots: "*"
           prompt: |
             以下の3つのスキルを順番に実行してください。
             AskUserQuestion は使わないでください。すべて自律的に判断して実行してください。
