@@ -105,7 +105,7 @@ cp sample-api/.env.local.example sample-api/.env.local
 cp sample-front/.env.local.example sample-front/.env.local
 ```
 
-2. DB を起動して初期化
+1. DB を起動して初期化
 
 ```bash
 cd sample-api
@@ -113,7 +113,7 @@ make docker-up
 make db-setup
 ```
 
-3. API / Front を別ターミナルで起動
+1. API / Front を別ターミナルで起動
 
 ```bash
 cd sample-api && make run
