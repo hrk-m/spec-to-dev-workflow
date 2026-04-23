@@ -4,13 +4,14 @@ on:
   pull_request:
     branches:
       - main
-  push:
-    branches:
-      - main
+    types:
+      - opened
+      - synchronize
 
 jobs:
   e2e-test:
     name: E2E Test (shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }})
+    if: ${{ !startsWith(github.head_ref, 'auto-pr/') }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -69,7 +70,7 @@ jobs:
   merge-reports:
     name: Merge Reports
     needs: e2e-test
-    if: always()
+    if: ${{ always() && !startsWith(github.head_ref, 'auto-pr/') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
