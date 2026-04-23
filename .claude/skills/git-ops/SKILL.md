@@ -126,15 +126,15 @@ git -C {リポジトリパス} push -u origin {ブランチ名}
 
 ### A-6. PR 作成
 
-A-5 でプッシュした全リポジトリに PR を作成する。PR タイトルは直近のコミットメッセージを使用する。サブモジュールを先に作成し、親リポジトリを最後に作成する。
+A-5 でプッシュした全リポジトリに PR を作成する。PR タイトルは直近のコミットメッセージを使用する。**サブモジュールを先に作成し、取得した URL を親リポジトリの PR body に含めてから親リポジトリを最後に作成する。**
 
 ```bash
 git -C {リポジトリパス} log -1 --pretty=%s
 ```
 
 ```bash
-# sample-api（対象の場合）
-gh pr create \
+# sample-api（対象の場合）— URL を変数に保存する
+API_PR_URL=$(gh pr create \
   --repo hrk-m/spec-to-sample-api \
   --base main \
   --head {ブランチ名} \
@@ -146,10 +146,10 @@ gh pr create \
 ## 関連
 spec-to-dev-workflow の実装による変更
 EOF
-)"
+)")
 
-# sample-front（対象の場合）
-gh pr create \
+# sample-front（対象の場合）— URL を変数に保存する
+FRONT_PR_URL=$(gh pr create \
   --repo hrk-m/spec-to-sample-front \
   --base main \
   --head {ブランチ名} \
@@ -161,16 +161,24 @@ gh pr create \
 ## 関連
 spec-to-dev-workflow の実装による変更
 EOF
-)"
+)")
+```
 
+サブモジュールの PR URL を収集したら、親リポジトリの PR を作成する。`## 関連 PR` セクションには対象だったサブモジュールの URL のみ列挙し、スキップしたリポジトリの行は省略する。
+
+```bash
 # 親リポジトリ（対象の場合）
 gh pr create \
   --base main \
   --head {ブランチ名} \
   --title "{PRタイトル}" \
-  --body "$(cat <<'EOF'
+  --body "$(cat <<EOF
 ## 変更内容
 {変更の概要}
+
+## 関連 PR
+- sample-api: ${API_PR_URL}   # sample-api が対象の場合のみ
+- sample-front: ${FRONT_PR_URL}   # sample-front が対象の場合のみ
 EOF
 )"
 ```
