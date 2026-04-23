@@ -102,6 +102,12 @@
 
 ---
 
+## 画面遷移
+
+テーブル行をクリックすると `/users/:id` へ遷移し、ユーザー詳細（user-detail）を表示する。詳細は [get-user.md](../user-detail/get-user.md) を参照。
+
+---
+
 ## 対応する API 仕様
 
 → `plans/user/list-users/prd.md`

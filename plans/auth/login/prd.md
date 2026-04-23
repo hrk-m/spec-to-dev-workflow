@@ -121,6 +121,7 @@ APP_ENV≠development の場合:
 - **パス**: `/api/v1/me`
 - **認証**: 認証ミドルウェア必須
 - **レスポンス (200)**:
+
   ```json
   {
     "id": 1,
@@ -129,7 +130,9 @@ APP_ENV≠development の場合:
     "last_name": "山田"
   }
   ```
+
 - **レスポンス (401)**:
+
   ```json
   { "message": "Unauthorized" }
   ```

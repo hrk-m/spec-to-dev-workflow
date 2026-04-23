@@ -225,19 +225,19 @@
 
 ### フロントエンド
 
-11. マウント時に `GET /api/v1/groups/:id/non-members?limit=100&offset=0` を呼び出し、最大 100 件を取得してクライアントキャッシュする
-12. 取得した全件をリストに即時表示する（`displayedCount` による分割表示なし）
-13. キャッシュが枯渇かつ `lastBatchSize === 100` のとき `offset+=100` で追加フェッチする
-14. 追加フェッチ中はリスト末尾にスピナーを表示する
-15. 追加フェッチ失敗時はリスト末尾にエラーメッセージを表示する（既存表示アイテムは維持）
-16. キーワード入力後 300ms デバウンスで再取得する（キャッシュクリア・`offset=0` リセットあり）
-17. UI から Previous/Next ボタンおよび件数セレクタ（20/50/100）を削除する
-18. `currentPage` / `totalPages` / `perPage` / `handlePerPageChange` の状態を削除する
-19. AddMemberSheet のユーザーリストが `<table>` 形式（`<table>` + `<thead>` + `<tbody>`）で表示される
-20. `<thead>` に空の `<th>`（チェックボックス列、`aria-label="選択"`）と `<th>姓名</th>` の 2 列ヘッダーが存在する
-21. アバターアイコン（イニシャル円形）を表示しない（各ユーザー行に `UserAvatar` は使用しない）
-22. `columnheader` ロールで `姓名` が取得できる
-23. `AddMemberSheet.styles.ts` に MemberList と同パターンのテーブル用スタイル定数が定義されている
+1. マウント時に `GET /api/v1/groups/:id/non-members?limit=100&offset=0` を呼び出し、最大 100 件を取得してクライアントキャッシュする
+2. 取得した全件をリストに即時表示する（`displayedCount` による分割表示なし）
+3. キャッシュが枯渇かつ `lastBatchSize === 100` のとき `offset+=100` で追加フェッチする
+4. 追加フェッチ中はリスト末尾にスピナーを表示する
+5. 追加フェッチ失敗時はリスト末尾にエラーメッセージを表示する（既存表示アイテムは維持）
+6. キーワード入力後 300ms デバウンスで再取得する（キャッシュクリア・`offset=0` リセットあり）
+7. UI から Previous/Next ボタンおよび件数セレクタ（20/50/100）を削除する
+8. `currentPage` / `totalPages` / `perPage` / `handlePerPageChange` の状態を削除する
+9. AddMemberSheet のユーザーリストが `<table>` 形式（`<table>` + `<thead>` + `<tbody>`）で表示される
+10. `<thead>` に空の `<th>`（チェックボックス列、`aria-label="選択"`）と `<th>姓名</th>` の 2 列ヘッダーが存在する
+11. アバターアイコン（イニシャル円形）を表示しない（各ユーザー行に `UserAvatar` は使用しない）
+12. `columnheader` ロールで `姓名` が取得できる
+13. `AddMemberSheet.styles.ts` に MemberList と同パターンのテーブル用スタイル定数が定義されている
 
 ---
 
