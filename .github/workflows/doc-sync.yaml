@@ -1,18 +1,19 @@
-name: Sync Docs after E2E
+name: Sync Docs on Submodule Update
 
 on:
-  workflow_run:
-    workflows: ["E2E Tests"]
-    types: [completed]
-    branches: [main]
+  push:
+    branches:
+      - main
+    paths:
+      - sample-api
+      - sample-front
 
 jobs:
   sync-docs:
     runs-on: ubuntu-latest
-    # E2E が成功し、かつ doc-sync 自身の PR マージで再トリガーされた場合はスキップ
+    # doc-sync 自身のコミットで再トリガーされた場合はスキップ
     if: |
-      github.event.workflow_run.conclusion == 'success' &&
-      !startsWith(github.event.workflow_run.head_commit.message, 'auto sync docs')
+      !startsWith(github.event.head_commit.message, 'auto sync docs')
     permissions:
       contents: write
       pull-requests: write
@@ -70,8 +71,8 @@ jobs:
         uses: peter-evans/create-pull-request@v6
         with:
           token: ${{ steps.generate_token.outputs.token }}
-          commit-message: "auto sync docs after E2E pass"
-          title: "[doc-sync] E2E pass 後のドキュメント自動同期"
+          commit-message: "auto sync docs"
+          title: "[doc-sync] サブモジュール更新後のドキュメント自動同期"
           branch: auto-pr/doc-sync
           branch-suffix: timestamp
           base: main
