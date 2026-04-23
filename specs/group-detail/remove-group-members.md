@@ -9,8 +9,16 @@
 ## 処理フロー（正常系）
 
 ```
-ユーザーがメンバー行のチェックボックスをクリックして 1 件以上選択する
+ユーザーがチェックボックスで削除対象メンバーを選択する
   │
+  ├─ [個別選択] 各メンバー行のチェックボックスをクリックして選択/解除を切り替える
+  │
+  └─ [全選択] ヘッダーチェックボックス（全選択）をクリックする
+       ├─ 全未選択または一部選択（indeterminate）→ 全メンバーを一括選択する
+       ├─ 全件選択済み → 全選択を解除する
+       └─ メンバー 0 件の場合は disabled（操作不可）
+  │
+  ├─ 一部のみ選択中: ヘッダーチェックボックスが indeterminate 状態になる
   ├─ 「削除」ボタンが enabled になる（0 件の場合は disabled）
   ├─ ユーザーが「削除」ボタンをクリックする
   ├─ AlertDialog が表示される
@@ -57,15 +65,18 @@ DELETE リクエストが 4xx・5xx を返す
 
 ## 使用コンポーネント・状態
 
-| 要素                   | 種別           | 役割                                                                                          |
-| ---------------------- | -------------- | --------------------------------------------------------------------------------------------- |
-| `MemberList`           | コンポーネント | 各行にチェックボックスを表示し、「削除」ボタンと削除確認 AlertDialog を内包する               |
-| `GroupDetailContent`   | コンポーネント | `onRefetch` props 経由で `useGroupDetail.refetch()` を `MemberList` に渡す                    |
-| `deleteGroupMembers`   | API 関数       | `DELETE /api/v1/groups/:id/members` を呼び出す                                                |
-| `selectedIds`          | state          | チェックされたメンバー ID の集合（`Set<number>`）。「削除」ボタンの enabled / disabled を制御 |
-| `isDeleteDialogOpen`   | state          | 削除確認 AlertDialog の開閉状態                                                               |
-| `deleteError`          | state          | 削除 API のエラーメッセージ                                                                   |
-| `clearMemberListCache` | 関数           | メンバー一覧のクライアントキャッシュをクリアして再フェッチをトリガーする                      |
+| 要素                   | 種別           | 役割                                                                                                  |
+| ---------------------- | -------------- | ----------------------------------------------------------------------------------------------------- |
+| `MemberList`           | コンポーネント | ヘッダー全選択チェックボックス・各行チェックボックス・「削除」ボタン・削除確認 AlertDialog を内包する |
+| `GroupDetailContent`   | コンポーネント | `onRefetch` props 経由で `useGroupDetail.refetch()` を `MemberList` に渡す                            |
+| `deleteGroupMembers`   | API 関数       | `DELETE /api/v1/groups/:id/members` を呼び出す                                                        |
+| `selectedIds`          | state          | チェックされたメンバー ID の集合（`Set<number>`）。「削除」ボタンの enabled / disabled を制御         |
+| `isAllSelected`        | 算出値         | 全メンバーが選択済みかどうか（`members.length > 0 && selectedIds.size === members.length`）           |
+| `isSomeSelected`       | 算出値         | 一部のみ選択中かどうか。`true` の場合、ヘッダーチェックボックスが indeterminate になる                |
+| `headerCheckboxRef`    | ref            | ヘッダーチェックボックスの `indeterminate` プロパティを直接操作するための ref                         |
+| `isDeleteDialogOpen`   | state          | 削除確認 AlertDialog の開閉状態                                                                       |
+| `deleteError`          | state          | 削除 API のエラーメッセージ                                                                           |
+| `clearMemberListCache` | 関数           | メンバー一覧のクライアントキャッシュをクリアして再フェッチをトリガーする                              |
 
 ---
 
@@ -73,8 +84,16 @@ DELETE リクエストが 4xx・5xx を返す
 
 ```
 - [ ] メンバー一覧の各行にチェックボックスが表示される
+- [ ] ヘッダーチェックボックス（全選択）が表示される
 - [ ] 0 件選択状態では「削除」ボタンが disabled
+- [ ] 0 件選択状態ではヘッダーチェックボックスが unchecked
+- [ ] メンバーが 0 件の場合、ヘッダーチェックボックスが disabled になる
 - [ ] 1 件以上選択すると「削除」ボタンが enabled になる
+- [ ] 一部のみ選択中はヘッダーチェックボックスが indeterminate 状態になる
+- [ ] 全メンバー選択済みの場合、ヘッダーチェックボックスが checked になる
+- [ ] 全未選択状態でヘッダーチェックボックスをクリックすると全メンバーが選択される
+- [ ] 全選択状態でヘッダーチェックボックスをクリックすると全選択が解除される
+- [ ] indeterminate 状態でヘッダーチェックボックスをクリックすると全メンバーが選択される
 - [ ] 「削除」ボタンをクリックすると AlertDialog が表示され、選択件数が文言に反映される
 - [ ] ダイアログの「削除する」をクリックすると DELETE リクエストが送信される
 - [ ] リクエスト body に選択した user_ids が含まれる

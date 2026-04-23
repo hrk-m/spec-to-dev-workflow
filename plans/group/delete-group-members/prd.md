@@ -75,6 +75,12 @@
 
 ```
 1. ユーザーがチェックボックスで削除対象メンバーを選択する
+   a. ヘッダーチェックボックス（全選択）をクリックする
+      - 全未選択または一部選択（indeterminate）の場合 → 全メンバーを選択する
+      - 全件選択済みの場合 → 全選択を解除する
+      - メンバーが 0 件の場合は disabled
+   b. 個別チェックボックスをクリックする → 選択状態を切り替える
+      - 一部のみ選択されている場合、ヘッダーチェックボックスは indeterminate になる
 2. 「削除」ボタンをクリックする（未選択時は非活性）
    - 確認ダイアログを開く
 3. 確認ダイアログで「削除する」ボタンをクリックする
@@ -164,6 +170,18 @@
 | 14  | 正常系   | user_ids が 1 件                                               | nil を返す             |
 | 15  | 正常系   | 重複 ID は自動排除されて 1 件で削除が呼ばれる                  | nil を返す             |
 | 16  | 正常系   | インターフェース経由でモックのみが呼ばれる（実 DB 非接触確認） | nil を返す             |
+
+**FE コンポーネントテスト** (`sample-front/src/pages/group-detail/ui/__tests__/MemberList.test.tsx`):
+
+| #   | 観点   | テスト内容                                             | 期待結果                               |
+| --- | ------ | ------------------------------------------------------ | -------------------------------------- |
+| 17  | 全選択 | 全未選択時にヘッダー checkbox が unchecked             | checked=false かつ indeterminate=false |
+| 18  | 全選択 | 全メンバー個別選択後にヘッダー checkbox が checked     | checked=true かつ indeterminate=false  |
+| 19  | 全選択 | 一部選択時にヘッダー checkbox が indeterminate=true    | indeterminate=true                     |
+| 20  | 全選択 | 全未選択→ヘッダークリックで全メンバーが選択される      | 全行 aria-checked="true"               |
+| 21  | 全選択 | 全選択→ヘッダークリックで全メンバーが解除される        | 全行 aria-checked="false"              |
+| 22  | 全選択 | indeterminate→ヘッダークリックで全メンバーが選択される | 全行 aria-checked="true"               |
+| 23  | 境界値 | メンバー 0 件時にヘッダー checkbox が disabled=true    | disabled=true                          |
 
 ---
 
