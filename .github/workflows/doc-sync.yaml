@@ -92,6 +92,9 @@ jobs:
           EOF
           claude --dangerously-skip-permissions -p "$(cat /tmp/prompt.txt)"
 
+      - name: Format generated Markdown
+        run: bunx prettier --write "specs/**/*.md" "plans/**/*.md"
+
       - name: Commit and push changes
         id: commit
         run: |
