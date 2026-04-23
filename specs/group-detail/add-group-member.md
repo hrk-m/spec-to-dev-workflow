@@ -98,4 +98,5 @@
 
 ## 対応する API 仕様
 
-→ `plans/group/add-group-members/prd.md`
+→ `plans/group/add-group-members/prd.md`（POST /api/v1/groups/:id/members）
+→ `plans/group/list-non-group-members/prd.md`（GET /api/v1/groups/:id/non-members）

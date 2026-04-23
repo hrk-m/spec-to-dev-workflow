@@ -64,6 +64,14 @@ ServiceUnavailablePage でも GET /api/v1/me が失敗
 
 ---
 
+## 使用 API
+
+| エンドポイント | メソッド | 用途                                                              |
+| -------------- | -------- | ----------------------------------------------------------------- |
+| `/api/v1/me`   | GET      | 認証済みユーザー情報（id, uuid, first_name, last_name）を取得する |
+
+---
+
 ## 対応する API 仕様
 
-→ `plans/auth/login/prd.md`
+→ `plans/auth/get-me/prd.md`

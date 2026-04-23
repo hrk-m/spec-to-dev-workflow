@@ -137,11 +137,12 @@
 
 ### sample-front
 
-| 対応ステップ | パス                                                            | 役割                                                |
-| ------------ | --------------------------------------------------------------- | --------------------------------------------------- |
-| 5-2-FE       | `sample-front/src/pages/group-detail/api/add-group-members.ts`  | API クライアント（POST /api/v1/groups/:id/members） |
-| 5-2-FE       | `sample-front/src/pages/group-detail/model/useNonMemberList.ts` | 非メンバー一覧取得・無限スクロールカスタムフック    |
-| 5-2-FE       | `sample-front/src/pages/group-detail/ui/AddMemberSheet.tsx`     | 非メンバー追加シート（選択・一括追加・エラー処理）  |
+| 対応ステップ | パス                                                                          | 役割                                                |
+| ------------ | ----------------------------------------------------------------------------- | --------------------------------------------------- |
+| 5-2-FE       | `sample-front/src/pages/group-detail/api/add-group-members.ts`                | API クライアント（POST /api/v1/groups/:id/members） |
+| 5-5          | `sample-front/src/pages/group-detail/api/__tests__/add-group-members.test.ts` | API クライアントユニットテスト                      |
+| 5-2-FE       | `sample-front/src/pages/group-detail/model/useNonMemberList.ts`               | 非メンバー一覧取得・無限スクロールカスタムフック    |
+| 5-2-FE       | `sample-front/src/pages/group-detail/ui/AddMemberSheet.tsx`                   | 非メンバー追加シート（選択・一括追加・エラー処理）  |
 
 ---
 

@@ -118,14 +118,15 @@
 
 ### sample-front
 
-| 対応ステップ | パス                                                                   | 役割                                                                                                                                                                                                          |
-| ------------ | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 5-2-FE       | `sample-front/src/pages/group-detail/ui/MemberList.tsx`                | メンバー一覧コンポーネント（`<table>` + `<thead>` + `<tbody>` 形式に変換。列構成: □選択 / id / 姓名。アバター削除。センチネル要素・スピナー・エラー表示維持）。MemberRow に `data-testid="member-row"` を付与 |
-| 5-2-FE       | `sample-front/src/pages/group-detail/ui/MemberList.styles.ts`          | テーブル用スタイル定数を追加（`tableRoot`, `tableHeader`, `tableHeaderCell`, `tableHeaderCellCheckbox`, `tableRow`, `tableRowLast`, `tableCellId`, `tableCellName`, `tableCellCheckbox`）                     |
-| 5-5          | `sample-front/src/pages/group-detail/ui/__tests__/MemberList.test.tsx` | テーブル形式向け更新（列ヘッダー確認・アバターなし確認）                                                                                                                                                      |
-| 5-2-FE       | `sample-front/src/pages/group-detail/api/fetch-group-members.ts`       | GET /api/v1/groups/:id/members 呼び出し（limit=100 に変更）                                                                                                                                                   |
-| 5-2-FE       | `sample-front/src/pages/group-detail/model/member-list.ts`             | メンバー一覧取得・無限スクロールカスタムフック（`useMemberList` を export。`displayedCount`・`isFetchingMore` 追加・ページネーション状態削除）                                                                |
-| 5-5          | `e2e/tests/group-detail.spec.ts`                                       | メンバー 0 件検索 E2E テスト（ページネーション UI 非存在確認に更新）                                                                                                                                          |
+| 対応ステップ | パス                                                                        | 役割                                                                                                                                                                                                          |
+| ------------ | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 5-2-FE       | `sample-front/src/pages/group-detail/ui/MemberList.tsx`                     | メンバー一覧コンポーネント（`<table>` + `<thead>` + `<tbody>` 形式に変換。列構成: □選択 / id / 姓名。アバター削除。センチネル要素・スピナー・エラー表示維持）。MemberRow に `data-testid="member-row"` を付与 |
+| 5-2-FE       | `sample-front/src/pages/group-detail/ui/MemberList.styles.ts`               | テーブル用スタイル定数を追加（`tableRoot`, `tableHeader`, `tableHeaderCell`, `tableHeaderCellCheckbox`, `tableRow`, `tableRowLast`, `tableCellId`, `tableCellName`, `tableCellCheckbox`）                     |
+| 5-5          | `sample-front/src/pages/group-detail/ui/__tests__/MemberList.test.tsx`      | テーブル形式向け更新（列ヘッダー確認・アバターなし確認）                                                                                                                                                      |
+| 5-2-FE       | `sample-front/src/pages/group-detail/api/fetch-group-members.ts`            | GET /api/v1/groups/:id/members 呼び出し（limit=100 に変更）                                                                                                                                                   |
+| 5-2-FE       | `sample-front/src/pages/group-detail/model/member-list.ts`                  | メンバー一覧取得・無限スクロールカスタムフック（`useMemberList` を export。`displayedCount`・`isFetchingMore` 追加・ページネーション状態削除）                                                                |
+| 5-5          | `sample-front/src/pages/group-detail/model/__tests__/useMemberList.test.ts` | useMemberList カスタムフックユニットテスト                                                                                                                                                                    |
+| 5-5          | `e2e/tests/group-detail.spec.ts`                                            | メンバー 0 件検索 E2E テスト（ページネーション UI 非存在確認に更新）                                                                                                                                          |
 
 ---
 

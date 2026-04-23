@@ -106,11 +106,12 @@
 
 ### sample-front
 
-| 対応ステップ | パス                                                              | 役割                                                  |
-| ------------ | ----------------------------------------------------------------- | ----------------------------------------------------- |
-| 5-2-FE       | `sample-front/src/pages/group-detail/api/delete-group-members.ts` | API クライアント（DELETE /api/v1/groups/:id/members） |
-| 5-2-FE       | `sample-front/src/pages/group-detail/model/member-list.ts`        | メンバー一覧の状態管理・削除後のキャッシュクリア      |
-| 5-2-FE       | `sample-front/src/pages/group-detail/ui/MemberList.tsx`           | メンバー一覧表示・選択・削除確認ダイアログ・削除処理  |
+| 対応ステップ | パス                                                                             | 役割                                                  |
+| ------------ | -------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| 5-2-FE       | `sample-front/src/pages/group-detail/api/delete-group-members.ts`                | API クライアント（DELETE /api/v1/groups/:id/members） |
+| 5-5          | `sample-front/src/pages/group-detail/api/__tests__/delete-group-members.test.ts` | API クライアントユニットテスト                        |
+| 5-2-FE       | `sample-front/src/pages/group-detail/model/member-list.ts`                       | メンバー一覧の状態管理・削除後のキャッシュクリア      |
+| 5-2-FE       | `sample-front/src/pages/group-detail/ui/MemberList.tsx`                          | メンバー一覧表示・選択・削除確認ダイアログ・削除処理  |
 
 ---
 
