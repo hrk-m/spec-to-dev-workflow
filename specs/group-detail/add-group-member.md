@@ -53,15 +53,15 @@
 
 ## 使用コンポーネント・状態
 
-| 要素                 | 種別           | 役割                                                                                                       |
-| -------------------- | -------------- | ---------------------------------------------------------------------------------------------------------- |
-| `GroupDetailContent` | コンポーネント | 「メンバー追加」ボタンを配置し、`openSheet()` で AddMemberSheet を SheetStack に登録する                   |
+| 要素                 | 種別           | 役割                                                                                                                                                                                                                     |
+| -------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `GroupDetailContent` | コンポーネント | 「メンバー追加」ボタンを配置し、`openSheet()` で AddMemberSheet を SheetStack に登録する                                                                                                                                 |
 | `AddMemberSheet`     | コンポーネント | 検索入力・チェックボックス付きユーザー一覧・「一括追加」ボタンを提供するシートコンテンツ。レイアウト（上から）：検索入力 → 「一括追加」ボタン（コンテンツ幅・右端揃え・soft スタイル）→ チェックボックス付きユーザー一覧 |
-| `useNonMemberList`   | カスタム Hook  | 未所属ユーザー一覧取得・クライアントサイドページネーション・検索クエリ管理を担う。`clearNonMemberListCache(groupId?: number)` でキャッシュをクリアできる（`groupId` 指定時は該当グループのみ、未指定時は全件） |
-| `addGroupMembers`    | API 関数       | `POST /api/v1/groups/:id/members` を呼び出す                                                               |
-| `selectedIds`        | state          | チェックされたユーザー ID の集合（`Set<number>`）                                                          |
-| `submitError`        | state          | 一括追加の API エラーメッセージ                                                                            |
-| `isSubmitting`       | state          | API 呼び出し中かどうか。「一括追加」ボタンの disabled 制御に使用                                           |
+| `useNonMemberList`   | カスタム Hook  | 未所属ユーザー一覧取得・クライアントサイドページネーション・検索クエリ管理を担う。`clearNonMemberListCache(groupId?: number)` でキャッシュをクリアできる（`groupId` 指定時は該当グループのみ、未指定時は全件）           |
+| `addGroupMembers`    | API 関数       | `POST /api/v1/groups/:id/members` を呼び出す                                                                                                                                                                             |
+| `selectedIds`        | state          | チェックされたユーザー ID の集合（`Set<number>`）                                                                                                                                                                        |
+| `submitError`        | state          | 一括追加の API エラーメッセージ                                                                                                                                                                                          |
+| `isSubmitting`       | state          | API 呼び出し中かどうか。「一括追加」ボタンの disabled 制御に使用                                                                                                                                                         |
 
 ---
 

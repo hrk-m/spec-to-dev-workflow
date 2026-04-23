@@ -2,13 +2,13 @@
 
 ## 概要
 
-| 項目         | 内容                                                                              |
-| ------------ | --------------------------------------------------------------------------------- |
-| 機能名       | `remove-group-members`                                                            |
+| 項目         | 内容                                                                                       |
+| ------------ | ------------------------------------------------------------------------------------------ |
+| 機能名       | `remove-group-members`                                                                     |
 | 目的         | グループ詳細画面のメンバー一覧から、1 件または複数件のメンバーを一括で削除できるようにする |
-| API          | `DELETE /api/v1/groups/:id/members`（メンバー一括削除）                           |
-| 認証         | 必要（AuthMiddleware）                                                            |
-| データソース | MySQL (`sample-api/internal/repository/mysql`)                                    |
+| API          | `DELETE /api/v1/groups/:id/members`（メンバー一括削除）                                    |
+| 認証         | 必要（AuthMiddleware）                                                                     |
+| データソース | MySQL (`sample-api/internal/repository/mysql`)                                             |
 
 ---
 
@@ -18,21 +18,21 @@
 
 #### リクエスト仕様
 
-| フィールド | 型             | 必須 | 説明                                       |
-| ---------- | -------------- | ---- | ------------------------------------------ |
-| `id`       | integer (path) | ✓    | グループの ID。正の整数                    |
-| `user_ids` | array (body)   | ✓    | 削除するユーザー ID の配列。1 件以上       |
+| フィールド | 型             | 必須 | 説明                                 |
+| ---------- | -------------- | ---- | ------------------------------------ |
+| `id`       | integer (path) | ✓    | グループの ID。正の整数              |
+| `user_ids` | array (body)   | ✓    | 削除するユーザー ID の配列。1 件以上 |
 
 #### バリデーション一覧
 
-| #   | 対象フィールド | ルール                                            | エラー時の挙動  |
-| --- | -------------- | ------------------------------------------------- | --------------- |
-| 1   | `id`           | 整数に変換できること                              | 400 Bad Request |
-| 2   | `id`           | 1 以上（正の整数）であること                      | 400 Bad Request |
-| 3   | `id`           | DB 上に該当グループが存在すること                 | 404 Not Found   |
-| 4   | `user_ids`     | リクエストボディに含まれること                    | 400 Bad Request |
-| 5   | `user_ids`     | 空配列でないこと（1 件以上）                      | 400 Bad Request |
-| 6   | `user_ids`     | 各 user_id がグループメンバーであること           | 404 Not Found   |
+| #   | 対象フィールド | ルール                                  | エラー時の挙動  |
+| --- | -------------- | --------------------------------------- | --------------- |
+| 1   | `id`           | 整数に変換できること                    | 400 Bad Request |
+| 2   | `id`           | 1 以上（正の整数）であること            | 400 Bad Request |
+| 3   | `id`           | DB 上に該当グループが存在すること       | 404 Not Found   |
+| 4   | `user_ids`     | リクエストボディに含まれること          | 400 Bad Request |
+| 5   | `user_ids`     | 空配列でないこと（1 件以上）            | 400 Bad Request |
+| 6   | `user_ids`     | 各 user_id がグループメンバーであること | 404 Not Found   |
 
 ---
 
@@ -100,12 +100,12 @@ DB スキーマ変更なし（既存テーブルへの DELETE 操作のみ）。
 
 ### DB 操作
 
-| 項目     | 内容                                                                                              |
-| -------- | ------------------------------------------------------------------------------------------------- |
-| 対象テーブル | `group_members`                                                                               |
-| SQL      | `DELETE FROM group_members WHERE group_id = :group_id AND user_id IN (:user_ids)`                |
-| トランザクション | あり                                                                                      |
-| スキーマ変更 | なし                                                                                          |
+| 項目             | 内容                                                                              |
+| ---------------- | --------------------------------------------------------------------------------- |
+| 対象テーブル     | `group_members`                                                                   |
+| SQL              | `DELETE FROM group_members WHERE group_id = :group_id AND user_id IN (:user_ids)` |
+| トランザクション | あり                                                                              |
+| スキーマ変更     | なし                                                                              |
 
 ---
 
@@ -120,15 +120,15 @@ DB スキーマ変更なし（既存テーブルへの DELETE 操作のみ）。
 
 #### エラーケース一覧
 
-| 条件                                             | 発生レイヤー                       | ステータス                | レスポンス                                          |
-| ------------------------------------------------ | ---------------------------------- | ------------------------- | --------------------------------------------------- |
-| `id` が整数に変換不可                            | Handler                            | 400 Bad Request           | `{ "message": "given param is not valid" }`         |
-| `id` が 1 未満                                   | Handler                            | 400 Bad Request           | `{ "message": "given param is not valid" }`         |
-| `user_ids` が存在しない / 空配列                 | Handler                            | 400 Bad Request           | `{ "message": "given param is not valid" }`         |
-| 対象グループが存在しない                         | Service / Repository               | 404 Not Found             | `{ "message": "your requested item is not found" }` |
-| `user_ids` 内にグループメンバーでない user_id がある | Service / Repository           | 404 Not Found             | `{ "message": "your requested item is not found" }` |
-| DB エラー                                        | Repository                         | 500 Internal Server Error | `{ "message": "internal server error" }`            |
-| ネットワークエラー                               | フロントエンド: API クライアント層 | —                         | エラーメッセージ表示                                |
+| 条件                                                 | 発生レイヤー                       | ステータス                | レスポンス                                          |
+| ---------------------------------------------------- | ---------------------------------- | ------------------------- | --------------------------------------------------- |
+| `id` が整数に変換不可                                | Handler                            | 400 Bad Request           | `{ "message": "given param is not valid" }`         |
+| `id` が 1 未満                                       | Handler                            | 400 Bad Request           | `{ "message": "given param is not valid" }`         |
+| `user_ids` が存在しない / 空配列                     | Handler                            | 400 Bad Request           | `{ "message": "given param is not valid" }`         |
+| 対象グループが存在しない                             | Service / Repository               | 404 Not Found             | `{ "message": "your requested item is not found" }` |
+| `user_ids` 内にグループメンバーでない user_id がある | Service / Repository               | 404 Not Found             | `{ "message": "your requested item is not found" }` |
+| DB エラー                                            | Repository                         | 500 Internal Server Error | `{ "message": "internal server error" }`            |
+| ネットワークエラー                                   | フロントエンド: API クライアント層 | —                         | エラーメッセージ表示                                |
 
 ---
 
@@ -136,30 +136,30 @@ DB スキーマ変更なし（既存テーブルへの DELETE 操作のみ）。
 
 ### バックエンド
 
-| #   | 観点     | テスト内容                                     | 入力例                             | 期待結果                        |
-| --- | -------- | ---------------------------------------------- | ---------------------------------- | ------------------------------- |
-| 1   | 正常系   | 1 件のメンバーを削除                           | `id=1, user_ids=[2]`               | 204 No Content                  |
-| 2   | 正常系   | 複数件のメンバーを一括削除                     | `id=1, user_ids=[2,3,4]`           | 204 No Content                  |
-| 3   | 異常系   | `id` が整数でない                              | `id="abc"`                         | 400 Bad Request                 |
-| 4   | 異常系   | `id` が 0 以下                                 | `id=0`                             | 400 Bad Request                 |
-| 5   | 異常系   | `user_ids` が空配列                            | `id=1, user_ids=[]`                | 400 Bad Request                 |
-| 6   | 異常系   | 存在しないグループ ID                          | `id=9999, user_ids=[1]`            | 404 Not Found                   |
-| 7   | 異常系   | グループメンバーでない user_id を含む          | `id=1, user_ids=[999]`（非メンバー）| 404 Not Found                  |
-| 8   | 境界値   | `user_ids` に 1 件だけ指定                     | `id=1, user_ids=[1]`               | 204 No Content                  |
-| 9   | 例外処理 | DB エラー発生時                                | DB 障害をモック                    | 500 Internal Server Error       |
-| 10  | 外部依存 | Service をモックで切り分け                     | mockGroupService                   | Handler 単体でテスト可能        |
-| 11  | 外部依存 | Repository をモックで切り分け                  | mockGroupRepository                | Service 単体でテスト可能        |
-| 12  | 状態変化 | DELETE 後に group_members から行が消えている   | `id=1, user_ids=[2]`               | DB から該当行が削除             |
+| #   | 観点     | テスト内容                                   | 入力例                               | 期待結果                  |
+| --- | -------- | -------------------------------------------- | ------------------------------------ | ------------------------- |
+| 1   | 正常系   | 1 件のメンバーを削除                         | `id=1, user_ids=[2]`                 | 204 No Content            |
+| 2   | 正常系   | 複数件のメンバーを一括削除                   | `id=1, user_ids=[2,3,4]`             | 204 No Content            |
+| 3   | 異常系   | `id` が整数でない                            | `id="abc"`                           | 400 Bad Request           |
+| 4   | 異常系   | `id` が 0 以下                               | `id=0`                               | 400 Bad Request           |
+| 5   | 異常系   | `user_ids` が空配列                          | `id=1, user_ids=[]`                  | 400 Bad Request           |
+| 6   | 異常系   | 存在しないグループ ID                        | `id=9999, user_ids=[1]`              | 404 Not Found             |
+| 7   | 異常系   | グループメンバーでない user_id を含む        | `id=1, user_ids=[999]`（非メンバー） | 404 Not Found             |
+| 8   | 境界値   | `user_ids` に 1 件だけ指定                   | `id=1, user_ids=[1]`                 | 204 No Content            |
+| 9   | 例外処理 | DB エラー発生時                              | DB 障害をモック                      | 500 Internal Server Error |
+| 10  | 外部依存 | Service をモックで切り分け                   | mockGroupService                     | Handler 単体でテスト可能  |
+| 11  | 外部依存 | Repository をモックで切り分け                | mockGroupRepository                  | Service 単体でテスト可能  |
+| 12  | 状態変化 | DELETE 後に group_members から行が消えている | `id=1, user_ids=[2]`                 | DB から該当行が削除       |
 
 ### フロントエンド
 
-| #   | 観点   | テスト内容                                          | 期待結果                                                     |
-| --- | ------ | --------------------------------------------------- | ------------------------------------------------------------ |
-| 1   | 正常系 | チェックで削除ボタンが有効化される                  | 未チェック時: disabled、1 件以上: enabled                    |
-| 2   | 正常系 | 削除ボタン押下で確認ダイアログが開く                | ダイアログが表示される                                       |
-| 3   | 正常系 | 削除成功後にキャッシュクリアと再取得が呼ばれる      | `clearMemberListCache`・`refetch` が呼ばれる                 |
-| 4   | 正常系 | キャンセルでダイアログを閉じてリストは変化しない    | ダイアログが閉じ、チェック状態が維持される                   |
-| 5   | 異常系 | 4xx/5xx エラー時にエラーメッセージを表示            | エラーメッセージが描画される                                 |
+| #   | 観点   | テスト内容                                       | 期待結果                                     |
+| --- | ------ | ------------------------------------------------ | -------------------------------------------- |
+| 1   | 正常系 | チェックで削除ボタンが有効化される               | 未チェック時: disabled、1 件以上: enabled    |
+| 2   | 正常系 | 削除ボタン押下で確認ダイアログが開く             | ダイアログが表示される                       |
+| 3   | 正常系 | 削除成功後にキャッシュクリアと再取得が呼ばれる   | `clearMemberListCache`・`refetch` が呼ばれる |
+| 4   | 正常系 | キャンセルでダイアログを閉じてリストは変化しない | ダイアログが閉じ、チェック状態が維持される   |
+| 5   | 異常系 | 4xx/5xx エラー時にエラーメッセージを表示         | エラーメッセージが描画される                 |
 
 ---
 
@@ -167,22 +167,22 @@ DB スキーマ変更なし（既存テーブルへの DELETE 操作のみ）。
 
 ### sample-api
 
-| ファイル                                                        | 役割                                                                             |
-| --------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| `sample-api/group/service.go`                                   | `GroupRepository` interface に `RemoveGroupMembers` を追加、Service 実装         |
-| `sample-api/group/service_test.go`                              | `RemoveGroupMembers` のユニットテスト追加                                        |
-| `sample-api/group/mocks/group_repository_mock.go`               | `RemoveGroupMembers` メソッドを手動 mock に追加                                  |
-| `sample-api/internal/rest/group.go`                             | `DELETE /api/v1/groups/:id/members` ハンドラ追加・`GroupService` interface 更新 |
-| `sample-api/internal/rest/group_test.go`                        | ハンドラユニットテスト追加                                                       |
-| `sample-api/internal/rest/mocks/group_service_mock.go`          | `RemoveGroupMembers` メソッドを手動 mock に追加                                  |
-| `sample-api/internal/repository/mysql/group.go`                 | `RemoveGroupMembers` MySQL 実装追加                                              |
+| ファイル                                               | 役割                                                                            |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------- |
+| `sample-api/group/service.go`                          | `GroupRepository` interface に `RemoveGroupMembers` を追加、Service 実装        |
+| `sample-api/group/service_test.go`                     | `RemoveGroupMembers` のユニットテスト追加                                       |
+| `sample-api/group/mocks/group_repository_mock.go`      | `RemoveGroupMembers` メソッドを手動 mock に追加                                 |
+| `sample-api/internal/rest/group.go`                    | `DELETE /api/v1/groups/:id/members` ハンドラ追加・`GroupService` interface 更新 |
+| `sample-api/internal/rest/group_test.go`               | ハンドラユニットテスト追加                                                      |
+| `sample-api/internal/rest/mocks/group_service_mock.go` | `RemoveGroupMembers` メソッドを手動 mock に追加                                 |
+| `sample-api/internal/repository/mysql/group.go`        | `RemoveGroupMembers` MySQL 実装追加                                             |
 
 ### sample-front
 
-| ファイル                                                                   | 役割                                                                          |
-| -------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| `sample-front/src/pages/group-detail/api/delete-group-members.ts`          | `DELETE /api/v1/groups/:id/members` 呼び出し                                  |
-| `sample-front/src/pages/group-detail/ui/MemberList.tsx`                    | 各行にチェックボックス追加・削除ボタン・確認ダイアログ追加                    |
+| ファイル                                                          | 役割                                                       |
+| ----------------------------------------------------------------- | ---------------------------------------------------------- |
+| `sample-front/src/pages/group-detail/api/delete-group-members.ts` | `DELETE /api/v1/groups/:id/members` 呼び出し               |
+| `sample-front/src/pages/group-detail/ui/MemberList.tsx`           | 各行にチェックボックス追加・削除ボタン・確認ダイアログ追加 |
 
 ---
 

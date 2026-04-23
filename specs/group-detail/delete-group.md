@@ -37,14 +37,14 @@ Cancel クリック
 
 ## 使用コンポーネント・状態
 
-| 要素 | 種別 | 役割 |
-|---|---|---|
-| `GroupDetailContent` | コンポーネント | `[Delete]` ボタンを配置し、`DeleteGroupDialog` の表示状態を管理する |
-| `DeleteGroupDialog` | コンポーネント | 削除確認・エラー表示を担当する Radix UI AlertDialog |
-| `useDeleteGroup` | カスタム Hook | `isLoading` / `error` 状態管理・DELETE API 呼び出しを行う |
-| `deleteDialogOpen` | state | ダイアログの開閉状態を管理する |
-| `isLoading` | state | API 呼び出し中かどうかを保持し、ダイアログ内 Delete ボタンの disabled 状態に連動する |
-| `error` | state | API エラーメッセージを保持する |
+| 要素                 | 種別           | 役割                                                                                 |
+| -------------------- | -------------- | ------------------------------------------------------------------------------------ |
+| `GroupDetailContent` | コンポーネント | `[Delete]` ボタンを配置し、`DeleteGroupDialog` の表示状態を管理する                  |
+| `DeleteGroupDialog`  | コンポーネント | 削除確認・エラー表示を担当する Radix UI AlertDialog                                  |
+| `useDeleteGroup`     | カスタム Hook  | `isLoading` / `error` 状態管理・DELETE API 呼び出しを行う                            |
+| `deleteDialogOpen`   | state          | ダイアログの開閉状態を管理する                                                       |
+| `isLoading`          | state          | API 呼び出し中かどうかを保持し、ダイアログ内 Delete ボタンの disabled 状態に連動する |
+| `error`              | state          | API エラーメッセージを保持する                                                       |
 
 ---
 
@@ -64,9 +64,9 @@ Cancel クリック
 
 ## 使用 API
 
-| エンドポイント | メソッド | 用途 |
-|---|---|---|
-| `/api/v1/groups/:id` | DELETE | グループをソフトデリートする（`deleted_at` に現在時刻を設定し、`updated_by` に操作者 ID を記録） |
+| エンドポイント       | メソッド | 用途                                                                                             |
+| -------------------- | -------- | ------------------------------------------------------------------------------------------------ |
+| `/api/v1/groups/:id` | DELETE   | グループをソフトデリートする（`deleted_at` に現在時刻を設定し、`updated_by` に操作者 ID を記録） |
 
 ---
 

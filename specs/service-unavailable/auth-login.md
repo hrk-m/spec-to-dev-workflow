@@ -40,14 +40,14 @@ ServiceUnavailablePage でも GET /api/v1/me が失敗
 
 ## 使用コンポーネント・状態
 
-| 要素 | 種別 | 役割 |
-|---|---|---|
-| `ProtectedRoute` | コンポーネント（`app/routes/`） | `GET /api/v1/me` を呼び出し、成功時は children を描画。失敗時は `/service-unavailable` へリダイレクト |
-| `ServiceUnavailablePage` | コンポーネント（`pages/service-unavailable/`） | マウント時に `GET /api/v1/me` を確認。200 なら `/` へリダイレクト。エラーならメンテナンス画面を表示 |
-| `AuthProvider` / `useAuth` | Context Provider / Hook（`shared/auth/`） | 認証済みユーザー情報（`AuthUser`）をアプリ全体に提供する |
-| `HttpError` | クラス（`shared/api/client.ts`） | HTTP エラーステータスを保持する `Error` サブクラス。`err.status === 401` で認証エラーを判別 |
-| `status` | state（`ProtectedRoute` 内） | `"loading"` / `"authenticated"` / `"unauthenticated"` / `"api_unavailable"` の 4 状態 |
-| `status` | state（`ServiceUnavailablePage` 内） | `"loading"` / `"redirect"` / `"error"` の 3 状態 |
+| 要素                       | 種別                                           | 役割                                                                                                  |
+| -------------------------- | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `ProtectedRoute`           | コンポーネント（`app/routes/`）                | `GET /api/v1/me` を呼び出し、成功時は children を描画。失敗時は `/service-unavailable` へリダイレクト |
+| `ServiceUnavailablePage`   | コンポーネント（`pages/service-unavailable/`） | マウント時に `GET /api/v1/me` を確認。200 なら `/` へリダイレクト。エラーならメンテナンス画面を表示   |
+| `AuthProvider` / `useAuth` | Context Provider / Hook（`shared/auth/`）      | 認証済みユーザー情報（`AuthUser`）をアプリ全体に提供する                                              |
+| `HttpError`                | クラス（`shared/api/client.ts`）               | HTTP エラーステータスを保持する `Error` サブクラス。`err.status === 401` で認証エラーを判別           |
+| `status`                   | state（`ProtectedRoute` 内）                   | `"loading"` / `"authenticated"` / `"unauthenticated"` / `"api_unavailable"` の 4 状態                 |
+| `status`                   | state（`ServiceUnavailablePage` 内）           | `"loading"` / `"redirect"` / `"error"` の 3 状態                                                      |
 
 ---
 

@@ -118,7 +118,7 @@
 | 5-1, 5-2, 5-4 | `sample-api/internal/rest/user.go`                    | HTTP Handler（ListUsers）・UserService interface・ルート登録 |
 | 5-2           | `sample-api/domain/user.go`                           | User Entity（id, uuid, first_name, last_name）               |
 | 5-2           | `sample-api/user/service.go`                          | UserRepository interface・ListUsers ビジネスロジック         |
-| 5-2           | `sample-api/internal/repository/mysql/user.go`        | MySQL 実装（ListUsers・CountByIDs・GetByUUID）                  |
+| 5-2           | `sample-api/internal/repository/mysql/user.go`        | MySQL 実装（ListUsers・CountByIDs・GetByUUID）               |
 | 5-5           | `sample-api/internal/rest/user_test.go`               | Handler ユニットテスト                                       |
 | 5-5           | `sample-api/internal/rest/mocks/user_service_mock.go` | UserService の手動 mock                                      |
 | 5-5           | `sample-api/user/service_test.go`                     | Service ユニットテスト                                       |

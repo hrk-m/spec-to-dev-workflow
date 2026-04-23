@@ -37,15 +37,15 @@ API エラー（404 / 500 / ネットワークエラー）
 
 ## 使用コンポーネント・状態
 
-| 要素 | 種別 | 役割 |
-|---|---|---|
-| `GroupDetailContent` | コンポーネント | `[Edit]` ボタンを配置し、`EditGroupDialog` の表示状態を管理する |
-| `EditGroupDialog` | コンポーネント | 編集フォーム・バリデーション・エラー表示を担当する Radix UI Dialog |
-| `useUpdateGroup` | カスタム Hook | `isLoading` / `error` 状態管理・FE バリデーション・PUT API 呼び出しを行う |
-| `useGroupDetail` | カスタム Hook | `refetch()` を提供し、保存成功後にグループ情報を再取得する |
-| `editDialogOpen` | state | ダイアログの開閉状態を管理する |
-| `isLoading` | state | API 呼び出し中かどうかを保持し、Save ボタンの disabled 状態に連動する |
-| `error` | state | API エラーメッセージを保持する |
+| 要素                 | 種別           | 役割                                                                      |
+| -------------------- | -------------- | ------------------------------------------------------------------------- |
+| `GroupDetailContent` | コンポーネント | `[Edit]` ボタンを配置し、`EditGroupDialog` の表示状態を管理する           |
+| `EditGroupDialog`    | コンポーネント | 編集フォーム・バリデーション・エラー表示を担当する Radix UI Dialog        |
+| `useUpdateGroup`     | カスタム Hook  | `isLoading` / `error` 状態管理・FE バリデーション・PUT API 呼び出しを行う |
+| `useGroupDetail`     | カスタム Hook  | `refetch()` を提供し、保存成功後にグループ情報を再取得する                |
+| `editDialogOpen`     | state          | ダイアログの開閉状態を管理する                                            |
+| `isLoading`          | state          | API 呼び出し中かどうかを保持し、Save ボタンの disabled 状態に連動する     |
+| `error`              | state          | API エラーメッセージを保持する                                            |
 
 ---
 
@@ -68,9 +68,9 @@ API エラー（404 / 500 / ネットワークエラー）
 
 ## 使用 API
 
-| エンドポイント | メソッド | 用途 |
-|---|---|---|
-| `/api/v1/groups/:id` | PUT | グループの name / description を更新する（`updated_by` に操作者 ID を記録） |
+| エンドポイント       | メソッド | 用途                                                                        |
+| -------------------- | -------- | --------------------------------------------------------------------------- |
+| `/api/v1/groups/:id` | PUT      | グループの name / description を更新する（`updated_by` に操作者 ID を記録） |
 
 ---
 

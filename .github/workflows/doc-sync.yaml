@@ -64,7 +64,7 @@ jobs:
             - コード（sample-api/ / sample-front/）の実装変更は行わない
             - docs/steering/ の変更も行わない（CI では不要）
             - スクリーンショットの撮影（spec-screenshot）は実行しない
-            - `make check` / `bun run lint:md` / `bun run lint:md:fix` は実行しない（PR 作成前に自動修正ステップが走るため）
+            - `make check` / `bun run format:md:check` は実行しない（PR 作成前に自動修正ステップが走るため）
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v6

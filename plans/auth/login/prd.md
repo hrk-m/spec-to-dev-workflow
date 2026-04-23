@@ -318,14 +318,14 @@ type MeResponse = {
 
 ### フロントエンド
 
-| #   | テスト内容                                                                  |
-| --- | --------------------------------------------------------------------------- |
-| 1   | `GET /api/v1/me` が 200 → ユーザー情報が AuthContext に保持される                   |
-| 2   | `GET /api/v1/me` が 401 → `/service-unavailable` へリダイレクトされる（reason=unauthenticated）    |
+| #   | テスト内容                                                                                                    |
+| --- | ------------------------------------------------------------------------------------------------------------- |
+| 1   | `GET /api/v1/me` が 200 → ユーザー情報が AuthContext に保持される                                             |
+| 2   | `GET /api/v1/me` が 401 → `/service-unavailable` へリダイレクトされる（reason=unauthenticated）               |
 | 3   | `GET /api/v1/me` がネットワークエラー → `/service-unavailable` へリダイレクトされる（reason=api_unavailable） |
-| 4   | `apiFetch` が 401 を throw したとき `HttpError.status === 401` で判別できる          |
-| 5   | `/service-unavailable` でマウント時に 200 が返ると `/` へリダイレクトされる           |
-| 6   | `/service-unavailable` でエラーが続くと「ただいまメンテナンス中です。」が表示される   |
+| 4   | `apiFetch` が 401 を throw したとき `HttpError.status === 401` で判別できる                                   |
+| 5   | `/service-unavailable` でマウント時に 200 が返ると `/` へリダイレクトされる                                   |
+| 6   | `/service-unavailable` でエラーが続くと「ただいまメンテナンス中です。」が表示される                           |
 
 ---
 

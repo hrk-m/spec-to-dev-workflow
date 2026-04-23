@@ -21,10 +21,10 @@ clean:
 	rm -rf node_modules
 
 check:
-	bun run lint:md
+	bun run format:md:check
 
 fix:
-	bun run lint:md:fix
+	bun run format:md
 
 up:
 	docker compose up --build -d --wait
