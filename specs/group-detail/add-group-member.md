@@ -68,8 +68,11 @@
 | `submitError`        | state          | 一括追加の API エラーメッセージ                                                                                                                                                                                          |
 | `isSubmitting`       | state          | API 呼び出し中かどうか。「一括追加」ボタンの disabled 制御に使用                                                                                                                                                         |
 | `headerCheckboxRef`  | ref            | ヘッダーチェックボックスの DOM 参照。`useEffect` で `indeterminate` 属性を直接設定するために使用                                                                                                                         |
+| `sentinelRef`        | ref            | 無限スクロール用センチネル要素の DOM 参照。`IntersectionObserver` がこの要素の可視性を監視し、画面に入ったタイミングで追加ページをフェッチする                                                                           |
 | `isAllSelected`      | 派生値         | `users.length > 0 && selectedIds.size === users.length` のとき `true`。ヘッダーチェックボックスの `checked` に反映                                                                                                       |
 | `isSomeSelected`     | 派生値         | `selectedIds.size > 0 && selectedIds.size < users.length` のとき `true`。ヘッダーチェックボックスの `indeterminate` に反映                                                                                               |
+| `isFetchingMore`     | state          | 追加ページのフェッチ中かどうか。`true` のとき一覧末尾にスピナーを表示する                                                                                                                                                |
+| `fetchMoreError`     | state          | 追加ページフェッチ失敗時のエラーメッセージ。一覧末尾にインライン表示される                                                                                                                                               |
 
 ---
 
@@ -97,6 +100,9 @@
 - [ ] 未所属ユーザーがいない場合に「追加できるユーザーがいません。」が表示される
 - [ ] シートモードで「メンバー追加」ボタンをクリックすると AddMemberSheet が 2 枚目のシートとして積まれる
 - [ ] メンバー追加後に AddMemberSheet を再度開くと、追加済みユーザーが非メンバーリストに表示されない（マウント時キャッシュクリアにより最新データを取得）
+- [ ] 非メンバーが 100 件超の場合、一覧末尾までスクロールすると次のページが自動で読み込まれる（IntersectionObserver による無限スクロール）
+- [ ] 追加ページ読み込み中は一覧末尾にスピナーが表示される
+- [ ] 追加ページ読み込み失敗時は一覧末尾にインラインエラーメッセージが表示される
 ```
 
 ---
