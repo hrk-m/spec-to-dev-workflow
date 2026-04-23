@@ -38,34 +38,37 @@ jobs:
       - name: Install dependencies
         run: bun install
 
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
       - name: Sync docs with Claude
-        uses: anthropics/claude-code-action@v1
-        with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          github_token: ${{ steps.generate_token.outputs.token }}
-          claude_args: "--dangerously-skip-permissions"
-          allowed_bots: "*"
-          prompt: |
-            以下の3つのスキルを順番に実行してください。
-            AskUserQuestion は使わないでください。すべて自律的に判断して実行してください。
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
+        run: |
+          cat > /tmp/prompt.txt << 'EOF'
+          以下の3つのスキルを順番に実行してください。
+          AskUserQuestion は使わないでください。すべて自律的に判断して実行してください。
 
-            ## 前提
-            - update-sample-api / update-sample-front のサブモジュール更新をトリガーに起動している
-            - 処理対象は「今回の更新で追加・変更されたファイル」のみ。変更のないファイルは触らない
-            - 対象ファイルは `git diff HEAD~1 HEAD -- sample-api/ sample-front/` で特定する
+          ## 前提
+          - update-sample-api / update-sample-front のサブモジュール更新をトリガーに起動している
+          - 処理対象は「今回の更新で追加・変更されたファイル」のみ。変更のないファイルは触らない
+          - 対象ファイルは `git diff HEAD~1 HEAD -- sample-api/ sample-front/` で特定する
 
-            ## 実行手順
+          ## 実行手順
 
-            1. `git diff HEAD~1 HEAD -- sample-api/ sample-front/` を実行し、今回の差分ファイルを特定する
-            2. `.claude/skills/plan-writer/references/api-sync/SKILL.md` を Read して、差分ファイルに含まれるエンドポイントのみを対象に実行する
-            3. `.claude/skills/plan-writer/references/schema-sync/SKILL.md` を Read して、差分にマイグレーション変更がある場合のみ実行する
-            4. `.claude/skills/spec-update/references/spec-knowledge/SKILL.md` を Read して、差分ファイルに対応する画面・機能のみを対象に実行する
+          1. `git diff HEAD~1 HEAD -- sample-api/ sample-front/` を実行し、今回の差分ファイルを特定する
+          2. `.claude/skills/plan-writer/references/api-sync/SKILL.md` を Read して、差分ファイルに含まれるエンドポイントのみを対象に実行する
+          3. `.claude/skills/plan-writer/references/schema-sync/SKILL.md` を Read して、差分にマイグレーション変更がある場合のみ実行する
+          4. `.claude/skills/spec-update/references/spec-knowledge/SKILL.md` を Read して、差分ファイルに対応する画面・機能のみを対象に実行する
 
-            ## 制約
-            - コード（sample-api/ / sample-front/）の実装変更は行わない
-            - docs/steering/ の変更も行わない（CI では不要）
-            - スクリーンショットの撮影（spec-screenshot）は実行しない
-            - `make check` / `bun run format:md:check` は実行しない（PR 作成前に自動修正ステップが走るため）
+          ## 制約
+          - コード（sample-api/ / sample-front/）の実装変更は行わない
+          - docs/steering/ の変更も行わない（CI では不要）
+          - スクリーンショットの撮影（spec-screenshot）は実行しない
+          - `make check` / `bun run format:md:check` は実行しない（PR 作成前に自動修正ステップが走るため）
+          EOF
+          claude --dangerously-skip-permissions -p "$(cat /tmp/prompt.txt)"
 
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v6
