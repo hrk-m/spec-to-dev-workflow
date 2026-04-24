@@ -79,9 +79,11 @@ bun run .claude/skills/spec-update/references/spec-screenshot/scripts/screenshot
 
 - スクリプト: `.claude/skills/spec-update/references/spec-screenshot/scripts/screenshot.ts`
 - 出力先: `specs/{機能画面}/img/{スクリーン名}.png`
-- サーバー起動: スクリプトが `sample-api`（:8080）と `sample-front`（:3000）を自動起動する
-  - 既に起動済みの場合は再利用する
-  - 環境変数 `FRONT_PORT` / `API_PORT` で変更可能
+- サーバー起動: スクリプトが `docker-compose.e2e.yml` で E2E スタック（MySQL / API / front）を自動起動する
+  - API: `:18080`、フロントエンド: `:13000`
+  - 既に起動済みの場合は再利用し、終了後も停止しない
+  - 未起動の場合は撮影後に `docker compose down -v` で停止する
+  - 環境変数 `FRONT_PORT`（デフォルト: 13000）/ `API_PORT`（デフォルト: 18080）で変更可能
 
 **撮影後の確認**:
 

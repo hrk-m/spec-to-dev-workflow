@@ -23,15 +23,14 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { chromium, type Page } from "playwright";
-import type { ChildProcess } from "child_process";
 import { spawn } from "child_process";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, "../../../../../..");
 const specDir = path.resolve(projectRoot, "specs");
 
-const FRONT_PORT = Number(process.env.FRONT_PORT ?? 3000);
-const API_PORT = Number(process.env.API_PORT ?? 8080);
+const FRONT_PORT = Number(process.env.FRONT_PORT ?? 13000);
+const API_PORT = Number(process.env.API_PORT ?? 18080);
 const FRONT_URL = `http://localhost:${FRONT_PORT}`;
 
 // ── 型定義 ───────────────────────────────────────────────────
@@ -95,17 +94,20 @@ async function isReachable(url: string): Promise<boolean> {
   }
 }
 
-async function waitReachable(url: string, timeoutMs = 15000): Promise<void> {
+async function waitReachable(url: string, timeoutMs = 60000): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     if (await isReachable(url)) return;
-    await Bun.sleep(500);
+    await Bun.sleep(1000);
   }
   throw new Error(`タイムアウト: ${url} に接続できません`);
 }
 
-function startProcess(cmd: string, args: string[], cwd: string): ChildProcess {
-  return spawn(cmd, args, { cwd, stdio: "pipe", detached: false });
+function runCommand(cmd: string, args: string[], cwd: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const proc = spawn(cmd, args, { cwd, stdio: "inherit" });
+    proc.on("close", (code) => (code === 0 ? resolve() : reject(new Error(`${cmd} exited with ${code}`))));
+  });
 }
 
 // ── シナリオ実行 ──────────────────────────────────────────────
@@ -155,25 +157,20 @@ if (scenarios.length === 0) {
 
 console.log(`${scenarios.length} シナリオを検出:`, scenarios.map((s) => s.specName).join(", "));
 
-// サーバー起動（未起動の場合のみ）
-const apiRunning = await isReachable(`http://localhost:${API_PORT}/hello`);
-const frontRunning = await isReachable(FRONT_URL);
+// E2E Docker スタックの起動（未起動の場合のみ）
+const apiHealthUrl = `http://localhost:${API_PORT}/health`;
+const stackAlreadyRunning = await isReachable(FRONT_URL) && await isReachable(apiHealthUrl);
 
-let apiProc: ChildProcess | null = null;
-let frontProc: ChildProcess | null = null;
-
-if (!apiRunning) {
-  console.log("sample-api を起動中...");
-  apiProc = startProcess("go", ["run", "main.go"], path.resolve(projectRoot, "sample-api"));
-  await waitReachable(`http://localhost:${API_PORT}/hello`);
-  console.log(`sample-api 起動完了 (:${API_PORT})`);
-}
-
-if (!frontRunning) {
-  console.log("sample-front を起動中...");
-  frontProc = startProcess("bun", ["run", "dev"], path.resolve(projectRoot, "sample-front"));
+if (!stackAlreadyRunning) {
+  console.log("E2E Docker スタックを起動中 (docker-compose.e2e.yml)...");
+  await runCommand(
+    "docker",
+    ["compose", "-f", "docker-compose.e2e.yml", "up", "--build", "-d", "--wait", "mysql", "api", "front"],
+    projectRoot,
+  );
+  console.log("フロントエンドの起動を待機中...");
   await waitReachable(FRONT_URL);
-  console.log(`sample-front 起動完了 (:${FRONT_PORT})`);
+  console.log(`E2E スタック起動完了 (front: :${FRONT_PORT}, api: :${API_PORT})`);
 }
 
 // Playwright でスクリーンショット撮影
@@ -189,8 +186,14 @@ try {
   }
 } finally {
   await browser.close();
-  apiProc?.kill();
-  frontProc?.kill();
+  if (!stackAlreadyRunning) {
+    console.log("E2E Docker スタックを停止中...");
+    await runCommand(
+      "docker",
+      ["compose", "-f", "docker-compose.e2e.yml", "down", "-v", "--remove-orphans"],
+      projectRoot,
+    ).catch((e) => console.warn("スタック停止に失敗:", e));
+  }
 }
 
 console.log("\n完了");

@@ -5,9 +5,12 @@ services:
     env_file:
       - ./sample-api/.env.docker.example
     ports:
-      - "3307:3306"
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./sample-api/db/database/database-create.sql:/docker-entrypoint-initdb.d/database-create.sql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-u", "root", "-ppassword"]
+      test: [ "CMD", "mysqladmin", "ping", "-u", "root", "-ppassword" ]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -17,12 +20,12 @@ services:
     env_file:
       - ./sample-api/.env.docker.example
     ports:
-      - "8081:8080"
+      - "8080:8080"
     depends_on:
       mysql:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      test: [ "CMD", "wget", "-qO-", "http://localhost:8080/health" ]
       interval: 5s
       timeout: 3s
       retries: 12
@@ -33,7 +36,7 @@ services:
     env_file:
       - ./sample-front/.env.docker.example
     ports:
-      - "3001:3000"
+      - "3000:3000"
     depends_on:
       api:
         condition: service_healthy
@@ -43,8 +46,13 @@ services:
           "CMD",
           "bun",
           "-e",
-          "fetch('http://localhost:3000').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+          "fetch('http://localhost:3000').then((r)=>process.exit(r.ok?0:1)).c\
+            atch(()=>process.exit(1))",
         ]
       interval: 5s
       timeout: 3s
       retries: 10
+
+volumes:
+  mysql-data:
+    driver: local
