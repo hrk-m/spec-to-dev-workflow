@@ -90,6 +90,51 @@ jobs:
           - docs/steering/ の変更も行わない（CI では不要）
           - スクリーンショットの撮影（spec-screenshot）は実行しない
           - `make check` / `bun run format:md:check` は実行しない（PR 作成前に自動修正ステップが走るため）
+
+          ## plans/ 更新ルール
+          plans/ を更新・作成する場合は、必ず以下の構造に従うこと。
+
+          ### ドメイン名の基準（最重要）
+          plans/ のドメイン名は api-sync の Step 4 ルールに従い、API パスのリソース名を単数形にしたものを使う。
+            例: /api/v1/groups → group、/api/v1/users → user、/api/v1/auth → auth
+
+          現在の対応関係（API パス → ドメイン名 → plans/ ディレクトリ）:
+            /api/v1/auth/...   → auth  → plans/auth/
+            /api/v1/groups/... → group → plans/group/
+            /api/v1/users/...  → user  → plans/user/
+
+          ※ このプロジェクトでは API パスのリソース名と sample-api/ のパッケージ名が一致している。
+            差分ファイルのパス（sample-api/{パッケージ名}/...）からドメインを特定してもよい。
+
+          ドメイン名を独自に命名してはいけない。
+          新しいドメインが必要な場合は、API パスに新しいリソースが実際に存在することを確認してから決定する。
+
+          ### ディレクトリ構造
+          ```
+          plans/{ドメイン名}/{verb-noun}/prd.md   # ドメイン名は sample-api のパッケージ名と一致させる
+          plans/shared/{処理名}.md                # 複数ドメインをまたぐ共通処理
+          ```
+          - {verb-noun} は「動詞-名詞」形式（例: create-group, list-users, get-me）
+
+          ### 重複防止（最優先ルール）
+          新規ファイルを作成する前に、必ず既存の plans/ を確認すること。
+          - `find plans/ -name "prd.md" | xargs grep -l "{キーワード}"` 等で類似ファイルを検索する
+          - 同じエンドポイント・機能・処理が既存ファイルに記載されていれば、そのファイルを更新する
+          - 「似ているが別物」と判断する場合は、既存ファイルとの差異を根拠として新規作成してよい
+          - 重複を作るくらいなら既存ファイルに追記・更新するほうを選ぶ
+
+          ### 判断フロー（plan-writer の書き出しルールに準拠）
+          ケース A: 差分が sample-api/{ドメイン名}/ 配下のファイルの場合:
+            → そのパッケージ名をドメインとして plans/{ドメイン名}/{verb-noun}/prd.md を対象にする
+            → ファイルが存在すれば差分のあるセクションだけ更新する。存在しなければ新規作成する
+
+          ケース B: 差分が複数ドメインをまたぐ共通処理（internal/ 配下等）の場合:
+            → plans/shared/{処理名}.md を対象にする
+            → ファイルが存在すれば差分のあるセクションだけ更新する。存在しなければ新規作成する
+
+          ケース C: 差分が既存ドメインに属さない全く新しい機能の場合:
+            → 重複防止ルールで既存ファイルに該当なしと確認してから新規作成する
+            → sample-api/ 側の新しいドメインパッケージ名と同じ名前で plans/{ドメイン名}/{verb-noun}/prd.md を作成する
           EOF
           claude --dangerously-skip-permissions -p "$(cat /tmp/prompt.txt)"
 
