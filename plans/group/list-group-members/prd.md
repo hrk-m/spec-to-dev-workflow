@@ -83,7 +83,7 @@
 2. GroupDetailPage コンポーネントがマウントされる（useMemberList フックが動作する）
 3. GET /api/v1/groups/:id/members?limit=100&offset=0 を送信する
 4. レスポンス受信
-   - 成功（200）→ 取得したメンバー一覧（最大 100 件）と total をキャッシュする → テーブル形式で全件表示する（thead: □選択 / id / 姓名） → テーブル末尾にセンチネル要素を設置する → 終了
+   - 成功（200）→ 取得したメンバー一覧（最大 100 件）と total をキャッシュする → テーブル形式で全件表示する（thead: □選択 / uuid / 姓名） → テーブル末尾にセンチネル要素を設置する → 終了
    - 失敗（4xx・5xx）→ エラーメッセージを画面に表示する → 終了
 5. センチネル要素が viewport に入る
    - lastBatchSize === 100 → テーブル末尾にスピナーを表示する
@@ -104,28 +104,26 @@
 
 ### sample-api
 
-| 対応ステップ  | パス                                                        | 役割                                                                                                                            |
-| ------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| 5-2           | `sample-api/domain/group.go`                                | Group Entity・GroupMember Entity（id, first_name, last_name）                                                                   |
-| 5-2           | `sample-api/group/service.go`                               | GroupRepository interface に ListGroupMembers 追加・ListGroupMembers ビジネスロジック                                           |
-| 5-5           | `sample-api/group/service_test.go`                          | Service ユニットテスト（ListGroupMembers）                                                                                      |
-| 5-5           | `sample-api/group/mocks/group_repository_mock.go`           | GroupRepository の手動 mock（ListGroupMembers 追加）                                                                            |
-| 5-1, 5-2, 5-4 | `sample-api/internal/rest/group.go`                         | HTTP Handler（ListGroupMembers）・GroupService interface に ListGroupMembers 追加・ルート登録（GET /api/v1/groups/:id/members） |
-| 5-5           | `sample-api/internal/rest/group_test.go`                    | Handler ユニットテスト（ListGroupMembers）                                                                                      |
-| 5-5           | `sample-api/internal/rest/mocks/group_service_mock.go`      | GroupService の手動 mock（ListGroupMembers 追加）                                                                               |
-| 5-3           | `sample-api/internal/repository/mysql/group.go`             | MySQL 実装（ListGroupMembers）                                                                                                  |
-| 5-3           | `sample-api/db/migrate/20260403120000_create_tables.up.sql` | テーブル定義・マイグレーション（golang-migrate。groups / users / group_members を統合管理）                                     |
+| 対応ステップ  | パス                                            | 役割                                                                                                                  |
+| ------------- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| 5-2           | `sample-api/domain/group.go`                    | Group Entity（変更なし。domain.User は既に UUID string フィールドを持つため型変更不要）                               |
+| 5-2           | `sample-api/group/service.go`                   | GroupRepository interface に ListGroupMembers 追加・ListGroupMembers ビジネスロジック（変更なし）                     |
+| 5-5           | `sample-api/group/service_test.go`              | Service ユニットテスト（ListGroupMembers）— mock データの domain.User に UUID 値を追加                                |
+| 5-1, 5-2, 5-4 | `sample-api/internal/rest/group.go`             | HTTP Handler（ListGroupMembers）（変更なし）                                                                          |
+| 5-5           | `sample-api/internal/rest/group_test.go`        | Handler ユニットテスト — mock データの domain.User に UUID 追加・レスポンス JSON の uuid フィールドアサーションを追加 |
+| 5-2, 5-3      | `sample-api/internal/repository/mysql/group.go` | ListGroupMembers: SELECT に `u.uuid` を追加、Scan に `&m.UUID` を追加                                                 |
 
 ### sample-front
 
-| 対応ステップ | パス                                                                   | 役割                                                                                                                                                                                                          |
-| ------------ | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 5-2-FE       | `sample-front/src/pages/group-detail/ui/MemberList.tsx`                | メンバー一覧コンポーネント（`<table>` + `<thead>` + `<tbody>` 形式に変換。列構成: □選択 / id / 姓名。アバター削除。センチネル要素・スピナー・エラー表示維持）。MemberRow に `data-testid="member-row"` を付与 |
-| 5-2-FE       | `sample-front/src/pages/group-detail/ui/MemberList.styles.ts`          | テーブル用スタイル定数を追加（`tableRoot`, `tableHeader`, `tableHeaderCell`, `tableHeaderCellCheckbox`, `tableRow`, `tableRowLast`, `tableCellId`, `tableCellName`, `tableCellCheckbox`）                     |
-| 5-5          | `sample-front/src/pages/group-detail/ui/__tests__/MemberList.test.tsx` | テーブル形式向け更新（列ヘッダー確認・アバターなし確認）                                                                                                                                                      |
-| 5-2-FE       | `sample-front/src/pages/group-detail/api/fetch-group-members.ts`       | GET /api/v1/groups/:id/members 呼び出し（limit=100 に変更）                                                                                                                                                   |
-| 5-2-FE       | `sample-front/src/pages/group-detail/model/member-list.ts`             | メンバー一覧取得・無限スクロールカスタムフック（`useMemberList` を export。`displayedCount`・`isFetchingMore` 追加・ページネーション状態削除）                                                                |
-| 5-5          | `e2e/tests/group-detail.spec.ts`                                       | メンバー 0 件検索 E2E テスト（ページネーション UI 非存在確認に更新）                                                                                                                                          |
+| 対応ステップ | パス                                                                   | 役割                                                                                                                                                |
+| ------------ | ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 5-2-FE       | `sample-front/src/pages/group-detail/ui/MemberList.tsx`                | uuid 列変更: 列ヘッダー `'id'` → `'uuid'`、表示値 `member.id` → `member.uuid`。選択状態管理は引き続き `member.id` をキーとして使用                  |
+| 5-2-FE       | `sample-front/src/pages/group-detail/model/group-detail.ts`            | `UserSummary` 型に `uuid: string` を追加                                                                                                            |
+| 5-2-FE       | `sample-front/src/pages/group-detail/ui/MemberList.styles.ts`          | `tableHeaderCellUuid` スタイルを追加（ヘッダーセルの uuid 列用。データセルは既存の `tableCellId` を流用）                                           |
+| 5-5          | `sample-front/src/pages/group-detail/ui/__tests__/MemberList.test.tsx` | 列ヘッダー確認テストを `'uuid'` に更新。モックデータ `UserSummary` に `uuid` を追加。`onMemberClick` コールバックの期待値に `uuid` フィールドを追加 |
+| 5-2-FE       | `sample-front/src/pages/group-detail/api/fetch-group-members.ts`       | GET /api/v1/groups/:id/members 呼び出し（limit=100 に変更）                                                                                         |
+| 5-2-FE       | `sample-front/src/pages/group-detail/model/member-list.ts`             | メンバー一覧取得・無限スクロールカスタムフック（`useMemberList` を export。`displayedCount`・`isFetchingMore` 追加・ページネーション状態削除）      |
+| 5-5          | `e2e/tests/group-detail.spec.ts`                                       | メンバー 0 件検索 E2E テスト（ページネーション UI 非存在確認に更新）                                                                                |
 
 ---
 
@@ -142,6 +140,7 @@
   "members": [
     {
       "id": 1,
+      "uuid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
       "first_name": "太郎",
       "last_name": "山田"
     }
@@ -202,11 +201,13 @@
 
 **フロントエンドテスト** (`MemberList.test.tsx`):
 
-| #   | 観点         | テスト内容                                                                           | 期待結果                                                     |
-| --- | ------------ | ------------------------------------------------------------------------------------ | ------------------------------------------------------------ |
-| 15  | 列ヘッダー   | `id`・`姓名` の列ヘッダーが存在する                                                  | `columnheader` ロールで `id` / `姓名` が取得できる           |
-| 16  | アバターなし | アバターアイコン（イニシャル円形）が存在しない                                       | `MemberAvatar` に相当する要素が DOM に存在しない             |
-| 17  | 既存テスト   | メンバー名表示・空状態・検索・チェックボックス等の既存テストがテーブル形式で通過する | 既存 19 ケースがテーブル形式（`<tr>` / `<td>`）対応で全 pass |
+| #   | 観点         | テスト内容                                                                           | 期待結果                                                          |
+| --- | ------------ | ------------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
+| 15  | 列ヘッダー   | `uuid`・`姓名` の列ヘッダーが存在する                                                | `columnheader` ロールで `uuid` / `姓名` が取得できる              |
+| 16  | アバターなし | アバターアイコン（イニシャル円形）が存在しない                                       | `MemberAvatar` に相当する要素が DOM に存在しない                  |
+| 17  | モックデータ | `UserSummary` モックオブジェクトに `uuid` フィールドが含まれる                       | TypeScript コンパイルエラーなし                                   |
+| 18  | コールバック | `onMemberClick` 呼び出し時の引数に `uuid` フィールドが含まれる                       | `{ id, uuid, first_name, last_name }` を含む `UserSummary` が渡る |
+| 19  | 既存テスト   | メンバー名表示・空状態・検索・チェックボックス等の既存テストがテーブル形式で通過する | 既存テストがテーブル形式（`<tr>` / `<td>`）対応で全 pass          |
 
 ---
 
@@ -226,7 +227,7 @@
 
 ## 最低要件
 
-1. `GET /api/v1/groups/:id/members` が実装されており、メンバー一覧（id, first_name, last_name）と total を返す
+1. `GET /api/v1/groups/:id/members` が実装されており、メンバー一覧（id, uuid, first_name, last_name）と total を返す
 2. `users` テーブルが作成されている（id, first_name, last_name）
 3. `group_members` テーブルが `user_id`（FK→users）を持つ構成に更新されている
 4. `id` が整数でない / 0 以下の場合に 400 を返す
@@ -242,15 +243,15 @@
 14. `currentPage` / `totalPages` / `perPage` / `handlePerPageChange` の状態を削除する
 15. MemberRow コンポーネントに `data-testid="member-row"` を付与し、E2E テストのセレクターを安定化させる
 16. MemberList が `<table>` 形式（`<table>` + `<thead>` + `<tbody>`）で表示される
-17. `<thead>` に空の `<th>`（チェックボックス列、`aria-label="選択"`）・`id`・`姓名` の 3 列ヘッダーが存在する
+17. `<thead>` に空の `<th>`（チェックボックス列、`aria-label="選択"`）・`uuid`・`姓名` の 3 列ヘッダーが存在する
 18. アバターアイコン（イニシャル円形）を表示しない（各メンバー行に `MemberAvatar` は使用しない）
-19. テーブルヘッダーの `columnheader` ロールで `id` および `姓名` が取得できる
+19. テーブルヘッダーの `columnheader` ロールで `uuid` および `姓名` が取得できる
 20. `MemberList.styles.ts` に UserList と同パターンのテーブル用スタイル定数が定義されている
 
 ---
 
 ## 対象外
 
-- 認証・認可（このエンドポイントは認証不要）
+- 認証・認可の追加実装（既存の AuthMiddleware で対応済み）
 - メンバーの追加・削除
 - ページネーション（サーバーサイド）— クライアントサイドページネーションのみ対応

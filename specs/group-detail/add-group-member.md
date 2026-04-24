@@ -58,18 +58,18 @@
 
 ## 使用コンポーネント・状態
 
-| 要素                 | 種別           | 役割                                                                                                                                                                                                                     |
-| -------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `GroupDetailContent` | コンポーネント | 「メンバー追加」ボタンを配置し、`openSheet()` で AddMemberSheet を SheetStack に登録する                                                                                                                                 |
-| `AddMemberSheet`     | コンポーネント | 検索入力・チェックボックス付きユーザー一覧・「一括追加」ボタンを提供するシートコンテンツ。レイアウト（上から）：検索入力 → 「一括追加」ボタン（コンテンツ幅・右端揃え・soft スタイル）→ チェックボックス付きユーザー一覧 |
-| `useNonMemberList`   | カスタム Hook  | 未所属ユーザー一覧取得・クライアントサイドページネーション・検索クエリ管理を担う。`clearNonMemberListCache(groupId?: number)` でキャッシュをクリアできる（`groupId` 指定時は該当グループのみ、未指定時は全件）           |
-| `addGroupMembers`    | API 関数       | `POST /api/v1/groups/:id/members` を呼び出す                                                                                                                                                                             |
-| `selectedIds`        | state          | チェックされたユーザー ID の集合（`Set<number>`）                                                                                                                                                                        |
-| `submitError`        | state          | 一括追加の API エラーメッセージ                                                                                                                                                                                          |
-| `isSubmitting`       | state          | API 呼び出し中かどうか。「一括追加」ボタンの disabled 制御に使用                                                                                                                                                         |
-| `headerCheckboxRef`  | ref            | ヘッダーチェックボックスの DOM 参照。`useEffect` で `indeterminate` 属性を直接設定するために使用                                                                                                                         |
-| `isAllSelected`      | 派生値         | `users.length > 0 && selectedIds.size === users.length` のとき `true`。ヘッダーチェックボックスの `checked` に反映                                                                                                       |
-| `isSomeSelected`     | 派生値         | `selectedIds.size > 0 && selectedIds.size < users.length` のとき `true`。ヘッダーチェックボックスの `indeterminate` に反映                                                                                               |
+| 要素                 | 種別           | 役割                                                                                                                                                                                                                                                            |
+| -------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GroupDetailContent` | コンポーネント | 「メンバー追加」ボタンを配置し、`openSheet()` で AddMemberSheet を SheetStack に登録する                                                                                                                                                                        |
+| `AddMemberSheet`     | コンポーネント | 検索入力・チェックボックス付きユーザー一覧・「一括追加」ボタンを提供するシートコンテンツ。レイアウト（上から）：検索入力 → 「一括追加」ボタン（コンテンツ幅・右端揃え・soft スタイル）→ チェックボックス付きユーザー一覧（□選択 / uuid / 姓名 の 3 列テーブル） |
+| `useNonMemberList`   | カスタム Hook  | 未所属ユーザー一覧取得・クライアントサイドページネーション・検索クエリ管理を担う。`clearNonMemberListCache(groupId?: number)` でキャッシュをクリアできる（`groupId` 指定時は該当グループのみ、未指定時は全件）                                                  |
+| `addGroupMembers`    | API 関数       | `POST /api/v1/groups/:id/members` を呼び出す                                                                                                                                                                                                                    |
+| `selectedIds`        | state          | チェックされたユーザー ID の集合（`Set<number>`）                                                                                                                                                                                                               |
+| `submitError`        | state          | 一括追加の API エラーメッセージ                                                                                                                                                                                                                                 |
+| `isSubmitting`       | state          | API 呼び出し中かどうか。「一括追加」ボタンの disabled 制御に使用                                                                                                                                                                                                |
+| `headerCheckboxRef`  | ref            | ヘッダーチェックボックスの DOM 参照。`useEffect` で `indeterminate` 属性を直接設定するために使用                                                                                                                                                                |
+| `isAllSelected`      | 派生値         | `users.length > 0 && selectedIds.size === users.length` のとき `true`。ヘッダーチェックボックスの `checked` に反映                                                                                                                                              |
+| `isSomeSelected`     | 派生値         | `selectedIds.size > 0 && selectedIds.size < users.length` のとき `true`。ヘッダーチェックボックスの `indeterminate` に反映                                                                                                                                      |
 
 ---
 
@@ -78,6 +78,7 @@
 ```
 - [ ] フルページ・シートモードの両方に「メンバー追加」ボタンが表示される
 - [ ] ボタンクリックで AddMemberSheet が表示され、未所属ユーザー一覧が描画される
+- [ ] 未所属ユーザー一覧に uuid 列が表示される（ハイフン区切り形式）
 - [ ] 未所属ユーザーの検索（キーワード入力）で一覧が絞り込まれる
 - [ ] 検索クリアで未所属ユーザー全件が再表示される
 - [ ] ユーザー行をクリックまたはチェックボックスで個別に選択・解除できる

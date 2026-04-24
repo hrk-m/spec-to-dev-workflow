@@ -7,8 +7,7 @@ type: project
 ## ドメインモデル（domain/group.go）
 
 - `Group`: ID(uint64), Name(string), Description(string), MemberCount(int)
-- `GroupMember`: ID(uint64), FirstName(string), LastName(string)
-- `User`: ID(uint64), FirstName(string), LastName(string) — add-group-member 機能で追加
+- `User`: ID(uint64), UUID(string), FirstName(string), LastName(string)
 
 ## DB スキーマ
 
@@ -45,8 +44,8 @@ type GroupService interface {
     GetByID(ctx context.Context, id uint64) (domain.Group, error)
     ListGroupMembers(ctx context.Context, id uint64, limit, offset int, q string) ([]domain.User, int, error)
     Store(ctx context.Context, name, description string, userID uint64) (domain.Group, error)
-    Update(ctx context.Context, id int64, name, description string, userID uint64) (*domain.Group, error)
-    Delete(ctx context.Context, id int64, userID uint64) error
+    Update(ctx context.Context, id uint64, name, description string, userID uint64) (*domain.Group, error)
+    Delete(ctx context.Context, id uint64, userID uint64) error
     ListNonGroupMembers(ctx context.Context, groupID uint64, limit, offset int, q string) ([]domain.User, int, error)
     AddGroupMembers(ctx context.Context, groupID uint64, userIDs []uint64) ([]domain.User, error)
     RemoveGroupMembers(ctx context.Context, groupID uint64, userIDs []uint64) error

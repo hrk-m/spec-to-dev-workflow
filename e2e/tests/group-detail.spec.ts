@@ -197,4 +197,21 @@ test.describe("グループ詳細ページ", () => {
     // MemberList renders String(err) as error text → "500" が含まれる
     await expect(page.getByText(/500/)).toBeVisible({ timeout: 5000 });
   });
+
+  test("MemberList の uuid 列ヘッダーが表示される", async ({ page }) => {
+    await page.goto("/groups/1");
+    // テーブルが表示されてから列ヘッダーを確認（networkidle 待機を避ける）
+    await expect(page.getByRole("table")).toBeVisible({ timeout: 10000 });
+    await expect(
+      page.getByRole("columnheader", { name: "uuid" }),
+    ).toBeVisible();
+  });
+
+  test("MemberList の各メンバー行に uuid 値が表示される", async ({ page }) => {
+    await page.goto("/groups/1");
+    // Group 001 のメンバー: Yamada Taro (uuid: 00000000-0000-0000-0000-000000000001)
+    await expect(
+      page.getByText("00000000-0000-0000-0000-000000000001"),
+    ).toBeVisible({ timeout: 10000 });
+  });
 });

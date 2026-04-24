@@ -84,10 +84,10 @@
 2. AddMemberSheet コンポーネントがマウントされる（useNonMemberList フックが動作する）
 3. GET /api/v1/groups/:id/non-members?limit=100&offset=0 を送信する
 4. レスポンス受信
-   - 成功（200）→ 取得したユーザー一覧（最大 100 件）と total をキャッシュする → テーブル形式で全件表示する（thead: □選択 / 姓名） → テーブル末尾にセンチネル要素を設置する → 終了
+   - 成功（200）→ 取得したユーザー一覧（最大 100 件）と total をキャッシュする → テーブル形式で全件表示する（thead: □選択 / uuid / 姓名） → テーブル末尾にセンチネル要素を設置する → 終了
    - 失敗（4xx・5xx）→ エラーメッセージを画面に表示する → 終了
 5. センチネル要素が viewport に入る
-   - lastBatchSize === 100 → テーブル末尾にスピナーを表示する
+   - 前回取得件数が上限（100 件）と一致する場合 → テーブル末尾にスピナーを表示する
    - GET /api/v1/groups/:id/non-members?limit=100&offset=N を送信する
      - 成功 → キャッシュに追加して全件表示する → スピナーを非表示にする → 終了
      - 失敗 → スピナーを非表示にする → テーブル末尾にエラーメッセージを表示する → 終了
@@ -105,27 +105,24 @@
 
 ### sample-api
 
-| 対応ステップ  | パス                                                                  | 役割                                                                            |
-| ------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| 5-2           | `sample-api/domain/user.go`                                           | User Entity（id, first_name, last_name）定義                                    |
-| 5-2           | `sample-api/group/service.go`                                         | GroupRepository interface に `ListNonGroupMembers` 追加・ビジネスロジック実装   |
-| 5-5           | `sample-api/group/service_test.go`                                    | Service ユニットテスト（ListNonGroupMembers）                                   |
-| 5-5           | `sample-api/group/mocks/group_repository_mock.go`                     | GroupRepository の手動 mock（ListNonGroupMembers 追加）                         |
-| 5-1, 5-2, 5-4 | `sample-api/internal/rest/group.go`                                   | HTTP Handler（ListNonGroupMembers）・GroupService interface 追加・ルート登録    |
-| 5-5           | `sample-api/internal/rest/group_test.go`                              | Handler ユニットテスト（ListNonGroupMembers）                                   |
-| 5-5           | `sample-api/internal/rest/mocks/group_service_mock.go`                | GroupService の手動 mock（ListNonGroupMembers 追加）                            |
-| 5-3           | `sample-api/internal/repository/mysql/group.go`                       | MySQL 実装（ListNonGroupMembers）                                               |
-| 5-3           | `sample-api/db/migrate/20260411120000_add_search_key_to_users.up.sql` | `users` テーブルへの `search_key` VIRTUAL GENERATED COLUMN 追加マイグレーション |
+| 対応ステップ  | パス                                            | 役割                                                                                   |
+| ------------- | ----------------------------------------------- | -------------------------------------------------------------------------------------- |
+| 5-2           | `sample-api/domain/user.go`                     | User Entity（変更なし。UUID string フィールドは既存）                                  |
+| 5-2           | `sample-api/group/service.go`                   | GroupRepository interface・ビジネスロジック（変更なし）                                |
+| 5-5           | `sample-api/group/service_test.go`              | Service ユニットテスト — mock データの domain.User に UUID 値を追加                    |
+| 5-1, 5-2, 5-4 | `sample-api/internal/rest/group.go`             | HTTP Handler（ListNonGroupMembers）（変更なし）                                        |
+| 5-5           | `sample-api/internal/rest/group_test.go`        | Handler ユニットテスト — mock データの domain.User に UUID 追加・uuid アサーション追加 |
+| 5-2, 5-3      | `sample-api/internal/repository/mysql/group.go` | ListNonGroupMembers: SELECT に `uuid` を追加、Scan に `&u.UUID` を追加                 |
 
 ### sample-front
 
-| 対応ステップ | パス                                                                       | 役割                                                                                                                                                                                                               |
-| ------------ | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 5-2-FE       | `sample-front/src/pages/group-detail/ui/AddMemberSheet.tsx`                | メンバー追加シート。ユーザーリスト部分を `<table>` + `<thead>` + `<tbody>` 形式に変換。列構成: □選択 / 姓名。UserAvatar 削除。センチネル要素・スピナー・エラー表示・一括追加機能を維持                             |
-| 5-2-FE       | `sample-front/src/pages/group-detail/ui/AddMemberSheet.styles.ts`          | テーブル用スタイル定数（`tableRoot`, `tableHeader`, `tableHeaderCell`, `tableHeaderCellCheckbox`, `tableRow`, `tableRowLast`, `tableCellCheckbox`, `tableCellName` 等）。エラーテキストは `appColors.error` を使用 |
-| 5-5          | `sample-front/src/pages/group-detail/ui/__tests__/AddMemberSheet.test.tsx` | テーブル形式向け更新（列ヘッダー確認・アバターなし確認）                                                                                                                                                           |
-| 5-2-FE       | `sample-front/src/pages/group-detail/api/fetch-non-members.ts`             | GET /api/v1/groups/:id/non-members 呼び出し                                                                                                                                                                        |
-| 5-2-FE       | `sample-front/src/pages/group-detail/model/useNonMemberList.ts`            | 非メンバー一覧取得・無限スクロールカスタムフック（変更なし）                                                                                                                                                       |
+| 対応ステップ | パス                                                                       | 役割                                                                                                                                                                                                                |
+| ------------ | -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 5-2-FE       | `sample-front/src/pages/group-detail/ui/AddMemberSheet.tsx`                | uuid 列追加: 列構成を □選択 / uuid / 姓名 に変更。スケルトン表示の列数を 3 列に更新。空データ行の `colSpan` を 2 → 3 に変更。データセルに `user.uuid` を追加。内部処理（選択・削除キー）は引き続き `user.id` を使用 |
+| 5-2-FE       | `sample-front/src/pages/group-detail/ui/AddMemberSheet.styles.ts`          | `tableCellUuid` スタイルを追加（MemberList の `tableCellId` と同パターン: 幅 固定・`textSecondary` カラー）                                                                                                         |
+| 5-5          | `sample-front/src/pages/group-detail/ui/__tests__/AddMemberSheet.test.tsx` | uuid 列ヘッダー確認テストを追加。全モックデータ `UserSummary` オブジェクトに `uuid` フィールドを追加                                                                                                                |
+| 5-2-FE       | `sample-front/src/pages/group-detail/api/fetch-non-members.ts`             | 変更なし（UserSummary 型は group-detail.ts で管理）                                                                                                                                                                 |
+| 5-2-FE       | `sample-front/src/pages/group-detail/model/useNonMemberList.ts`            | 非メンバー一覧取得・無限スクロールカスタムフック（変更なし）                                                                                                                                                        |
 
 ---
 
@@ -142,6 +139,7 @@
   "users": [
     {
       "id": 2,
+      "uuid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
       "first_name": "太郎",
       "last_name": "山田"
     }
@@ -199,12 +197,13 @@
 
 **フロントエンドテスト** (`AddMemberSheet.test.tsx`):
 
-| #   | 観点         | テスト内容                                                   | 期待結果                                       |
-| --- | ------------ | ------------------------------------------------------------ | ---------------------------------------------- |
-| 20  | 列ヘッダー   | `姓名` の列ヘッダーが存在する                                | `columnheader` ロールで `姓名` が取得できる    |
-| 21  | アバターなし | アバターアイコン（イニシャル円形）が存在しない               | `UserAvatar` に相当する要素が DOM に存在しない |
-| 22  | 選択ヘッダー | 選択列ヘッダーが存在する                                     | `th[aria-label="選択"]` が DOM に存在する      |
-| 23  | 既存テスト   | 既存 14 ケースがテーブル形式（`<tr>` / `<td>`）対応で全 pass | 既存テスト全通過                               |
+| #   | 観点         | テスト内容                                                      | 期待結果                                             |
+| --- | ------------ | --------------------------------------------------------------- | ---------------------------------------------------- |
+| 20  | 列ヘッダー   | `uuid`・`姓名` の列ヘッダーが存在する                           | `columnheader` ロールで `uuid` / `姓名` が取得できる |
+| 21  | アバターなし | アバターアイコン（イニシャル円形）が存在しない                  | `UserAvatar` に相当する要素が DOM に存在しない       |
+| 22  | 選択ヘッダー | 選択列ヘッダーが存在する                                        | `th[aria-label="選択"]` が DOM に存在する            |
+| 23  | モックデータ | テスト内の `UserSummary` モックオブジェクトに `uuid` が含まれる | TypeScript コンパイルエラーなし                      |
+| 24  | 既存テスト   | 既存テストケースがテーブル形式（`<tr>` / `<td>`）対応で全 pass  | 既存テスト全通過                                     |
 
 ---
 
@@ -212,7 +211,7 @@
 
 ### バックエンド
 
-1. `GET /api/v1/groups/:id/non-members` が実装されており、未所属ユーザー一覧（id, first_name, last_name）と total を返す
+1. `GET /api/v1/groups/:id/non-members` が実装されており、未所属ユーザー一覧（id, uuid, first_name, last_name）と total を返す
 2. `users` テーブルの `deleted_at IS NULL` のユーザーのみを対象とする
 3. `NOT IN` サブクエリで `group_members` に存在するユーザーを除外する
 4. `q` パラメータで `search_key LIKE '%q%'` の検索が動作する（`search_key` は VIRTUAL GENERATED COLUMN）
@@ -234,10 +233,10 @@
 7. UI から Previous/Next ボタンおよび件数セレクタ（20/50/100）を削除する
 8. `currentPage` / `totalPages` / `perPage` / `handlePerPageChange` の状態を削除する
 9. AddMemberSheet のユーザーリストが `<table>` 形式（`<table>` + `<thead>` + `<tbody>`）で表示される
-10. `<thead>` に空の `<th>`（チェックボックス列、`aria-label="選択"`）と `<th>姓名</th>` の 2 列ヘッダーが存在する
+10. `<thead>` に空の `<th>`（チェックボックス列、`aria-label="選択"`）・`<th>uuid</th>`・`<th>姓名</th>` の 3 列ヘッダーが存在する
 11. アバターアイコン（イニシャル円形）を表示しない（各ユーザー行に `UserAvatar` は使用しない）
-12. `columnheader` ロールで `姓名` が取得できる
-13. `AddMemberSheet.styles.ts` に MemberList と同パターンのテーブル用スタイル定数が定義されている
+12. `columnheader` ロールで `uuid` および `姓名` が取得できる
+13. `AddMemberSheet.styles.ts` に `tableCellUuid` スタイルが定義されている（MemberList の `tableCellId` と同パターン）
 
 ---
 
