@@ -2,8 +2,9 @@ name: Sync Docs on Submodule Update
 
 on:
   push:
-    branches-ignore:
-      - main
+    branches:
+      - "auto-pr/update-sample-api*"
+      - "auto-pr/update-sample-front*"
     paths:
       - sample-api
       - sample-front
