@@ -209,7 +209,7 @@
 ```json
 {
   "steps": [
-    { "goto": "http://localhost:3000/groups/1" },
+    { "goto": "http://localhost:13000/groups/1" },
     { "waitForText": "Members" },
     { "screenshot": "group-detail" }
   ]

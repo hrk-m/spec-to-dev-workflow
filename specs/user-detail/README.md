@@ -35,7 +35,7 @@
 ```json
 {
   "steps": [
-    { "goto": "http://localhost:3000/users/1" },
+    { "goto": "http://localhost:13000/users/1" },
     { "waitForText": "00000000-0000-0000-0000-000000000001" },
     { "screenshot": "user-detail" }
   ]

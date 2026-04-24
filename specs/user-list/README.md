@@ -108,7 +108,7 @@
 ```json
 {
   "steps": [
-    { "goto": "http://localhost:3000/users" },
+    { "goto": "http://localhost:13000/users" },
     { "waitForText": "Users" },
     { "screenshot": "user-list" }
   ]
