@@ -193,16 +193,15 @@
 
 ## 機能一覧
 
-| 機能                 | 概要                                                                              | 詳細                                                 |
-| -------------------- | --------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| get-group            | グループの詳細情報（名称・説明・メンバー数）を取得する                            | [get-group.md](./get-group.md)                       |
-| list-group-members   | グループのメンバー一覧を検索・無限スクロール付きで取得する                        | [list-group-members.md](./list-group-members.md)     |
-| sheet-navigation     | グループ詳細をシートで表示し、メンバー詳細へネストできるシートナビゲーション      | [sheet-navigation.md](./sheet-navigation.md)         |
-| update-group         | グループの名称・説明を編集ダイアログから更新する                                  | [update-group.md](./update-group.md)                 |
-| delete-group         | グループを削除確認ダイアログからソフトデリートし、一覧へ遷移する                  | [delete-group.md](./delete-group.md)                 |
-| add-group-member     | グループ未所属のユーザーを検索・選択して AddMemberSheet から一括追加する          | [add-group-member.md](./add-group-member.md)         |
-| remove-group-members | メンバー一覧のチェックボックスで選択した 1 件または複数件のメンバーを一括削除する | [remove-group-members.md](./remove-group-members.md) |
-| select-all-members   | ヘッダーチェックボックスで全メンバーを一括選択 / 全解除する                       | [select-all-members.md](./select-all-members.md)     |
+| 機能                 | 概要                                                                                                            | 詳細                                                 |
+| -------------------- | --------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| get-group            | グループの詳細情報（名称・説明・メンバー数）を取得する                                                          | [get-group.md](./get-group.md)                       |
+| list-group-members   | グループのメンバー一覧を検索・無限スクロール付きで取得する                                                      | [list-group-members.md](./list-group-members.md)     |
+| sheet-navigation     | グループ詳細をシートで表示し、メンバー詳細へネストできるシートナビゲーション                                    | [sheet-navigation.md](./sheet-navigation.md)         |
+| update-group         | グループの名称・説明を編集ダイアログから更新する                                                                | [update-group.md](./update-group.md)                 |
+| delete-group         | グループを削除確認ダイアログからソフトデリートし、一覧へ遷移する                                                | [delete-group.md](./delete-group.md)                 |
+| add-group-member     | グループ未所属のユーザーを検索・選択して AddMemberSheet から一括追加する                                        | [add-group-member.md](./add-group-member.md)         |
+| remove-group-members | メンバー一覧のチェックボックスで選択した 1 件または複数件のメンバーを一括削除する（全選択・indeterminate 含む） | [remove-group-members.md](./remove-group-members.md) |
 
 ## スクリーンショット設定
 
