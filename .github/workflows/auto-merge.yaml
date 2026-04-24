@@ -58,19 +58,9 @@ jobs:
               repo: context.repo.repo,
               labels: ["lgtm","approved","auto-merge"]
             })
-            await github.graphql(`
-              mutation ($pullRequestId: ID!) {
-                enablePullRequestAutoMerge(input: {
-                  pullRequestId: $pullRequestId,
-                  mergeMethod: MERGE
-                }) {
-                  pullRequest {
-                    autoMergeRequest {
-                      enabledAt
-                    }
-                  }
-                }
-              }
-            `, {
-              pullRequestId: context.payload.pull_request.node_id
+            await github.rest.pulls.merge({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              merge_method: "merge"
             })
