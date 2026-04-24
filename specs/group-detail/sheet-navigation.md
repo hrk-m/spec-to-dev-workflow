@@ -99,6 +99,12 @@
 
 ---
 
+## 使用 API
+
+シートナビゲーション自体は API を直接呼び出さない。シートコンテンツとして描画される `GroupDetailSheet` / `GroupDetailContent` がそれぞれの機能で API を呼び出す（詳細は [get-group.md](./get-group.md) / [list-group-members.md](./list-group-members.md) を参照）。
+
+---
+
 ## 対応する API 仕様
 
 → `plans/group/sheet-navigation/prd.md`

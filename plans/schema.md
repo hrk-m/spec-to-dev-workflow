@@ -7,9 +7,9 @@
 | システム名       | sample-api                                                                                              |
 | 目的・用途       | spec-to-dev-workflow リポジトリのバックエンド API リファレンス実装。Clean Architecture パターンの実証用 |
 | RDBMS            | MySQL                                                                                                   |
-| バージョン       | {要確認}（Docker Compose で管理）                                                                       |
+| バージョン       | MySQL 8（`mysql:8` イメージ、Docker Compose で管理）                                                    |
 | ドキュメント種別 | 手書き                                                                                                  |
-| 最終更新日       | 2026-04-22                                                                                              |
+| 最終更新日       | 2026-04-24                                                                                              |
 
 ---
 
@@ -144,7 +144,7 @@
 
 ### その他の暗黙ルール
 
-- 文字コード・照合順序は {要確認}（Docker Compose の MySQL 設定に依存）
+- 文字コード・照合順序は `utf8mb4` / `utf8mb4_0900_ai_ci`（全テーブル共通）
 - タイムゾーンは {要確認}
 
 ---

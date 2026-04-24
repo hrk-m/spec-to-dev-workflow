@@ -88,7 +88,7 @@
 8. トランザクションを開始し、DELETE FROM group_members WHERE group_id = :group_id AND user_id IN (:user_ids) を実行
    - DB エラーの場合 → ロールバックして 500 Internal Server Error を返す
 9. トランザクションをコミット
-10. 200 OK（ボディなし）を返す
+10. 204 No Content を返す（ボディなし）
 11. 終了
 ```
 

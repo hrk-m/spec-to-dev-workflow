@@ -84,6 +84,8 @@
 
 ## 確認ステップ 5-3: ファイル配置
 
+→ [plans/schema.md](../../schema.md) を参照。
+
 ### sample-api
 
 | ファイル                                                        | 役割                                                        |
