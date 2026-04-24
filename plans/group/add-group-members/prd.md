@@ -106,7 +106,7 @@
 13. 追加したユーザー情報を取得する
     - DB エラー → 500 Internal Server Error → 終了
 
-14. 201 Created + 追加メンバー一覧（id, first_name, last_name）を返す → 終了
+14. 201 Created + 追加メンバー一覧（id, uuid, first_name, last_name）を返す → 終了
 ```
 
 ---
@@ -118,7 +118,7 @@
 ```
 1. マウント時にキャッシュをクリアする
 
-2. 非メンバー一覧をテーブル形式（選択/姓名列）で表示する
+2. 非メンバー一覧をテーブル形式（選択/uuid/姓名列）で表示する
 
 3. ユーザーがチェックボックスまたは行をクリックする
    a. ヘッダーチェックボックス（全選択）をクリックする
@@ -167,7 +167,7 @@
 
 | 対応ステップ  | パス                                                        | 役割                                                                                |
 | ------------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| 5-2           | `sample-api/domain/user.go`                                 | User Entity（id, first_name, last_name）定義                                        |
+| 5-2           | `sample-api/domain/user.go`                                 | User Entity（id, uuid, first_name, last_name）定義                                  |
 | 5-2           | `sample-api/group/service.go`                               | グループメンバー追加のビジネスロジック（重複排除・存在確認・DB 操作）               |
 | 5-5           | `sample-api/group/service_test.go`                          | AddGroupMembers の Service ユニットテスト                                           |
 | 5-5           | `sample-api/group/mocks/group_repository_mock.go`           | GroupRepository の手動 mock                                                         |
@@ -200,6 +200,7 @@
   "members": [
     {
       "id": 2,
+      "uuid": "550e8400-e29b-41d4-a716-446655440002",
       "first_name": "花子",
       "last_name": "鈴木"
     }
@@ -237,15 +238,15 @@
 
 **Handler テスト** (`internal/rest/group_test.go`):
 
-| #   | 観点     | テスト内容           | 入力例          | 期待結果                  |
-| --- | -------- | -------------------- | --------------- | ------------------------- |
-| 1   | 正常系   | 複数ユーザー一括追加 | user_ids=[2,3]  | 201 Created + members     |
-| 2   | 異常系   | id が文字列          | id=abc          | 400 Bad Request           |
-| 3   | 境界値   | id=0                 | id=0            | 400 Bad Request           |
-| 4   | 異常系   | user_ids が空        | user_ids=[]     | 400 Bad Request           |
-| 5   | 異常系   | グループ未存在       | id=9999         | 404 Not Found             |
-| 6   | 異常系   | 既にメンバー         | 既存メンバー ID | 409 Conflict              |
-| 7   | 例外処理 | DB エラー時に 500    | DB モックエラー | 500 Internal Server Error |
+| #   | 観点     | テスト内容           | 入力例          | 期待結果                                    |
+| --- | -------- | -------------------- | --------------- | ------------------------------------------- |
+| 1   | 正常系   | 複数ユーザー一括追加 | user_ids=[2,3]  | 201 Created + members（id・uuid・姓名含む） |
+| 2   | 異常系   | id が文字列          | id=abc          | 400 Bad Request                             |
+| 3   | 境界値   | id=0                 | id=0            | 400 Bad Request                             |
+| 4   | 異常系   | user_ids が空        | user_ids=[]     | 400 Bad Request                             |
+| 5   | 異常系   | グループ未存在       | id=9999         | 404 Not Found                               |
+| 6   | 異常系   | 既にメンバー         | 既存メンバー ID | 409 Conflict                                |
+| 7   | 例外処理 | DB エラー時に 500    | DB モックエラー | 500 Internal Server Error                   |
 
 **FE コンポーネントテスト** (`sample-front/src/pages/group-detail/ui/__tests__/AddMemberSheet.test.tsx`):
 
