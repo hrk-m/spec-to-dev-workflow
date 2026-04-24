@@ -453,6 +453,28 @@ test.describe("グループメンバー追加", () => {
     await expect(dialog.getByTestId("header-checkbox")).toBeDisabled();
   });
 
+  // N-3: AddMemberSheet の uuid 列ヘッダーが表示される
+  test("[N-3] AddMemberSheet の uuid 列ヘッダーが表示される", async ({ page }) => {
+    await openAddMemberSheetOnFullPage(page);
+    const dialog = page.getByRole("dialog");
+    // スケルトン表示中でも uuid columnheader は即時表示されるため、データ読み込み待ち不要
+    await expect(
+      dialog.getByRole("columnheader", { name: "uuid" }).first(),
+    ).toBeVisible({ timeout: 10000 });
+  });
+
+  // N-4: AddMemberSheet の各ユーザー行に uuid 値が表示される
+  test("[N-4] AddMemberSheet の各ユーザー行に uuid 値が表示される", async ({ page }) => {
+    await openAddMemberSheetOnFullPage(page);
+    await waitForNonMemberList(page);
+    const dialog = page.getByRole("dialog");
+
+    // Group 1 の非メンバー Tanaka Jiro (uuid: 00000000-0000-0000-0000-000000000003)
+    await expect(
+      dialog.getByText("00000000-0000-0000-0000-000000000003"),
+    ).toBeVisible();
+  });
+
   // TC-16: メンバー追加後に AddMemberSheet を再度開くと追加済みユーザーが非メンバーリストに表示されない
   test("[TC-16] メンバー追加後に AddMemberSheet を再度開くと追加済みユーザーが非メンバーリストに表示されない（キャッシュクリア確認）", async ({
     page,
