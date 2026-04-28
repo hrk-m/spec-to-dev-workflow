@@ -128,7 +128,7 @@
 
 | ファイル                                                               | 役割                                                                                                                     |
 | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `sample-api/domain/group.go`                                           | `GroupRelation` Entity（parent_group_id, child_group_id）追加                                                           |
+| `sample-api/domain/group_relation.go`                                  | `GroupRelation` Entity（parent_group_id, child_group_id）定義（独立ファイル）                                           |
 | `sample-api/group/service.go`                                          | `GroupRelationRepository` IF 追加・`CreateSubGroup` メソッド                                                            |
 | `sample-api/group/service_test.go`                                     | `CreateSubGroup` サービステスト                                                                                          |
 | `sample-api/group/mocks/group_relation_repository_mock.go`             | `GroupRelationRepository` 手動 mock（新規作成）                                                                          |

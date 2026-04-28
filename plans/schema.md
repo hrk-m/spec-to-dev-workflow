@@ -103,28 +103,30 @@
 
 #### カラム
 
-| カラム名           | データ型          | NULL     | デフォルト     | 説明                                                 |
-| ------------------ | ----------------- | -------- | -------------- | ---------------------------------------------------- |
-| `id`               | `BIGINT UNSIGNED` | NOT NULL | AUTO_INCREMENT | 親子関係の識別子（主キー）                           |
-| `parent_group_id`  | `BIGINT UNSIGNED` | NOT NULL | なし           | 親グループの ID（FK → `groups.id`）                  |
-| `child_group_id`   | `BIGINT UNSIGNED` | NOT NULL | なし           | 子グループの ID（FK → `groups.id`）                  |
+| カラム名           | データ型          | NULL     | デフォルト        | 説明                                                 |
+| ------------------ | ----------------- | -------- | ----------------- | ---------------------------------------------------- |
+| `id`               | `BIGINT UNSIGNED` | NOT NULL | AUTO_INCREMENT    | 親子関係の識別子（主キー）                           |
+| `parent_group_id`  | `BIGINT UNSIGNED` | NOT NULL | なし              | 親グループの ID（FK → `groups.id`）                  |
+| `child_group_id`   | `BIGINT UNSIGNED` | NOT NULL | なし              | 子グループの ID（FK → `groups.id`）                  |
+| `created_at`       | `DATETIME`        | NOT NULL | CURRENT_TIMESTAMP | レコード作成日時                                     |
 
 #### 制約
 
-| 種別        | 名前                                  | 対象カラム                              | 説明                                                                    |
-| ----------- | ------------------------------------- | --------------------------------------- | ----------------------------------------------------------------------- |
-| PRIMARY KEY | `PRIMARY`                             | `id`                                    | 親子関係の一意識別子                                                    |
-| FOREIGN KEY | `fk_group_relations_parent_group_id`  | `parent_group_id` → `groups(id)`        | 親グループの参照整合性を保証                                            |
-| FOREIGN KEY | `fk_group_relations_child_group_id`   | `child_group_id` → `groups(id)`         | 子グループの参照整合性を保証                                            |
-| UNIQUE      | `uq_group_relations_parent_child`     | `(parent_group_id, child_group_id)`     | 同一親子関係の重複登録を防止（重複 INSERT → 409）                       |
+| 種別        | 名前              | 対象カラム                              | 説明                                                              |
+| ----------- | ----------------- | --------------------------------------- | ----------------------------------------------------------------- |
+| PRIMARY KEY | `PRIMARY`         | `id`                                    | 親子関係の一意識別子                                              |
+| UNIQUE      | `uk_parent_child` | `(parent_group_id, child_group_id)`     | 同一親子関係の重複登録を防止（重複 INSERT → 409）                 |
+| FOREIGN KEY | `fk_parent_group` | `parent_group_id` → `groups(id)`        | 親グループの参照整合性を保証（CASCADE DELETE）                    |
+| FOREIGN KEY | `fk_child_group`  | `child_group_id` → `groups(id)`         | 子グループの参照整合性を保証（CASCADE DELETE）                    |
 
 #### インデックス
 
-| インデックス名                        | 対象カラム                          | 種別    | 用途                                                        |
-| ------------------------------------- | ----------------------------------- | ------- | ----------------------------------------------------------- |
-| `PRIMARY`                             | `id`                                | PRIMARY | 主キーアクセス                                              |
-| `uq_group_relations_parent_child`     | `(parent_group_id, child_group_id)` | UNIQUE  | 重複防止 + `parent_group_id` leftmost prefix で子一覧取得   |
-| `idx_group_relations_child_group_id`  | `child_group_id`                    | INDEX   | 子グループ別の親グループ取得（祖先トラバーサル）の高速化    |
+| インデックス名    | 対象カラム                          | 種別    | 用途                                                        |
+| ----------------- | ----------------------------------- | ------- | ----------------------------------------------------------- |
+| `PRIMARY`         | `id`                                | PRIMARY | 主キーアクセス                                              |
+| `uk_parent_child` | `(parent_group_id, child_group_id)` | UNIQUE  | 重複防止 + `parent_group_id` leftmost prefix で子一覧取得   |
+| `idx_parent`      | `parent_group_id`                   | INDEX   | 親グループ別の子グループ取得の高速化                        |
+| `idx_child`       | `child_group_id`                    | INDEX   | 子グループ別の親グループ取得（祖先トラバーサル）の高速化    |
 
 #### ビジネスルール
 
