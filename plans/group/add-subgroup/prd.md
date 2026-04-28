@@ -2,13 +2,13 @@
 
 ## 概要
 
-| 項目         | 内容                                                                                                                                             |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 機能名       | `add-subgroup`                                                                                                                                   |
-| 目的         | 既存グループに別グループをサブグループ（子グループ）として追加し、グループのツリー構造を構築する                                                   |
-| API          | `POST /api/v1/groups/:id/subgroups`                                                                                                              |
-| 認証         | 必要（AuthMiddleware）                                                                                                                           |
-| データソース | MySQL (`sample-api/internal/repository/mysql`)                                                                                                   |
+| 項目         | 内容                                                                                             |
+| ------------ | ------------------------------------------------------------------------------------------------ |
+| 機能名       | `add-subgroup`                                                                                   |
+| 目的         | 既存グループに別グループをサブグループ（子グループ）として追加し、グループのツリー構造を構築する |
+| API          | `POST /api/v1/groups/:id/subgroups`                                                              |
+| 認証         | 必要（AuthMiddleware）                                                                           |
+| データソース | MySQL (`sample-api/internal/repository/mysql`)                                                   |
 
 ---
 
@@ -18,27 +18,27 @@
 
 **リクエスト仕様**
 
-| フィールド        | 型             | 必須 | 説明                       |
-| ----------------- | -------------- | ---- | -------------------------- |
-| `id` (path)       | integer        | ✓    | 親グループ ID（正の整数）  |
-| `child_group_id`  | integer (body) | ✓    | 子グループ ID（正の整数）  |
+| フィールド       | 型             | 必須 | 説明                      |
+| ---------------- | -------------- | ---- | ------------------------- |
+| `id` (path)      | integer        | ✓    | 親グループ ID（正の整数） |
+| `child_group_id` | integer (body) | ✓    | 子グループ ID（正の整数） |
 
 **バリデーション一覧**
 
-| #  | 対象フィールド   | ルール                                                                               | エラー時の挙動  |
-| -- | ---------------- | ------------------------------------------------------------------------------------ | --------------- |
-| 1  | `id` (path)      | 整数に変換できること                                                                 | 400 Bad Request |
-| 2  | `id` (path)      | 1 以上の正の整数であること                                                           | 400 Bad Request |
-| 3  | リクエストボディ | JSON デコードに成功すること                                                          | 400 Bad Request |
-| 4  | `child_group_id` | 1 以上の正の整数であること                                                           | 400 Bad Request |
-| 5  | 認証             | コンテキストから `authUser` を取得できること                                         | 401 Unauthorized |
-| 6  | 自己ループ       | `parent_group_id == child_group_id` は不可                                          | 400 Bad Request |
-| 7  | parent 存在      | `parent_group_id` が DB 上に存在すること                                             | 404 Not Found   |
-| 8  | child 存在       | `child_group_id` が DB 上に存在すること                                              | 404 Not Found   |
-| 9  | 循環参照防止     | 追加によってサイクルが生まれないこと                                                 | 400 Bad Request |
-| 10 | グループ数上限   | parent が属する連結成分全体のグループ数が追加後も 10 以内であること                  | 400 Bad Request |
-| 11 | 階層深度上限     | ルートから葉までのノード数が追加後も 5 以内であること                               | 400 Bad Request |
-| 12 | 重複チェック     | 同じ `(parent_group_id, child_group_id)` の関係が DB 上に存在しないこと             | 409 Conflict    |
+| #   | 対象フィールド   | ルール                                                                  | エラー時の挙動   |
+| --- | ---------------- | ----------------------------------------------------------------------- | ---------------- |
+| 1   | `id` (path)      | 整数に変換できること                                                    | 400 Bad Request  |
+| 2   | `id` (path)      | 1 以上の正の整数であること                                              | 400 Bad Request  |
+| 3   | リクエストボディ | JSON デコードに成功すること                                             | 400 Bad Request  |
+| 4   | `child_group_id` | 1 以上の正の整数であること                                              | 400 Bad Request  |
+| 5   | 認証             | コンテキストから `authUser` を取得できること                            | 401 Unauthorized |
+| 6   | 自己ループ       | `parent_group_id == child_group_id` は不可                              | 400 Bad Request  |
+| 7   | parent 存在      | `parent_group_id` が DB 上に存在すること                                | 404 Not Found    |
+| 8   | child 存在       | `child_group_id` が DB 上に存在すること                                 | 404 Not Found    |
+| 9   | 循環参照防止     | 追加によってサイクルが生まれないこと                                    | 400 Bad Request  |
+| 10  | グループ数上限   | parent が属する連結成分全体のグループ数が追加後も 10 以内であること     | 400 Bad Request  |
+| 11  | 階層深度上限     | ルートから葉までのノード数が追加後も 5 以内であること                   | 400 Bad Request  |
+| 12  | 重複チェック     | 同じ `(parent_group_id, child_group_id)` の関係が DB 上に存在しないこと | 409 Conflict     |
 
 ---
 
@@ -126,27 +126,27 @@
 
 ### sample-api
 
-| ファイル                                                               | 役割                                                                                                                     |
-| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `sample-api/domain/group_relation.go`                                  | `GroupRelation` Entity（parent_group_id, child_group_id）定義（独立ファイル）                                           |
-| `sample-api/group/service.go`                                          | `GroupRelationRepository` IF 追加・`CreateSubGroup` メソッド                                                            |
-| `sample-api/group/service_test.go`                                     | `CreateSubGroup` サービステスト                                                                                          |
-| `sample-api/group/mocks/group_relation_repository_mock.go`             | `GroupRelationRepository` 手動 mock（新規作成）                                                                          |
-| `sample-api/internal/rest/group.go`                                    | `CreateSubGroup` ハンドラ・`GroupService` IF に `CreateSubGroup` 追加・ルート登録（POST /api/v1/groups/:id/subgroups）   |
-| `sample-api/internal/rest/group_test.go`                               | `CreateSubGroup` ハンドラテスト                                                                                          |
-| `sample-api/internal/rest/mocks/group_service_mock.go`                 | `GroupService` mock に `CreateSubGroup` 追加                                                                             |
-| `sample-api/internal/repository/mysql/group_relation.go`               | `GroupRelationRepository` MySQL 実装（新規ファイル・WITH RECURSIVE で祖先/子孫集合取得）                                 |
-| `sample-api/db/migrate/20260425000000_create_group_relations.up.sql`   | `group_relations` テーブル作成                                                                                           |
-| `sample-api/app/main.go`                                               | DI 配線（`GroupRelationRepository` の注入）                                                                              |
+| ファイル                                                             | 役割                                                                                                                   |
+| -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `sample-api/domain/group_relation.go`                                | `GroupRelation` Entity（parent_group_id, child_group_id）定義（独立ファイル）                                          |
+| `sample-api/group/service.go`                                        | `GroupRelationRepository` IF 追加・`CreateSubGroup` メソッド                                                           |
+| `sample-api/group/service_test.go`                                   | `CreateSubGroup` サービステスト                                                                                        |
+| `sample-api/group/mocks/group_relation_repository_mock.go`           | `GroupRelationRepository` 手動 mock（新規作成）                                                                        |
+| `sample-api/internal/rest/group.go`                                  | `CreateSubGroup` ハンドラ・`GroupService` IF に `CreateSubGroup` 追加・ルート登録（POST /api/v1/groups/:id/subgroups） |
+| `sample-api/internal/rest/group_test.go`                             | `CreateSubGroup` ハンドラテスト                                                                                        |
+| `sample-api/internal/rest/mocks/group_service_mock.go`               | `GroupService` mock に `CreateSubGroup` 追加                                                                           |
+| `sample-api/internal/repository/mysql/group_relation.go`             | `GroupRelationRepository` MySQL 実装（新規ファイル・WITH RECURSIVE で祖先/子孫集合取得）                               |
+| `sample-api/db/migrate/20260425000000_create_group_relations.up.sql` | `group_relations` テーブル作成                                                                                         |
+| `sample-api/app/main.go`                                             | DI 配線（`GroupRelationRepository` の注入）                                                                            |
 
 ### sample-front
 
-| ファイル                                                                           | 役割                                                                                                    |
-| ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `sample-front/src/pages/group-detail/api/add-subgroup.ts`                                    | POST /api/v1/groups/:id/subgroups fetch 関数（新規）                                                                                                                                            |
-| `sample-front/src/pages/group-detail/api/fetch-groups.ts`                                    | GET /api/v1/groups fetch 関数。`fetchGroupsForSheet(q?: string)` に `q` パラメータを追加し、クエリ文字列として付与する                                                                          |
-| `sample-front/src/pages/group-detail/ui/AddSubgroupSheet.tsx`                                | グループ選択 Sheet。検索フォーム（TextField + 虫眼鏡アイコン）・`q` state・300ms デバウンス（`useEffect + setTimeout`）・"X groups" 件数表示（`total`）を追加する                               |
-| `sample-front/src/pages/group-detail/ui/__tests__/AddSubgroupSheet.test.tsx`                 | 検索機能テストケースを追加する（既存テストファイルに追記）                                                                                                                                       |
+| ファイル                                                                     | 役割                                                                                                                                                              |
+| ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sample-front/src/pages/group-detail/api/add-subgroup.ts`                    | POST /api/v1/groups/:id/subgroups fetch 関数（新規）                                                                                                              |
+| `sample-front/src/pages/group-detail/api/fetch-groups.ts`                    | GET /api/v1/groups fetch 関数。`fetchGroupsForSheet(q?: string)` に `q` パラメータを追加し、クエリ文字列として付与する                                            |
+| `sample-front/src/pages/group-detail/ui/AddSubgroupSheet.tsx`                | グループ選択 Sheet。検索フォーム（TextField + 虫眼鏡アイコン）・`q` state・300ms デバウンス（`useEffect + setTimeout`）・"X groups" 件数表示（`total`）を追加する |
+| `sample-front/src/pages/group-detail/ui/__tests__/AddSubgroupSheet.test.tsx` | 検索機能テストケースを追加する（既存テストファイルに追記）                                                                                                        |
 
 > DB スキーマ（`group_relations` テーブル定義・制約・FK）の詳細は [plans/schema.md](../../schema.md) を参照。
 
@@ -169,21 +169,21 @@
 
 ### エラーケース一覧
 
-| 条件                                                          | 発生レイヤー       | ステータス                | レスポンス                                          |
-| ------------------------------------------------------------- | ------------------ | ------------------------- | --------------------------------------------------- |
-| `id` (path) が整数に変換不可                                  | Handler            | 400 Bad Request           | `{"message": "given param is not valid"}`           |
-| `id` が 0 以下                                                | Handler            | 400 Bad Request           | `{"message": "given param is not valid"}`           |
-| JSON デコード失敗                                             | Handler            | 400 Bad Request           | `{"message": "<Bind エラーメッセージ>"}`            |
-| `child_group_id` が 1 未満                                    | Service            | 400 Bad Request           | `{"message": "given param is not valid"}`           |
-| `authUser` 取得失敗                                           | Handler            | 401 Unauthorized          | `{"message": "Unauthorized"}`                       |
-| 自己ループ（parent == child）                                 | Service            | 400 Bad Request           | `{"message": "given param is not valid"}`           |
-| `parent_group_id` が DB に存在しない                          | Service/Repository | 404 Not Found             | `{"message": "your requested item is not found"}`   |
-| `child_group_id` が DB に存在しない                           | Service/Repository | 404 Not Found             | `{"message": "your requested item is not found"}`   |
-| 循環参照検出                                                  | Service            | 400 Bad Request           | `{"message": "given param is not valid"}`           |
-| ツリー全体グループ数が 10 超（追加後）                        | Service            | 400 Bad Request           | `{"message": "given param is not valid"}`           |
-| 階層深度（ノード数）が 5 超（追加後）                         | Service            | 400 Bad Request           | `{"message": "given param is not valid"}`           |
-| 重複（UNIQUE 制約違反）                                       | Repository         | 409 Conflict              | `{"message": "given param is not valid"}`           |
-| DB エラー                                                     | Repository         | 500 Internal Server Error | `{"message": "internal server error"}`              |
+| 条件                                   | 発生レイヤー       | ステータス                | レスポンス                                        |
+| -------------------------------------- | ------------------ | ------------------------- | ------------------------------------------------- |
+| `id` (path) が整数に変換不可           | Handler            | 400 Bad Request           | `{"message": "given param is not valid"}`         |
+| `id` が 0 以下                         | Handler            | 400 Bad Request           | `{"message": "given param is not valid"}`         |
+| JSON デコード失敗                      | Handler            | 400 Bad Request           | `{"message": "<Bind エラーメッセージ>"}`          |
+| `child_group_id` が 1 未満             | Service            | 400 Bad Request           | `{"message": "given param is not valid"}`         |
+| `authUser` 取得失敗                    | Handler            | 401 Unauthorized          | `{"message": "Unauthorized"}`                     |
+| 自己ループ（parent == child）          | Service            | 400 Bad Request           | `{"message": "given param is not valid"}`         |
+| `parent_group_id` が DB に存在しない   | Service/Repository | 404 Not Found             | `{"message": "your requested item is not found"}` |
+| `child_group_id` が DB に存在しない    | Service/Repository | 404 Not Found             | `{"message": "your requested item is not found"}` |
+| 循環参照検出                           | Service            | 400 Bad Request           | `{"message": "given param is not valid"}`         |
+| ツリー全体グループ数が 10 超（追加後） | Service            | 400 Bad Request           | `{"message": "given param is not valid"}`         |
+| 階層深度（ノード数）が 5 超（追加後）  | Service            | 400 Bad Request           | `{"message": "given param is not valid"}`         |
+| 重複（UNIQUE 制約違反）                | Repository         | 409 Conflict              | `{"message": "given param is not valid"}`         |
+| DB エラー                              | Repository         | 500 Internal Server Error | `{"message": "internal server error"}`            |
 
 ---
 
@@ -193,50 +193,50 @@
 
 **FE コンポーネントテスト** (`pages/group-detail/ui/__tests__/AddSubgroupSheet.test.tsx`):
 
-| #  | 観点     | テスト内容                                                            | 期待結果                                                    |
-| -- | -------- | --------------------------------------------------------------------- | ----------------------------------------------------------- |
-| 1  | 正常系   | グループ選択 → 追加ボタン押下 → 201 成功                             | onClose が呼ばれ一覧が refetch される                       |
-| 2  | 分岐条件 | グループ未選択時は追加ボタンが disabled                               | ボタンがクリック不可                                        |
-| 3  | 分岐条件 | グループ選択後は追加ボタンが enabled                                 | ボタンがクリック可                                          |
-| 4  | 異常系   | POST API が 400 を返す                                                | Sheet 内にエラーメッセージが表示される                      |
-| 5  | 異常系   | POST API が 409 を返す                                                | 「すでに追加済みです」が表示される                          |
-| 6  | 正常系   | Sheet 開封時に全件取得され "X groups" の件数が表示される             | `fetchGroupsForSheet("")` が呼ばれ total 件数が表示される   |
-| 7  | 正常系   | キーワード入力後 300ms で `q` 付き API が呼ばれる                    | `fetchGroupsForSheet("dev")` が呼ばれ groups 一覧が更新される |
-| 8  | 分岐条件 | 検索結果が 0 件のとき "0 groups" が表示される                        | "0 groups" が表示される                                     |
-| 9  | 分岐条件 | 検索フィールドをクリアすると q なしで全件取得される                  | `fetchGroupsForSheet("")` が再度呼ばれる                    |
-| 10 | 異常系   | グループ取得 API がエラーを返す                                       | Sheet 内にエラーメッセージが表示される                      |
-| 11 | 外部依存 | `fetchGroupsForSheet` はモックに差し替える                           | 実際の HTTP 通信は発生しない                                |
+| #   | 観点     | テスト内容                                               | 期待結果                                                      |
+| --- | -------- | -------------------------------------------------------- | ------------------------------------------------------------- |
+| 1   | 正常系   | グループ選択 → 追加ボタン押下 → 201 成功                 | onClose が呼ばれ一覧が refetch される                         |
+| 2   | 分岐条件 | グループ未選択時は追加ボタンが disabled                  | ボタンがクリック不可                                          |
+| 3   | 分岐条件 | グループ選択後は追加ボタンが enabled                     | ボタンがクリック可                                            |
+| 4   | 異常系   | POST API が 400 を返す                                   | Sheet 内にエラーメッセージが表示される                        |
+| 5   | 異常系   | POST API が 409 を返す                                   | 「すでに追加済みです」が表示される                            |
+| 6   | 正常系   | Sheet 開封時に全件取得され "X groups" の件数が表示される | `fetchGroupsForSheet("")` が呼ばれ total 件数が表示される     |
+| 7   | 正常系   | キーワード入力後 300ms で `q` 付き API が呼ばれる        | `fetchGroupsForSheet("dev")` が呼ばれ groups 一覧が更新される |
+| 8   | 分岐条件 | 検索結果が 0 件のとき "0 groups" が表示される            | "0 groups" が表示される                                       |
+| 9   | 分岐条件 | 検索フィールドをクリアすると q なしで全件取得される      | `fetchGroupsForSheet("")` が再度呼ばれる                      |
+| 10  | 異常系   | グループ取得 API がエラーを返す                          | Sheet 内にエラーメッセージが表示される                        |
+| 11  | 外部依存 | `fetchGroupsForSheet` はモックに差し替える               | 実際の HTTP 通信は発生しない                                  |
 
 **Handler テスト** (`internal/rest/group_test.go`):
 
-| #  | 観点     | テスト内容                                          | 入力例                            | 期待結果                                    |
-| -- | -------- | --------------------------------------------------- | --------------------------------- | ------------------------------------------- |
-| 1  | 正常系   | 有効な parentGroupID + childGroupID で登録成功      | id=1, body={child_group_id:2}     | 201 Created + relation JSON                 |
-| 2  | 異常系   | `authUser` を取得できない（型アサーション失敗）     | —                                 | 401 Unauthorized                            |
-| 3  | 異常系   | id が文字列                                         | id=abc                            | 400 Bad Request                             |
-| 4  | 境界値   | id=0（最小境界外）                                  | id=0                              | 400 Bad Request                             |
-| 5  | 異常系   | 不正 JSON body                                      | body="{invalid}"                  | 400 Bad Request                             |
-| 6  | 異常系   | service が ErrBadParamInput を返す                  | 自己ループ・循環参照・上限超過等  | 400 Bad Request                             |
-| 7  | 異常系   | service が ErrNotFound を返す                       | 存在しない group ID               | 404 Not Found                               |
-| 8  | 異常系   | service が ErrConflict を返す                       | 重複登録                          | 409 Conflict                                |
-| 9  | 例外処理 | service が ErrInternalServerError を返す            | DB エラー                         | 500 Internal Server Error                   |
+| #   | 観点     | テスト内容                                      | 入力例                           | 期待結果                    |
+| --- | -------- | ----------------------------------------------- | -------------------------------- | --------------------------- |
+| 1   | 正常系   | 有効な parentGroupID + childGroupID で登録成功  | id=1, body={child_group_id:2}    | 201 Created + relation JSON |
+| 2   | 異常系   | `authUser` を取得できない（型アサーション失敗） | —                                | 401 Unauthorized            |
+| 3   | 異常系   | id が文字列                                     | id=abc                           | 400 Bad Request             |
+| 4   | 境界値   | id=0（最小境界外）                              | id=0                             | 400 Bad Request             |
+| 5   | 異常系   | 不正 JSON body                                  | body="{invalid}"                 | 400 Bad Request             |
+| 6   | 異常系   | service が ErrBadParamInput を返す              | 自己ループ・循環参照・上限超過等 | 400 Bad Request             |
+| 7   | 異常系   | service が ErrNotFound を返す                   | 存在しない group ID              | 404 Not Found               |
+| 8   | 異常系   | service が ErrConflict を返す                   | 重複登録                         | 409 Conflict                |
+| 9   | 例外処理 | service が ErrInternalServerError を返す        | DB エラー                        | 500 Internal Server Error   |
 
 **Service テスト** (`group/service_test.go`):
 
-| #  | 観点     | テスト内容                                          | 入力例                     | 期待結果               |
-| -- | -------- | --------------------------------------------------- | -------------------------- | ---------------------- |
-| 10 | 正常系   | 有効な parentGroupID + childGroupID → 登録成功      | parent=1, child=2          | GroupRelation を返す   |
-| 11 | 異常系   | `child_group_id` が 0                               | child=0                    | ErrBadParamInput       |
-| 12 | 異常系   | 自己ループ（parent == child）                       | parent=1, child=1          | ErrBadParamInput       |
-| 13 | 異常系   | parent_group_id が DB に存在しない                  | parent=9999                | ErrNotFound            |
-| 14 | 異常系   | child_group_id が DB に存在しない                   | child=9999                 | ErrNotFound            |
-| 15 | 分岐条件 | 循環参照が検出される（child が parent の祖先）      | 既存ツリーで parent=A→B, child=A | ErrBadParamInput  |
-| 16 | 境界値   | ツリーグループ数が 9（追加後 10）                   | count=9                    | GroupRelation を返す   |
-| 17 | 境界値   | ツリーグループ数が 10（追加後 11）                  | count=10                   | ErrBadParamInput       |
-| 18 | 境界値   | 階層深度が 4 ノード（追加後 5 ノード）              | depth=4                    | GroupRelation を返す   |
-| 19 | 境界値   | 階層深度が 5 ノード（追加後 6 ノード）              | depth=5                    | ErrBadParamInput       |
-| 20 | 異常系   | repository が ErrConflict を返す（重複登録）        | 同一 parent+child          | ErrConflict            |
-| 21 | 例外処理 | repository が DB エラーを返す                       | mock がエラーを返す        | ErrInternalServerError |
+| #   | 観点     | テスト内容                                     | 入力例                           | 期待結果               |
+| --- | -------- | ---------------------------------------------- | -------------------------------- | ---------------------- |
+| 10  | 正常系   | 有効な parentGroupID + childGroupID → 登録成功 | parent=1, child=2                | GroupRelation を返す   |
+| 11  | 異常系   | `child_group_id` が 0                          | child=0                          | ErrBadParamInput       |
+| 12  | 異常系   | 自己ループ（parent == child）                  | parent=1, child=1                | ErrBadParamInput       |
+| 13  | 異常系   | parent_group_id が DB に存在しない             | parent=9999                      | ErrNotFound            |
+| 14  | 異常系   | child_group_id が DB に存在しない              | child=9999                       | ErrNotFound            |
+| 15  | 分岐条件 | 循環参照が検出される（child が parent の祖先） | 既存ツリーで parent=A→B, child=A | ErrBadParamInput       |
+| 16  | 境界値   | ツリーグループ数が 9（追加後 10）              | count=9                          | GroupRelation を返す   |
+| 17  | 境界値   | ツリーグループ数が 10（追加後 11）             | count=10                         | ErrBadParamInput       |
+| 18  | 境界値   | 階層深度が 4 ノード（追加後 5 ノード）         | depth=4                          | GroupRelation を返す   |
+| 19  | 境界値   | 階層深度が 5 ノード（追加後 6 ノード）         | depth=5                          | ErrBadParamInput       |
+| 20  | 異常系   | repository が ErrConflict を返す（重複登録）   | 同一 parent+child                | ErrConflict            |
+| 21  | 例外処理 | repository が DB エラーを返す                  | mock がエラーを返す              | ErrInternalServerError |
 
 ---
 

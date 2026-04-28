@@ -115,6 +115,8 @@
 | `sample-front/src/pages/group-detail/ui/__tests__/GroupDetailContent.test.tsx` | `useSubgroupList` mock を削除・`useGroupDetail` 返り値に `subgroups` を追加                                                            |
 | `sample-front/src/pages/group-detail/ui/__tests__/SubgroupList.test.tsx`       | `SubgroupSummary` の import 先を `model/group-detail.ts` に変更                                                                        |
 
+> DB スキーマ（`group_relations` テーブル定義・制約・FK）の詳細は [plans/schema.md](../../schema.md) を参照。
+
 ---
 
 ## 確認ステップ 5-4: レスポンス・エラーケース
@@ -171,12 +173,13 @@
 
 | #   | 観点     | テスト内容                   | 入力例                 | 期待結果                            |
 | --- | -------- | ---------------------------- | ---------------------- | ----------------------------------- |
-| 1   | 正常系   | subgroups ありのグループ取得 | `id=1`                 | 200 OK + `subgroups` フィールドあり |
-| 2   | 正常系   | subgroups なし（空配列）     | `id=1`（関係なし）     | 200 OK + `subgroups: []`            |
+| 1   | 正常系   | subgroups なし（空配列）     | `id=1`（関係なし）     | 200 OK + `subgroups: []`            |
+| 2   | 正常系   | subgroups ありのグループ取得 | `id=1`                 | 200 OK + `subgroups` フィールドあり |
 | 3   | 異常系   | 文字列を id に指定           | `id=abc`               | 400 Bad Request                     |
 | 4   | 境界値   | id=0（最小境界外）           | `id=0`                 | 400 Bad Request                     |
-| 5   | 異常系   | 存在しないグループ ID        | `id=9999`              | 404 Not Found                       |
-| 6   | 例外処理 | DB 接続エラー発生時          | DB mock がエラーを返す | 500 Internal Server Error           |
+| 5   | 境界値   | id=-1（負の整数）            | `id=-1`                | 400 Bad Request                     |
+| 6   | 異常系   | 存在しないグループ ID        | `id=9999`              | 404 Not Found                       |
+| 7   | 例外処理 | DB 接続エラー発生時          | DB mock がエラーを返す | 500 Internal Server Error           |
 
 **Service テスト** (`group/service_test.go`):
 
