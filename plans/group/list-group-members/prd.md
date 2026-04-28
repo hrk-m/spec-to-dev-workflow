@@ -2,13 +2,21 @@
 
 ## 概要
 
-| 項目         | 内容                                                                               |
-| ------------ | ---------------------------------------------------------------------------------- |
-| 機能名       | `list-group-members`                                                               |
-| 目的         | グループに所属するメンバー一覧を取得する。グループ詳細画面のメンバー一覧表示に使用 |
-| API          | `GET /api/v1/groups/:id/members`                                                   |
-| 認証         | 必要（AuthMiddleware）                                                             |
-| データソース | MySQL (`sample-api/internal/repository/mysql`)                                     |
+| 項目         | 内容                                                                                                                |
+| ------------ | ------------------------------------------------------------------------------------------------------------------- |
+| 機能名       | `list-group-members`                                                                                                |
+| 目的         | グループ詳細画面で、自グループ直属メンバーに加えて全子孫サブグループのメンバーを統合表示する                          |
+| API          | `GET /api/v1/groups/:id/members`                                                                                    |
+| 認証         | 必要（AuthMiddleware）                                                                                              |
+| データソース | MySQL (`sample-api/internal/repository/mysql`) — `groups` / `group_members` / `group_relations` / `users`           |
+
+### 依存関係・前提条件
+
+- **`add-subgroup`（`plans/group/add-subgroup`）の実装が先行されていること** — 本機能は `group_relations` テーブルと `GroupRelationRepository` を WITH RECURSIVE で辿るため、以下が先に存在する必要がある:
+  - migration: `db/migrate/20260425000000_create_group_relations.up.sql`
+  - repository: `sample-api/internal/repository/mysql/group_relation.go`
+  - DB スキーマ詳細は [plans/schema.md](../../schema.md) を参照
+- **MySQL 8.0+ を前提** — WITH RECURSIVE / ROW_NUMBER() OVER の利用に必須
 
 ---
 
@@ -18,24 +26,25 @@
 
 #### リクエスト仕様
 
-| フィールド | 型              | 必須 | 説明                                                           |
-| ---------- | --------------- | ---- | -------------------------------------------------------------- |
-| `id`       | integer (path)  | ✓    | グループの ID。正の整数                                        |
-| `limit`    | integer (query) | —    | 取得件数上限。1〜500（デフォルト: 500）                        |
-| `offset`   | integer (query) | —    | 取得開始位置。0 以上（デフォルト: 0）                          |
-| `q`        | string (query)  | —    | 検索キーワード。search_key LIKE 検索（姓名・名姓順両方向対応） |
+| フィールド | 型              | 必須 | 説明                                                                              |
+| ---------- | --------------- | ---- | --------------------------------------------------------------------------------- |
+| `id`       | integer (path)  | ✓    | 親グループ ID（正の整数）                                                         |
+| `limit`    | integer (query) | —    | 取得件数上限。1〜500（デフォルト: 500）                                           |
+| `offset`   | integer (query) | —    | 取得開始位置。0 以上（デフォルト: 0）                                             |
+| `q`        | string (query)  | —    | 検索キーワード。**親 + 全子孫メンバーを対象**に search_key の双方向 LIKE 絞り込み |
 
 #### バリデーション一覧
 
-| #   | 対象フィールド | ルール                                     | エラー時の挙動  |
-| --- | -------------- | ------------------------------------------ | --------------- |
-| 1   | `id`           | 整数に変換できること                       | 400 Bad Request |
-| 2   | `id`           | 1 以上（正の整数）であること               | 400 Bad Request |
-| 3   | `id`           | DB 上に該当グループが存在すること          | 404 Not Found   |
-| 4   | `limit`        | 指定される場合は整数に変換できること       | 400 Bad Request |
-| 5   | `limit`        | 指定される場合は 1 以上 500 以下であること | 400 Bad Request |
-| 6   | `offset`       | 指定される場合は整数に変換できること       | 400 Bad Request |
-| 7   | `offset`       | 指定される場合は 0 以上であること          | 400 Bad Request |
+| #   | 対象フィールド | ルール                                       | エラー時の挙動   |
+| --- | -------------- | -------------------------------------------- | ---------------- |
+| 1   | `id`           | 整数に変換できること                         | 400 Bad Request  |
+| 2   | `id`           | 1 以上（正の整数）であること                 | 400 Bad Request  |
+| 3   | `id`           | DB 上に該当グループが存在すること            | 404 Not Found    |
+| 4   | `limit`        | 指定される場合は整数に変換できること         | 400 Bad Request  |
+| 5   | `limit`        | 指定される場合は 1 以上 500 以下であること   | 400 Bad Request  |
+| 6   | `offset`       | 指定される場合は整数に変換できること         | 400 Bad Request  |
+| 7   | `offset`       | 指定される場合は 0 以上であること            | 400 Bad Request  |
+| 8   | 認証           | コンテキストから `authUser` を取得できること | 401 Unauthorized |
 
 ---
 
@@ -45,30 +54,39 @@
 
 凡例: `→` は条件分岐・次ステップ、`終了` はフロー終端を示す
 
-#### バックエンド処理フロー
-
 ```
 1. 開始
 2. パスパラメータ id を取得してパースする
-   - パース失敗または 0 以下の場合 → 400 Bad Request { "message": "given param is not valid" } → 終了
-3. limit が指定されている場合はパースしてバリデーションを行う
-   - 整数でない / 1 未満 / 500 超の場合 → 400 Bad Request { "message": "given param is not valid" } → 終了
-4. offset が指定されている場合はパースしてバリデーションを行う
-   - 整数でない / 0 未満の場合 → 400 Bad Request { "message": "given param is not valid" } → 終了
+   - パース失敗または 0 以下 → 400 Bad Request {"message": "given param is not valid"} → 終了
+3. クエリ limit / offset / q をパース・バリデーションする
+   - 整数でない / 範囲外 → 400 Bad Request {"message": "given param is not valid"} → 終了
+4. コンテキストから認証済みユーザー情報を取得する
+   - 取得失敗 → 401 Unauthorized {"message": "Unauthorized"} → 終了
 5. メンバー一覧取得をサービス層に委譲する
-6. サービス層で id が 1 未満かどうかを確認する
-   - 1 未満の場合 → 400 Bad Request → 終了
-7. サービス層で limit の範囲を再確認する
-   - 1 未満または 500 超の場合 → 400 Bad Request → 終了
-8. グループの存在を確認する
-   - 存在しない場合 → 404 Not Found { "message": "your requested item is not found" } → 終了
-9. q フィルターを適用したメンバー件数を先行取得する
-   - 件数が 0 の場合 → 200 OK + members=[] + total=0 → 終了
-10. グループメンバー一覧を取得する（id ASC 順）
-    - q が指定されている場合: search_key の部分一致で絞り込む
-    - DB エラーの場合 → 500 Internal Server Error { "message": "internal server error" } → 終了
-11. 200 OK + メンバー一覧と total を含む JSON を返す → 終了
+6. サービス層で id / limit の範囲を再確認する
+   - 範囲外 → 400 Bad Request → 終了
+7. 親グループの存在を確認する
+   - 存在しない → 404 Not Found {"message": "your requested item is not found"} → 終了
+8. 自身 + 全子孫の (group_id, depth) 集合を WITH RECURSIVE で構築する
+   - 自身を depth=0、直子 depth=1、孫 depth=2 ... と展開する
+9. 集合内 group_id をキーに group_members JOIN users で全候補行を取得する
+   - 同一 user_id に複数行ある場合は ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY depth ASC, group_id ASC) = 1 の行を採用する
+   - 採用された group_id を「所属元」として保持する（親直属の場合は親自身の id）
+10. q が指定されている場合は users.search_key の双方向 LIKE 絞り込みを適用する
+11. 重複排除後の件数を total として確定する（q 適用後の件数）
+12. 結果を depth ASC → user.id ASC でソートし、limit / offset を適用する
+13. 採用 group_id に対応する groups.name を JOIN groups で source_group_name として解決する
+    - DB エラー → 500 Internal Server Error {"message": "internal server error"} → 終了
+14. 200 OK + { members: [{id, uuid, first_name, last_name, source_group_id, source_group_name}], total } を返す → 終了
 ```
+
+### 主要設計判断（BE）
+
+- 戻り値型は新型 `domain.GroupMember`（既存 `domain.User` の全フィールド + `SourceGroupID uint64` + `SourceGroupName string`）を `domain/group.go` に新設する
+- 既存 `domain.User` は変更しない（user パッケージ側への波及を避ける）
+- `GroupRepository.ListGroupMembers` / `GroupService.ListGroupMembers` / `groupMemberListResponse.Members` の型を `[]domain.GroupMember` に統一する
+- WITH RECURSIVE + ROW_NUMBER + JOIN groups を 1 クエリで実行し、アプリ層の集約を避ける
+- `source_group_name` は BE 側で必ず JOIN groups により名前解決した値を返す（FE 側のフォールバック表示は持たない）
 
 ---
 
@@ -76,24 +94,30 @@
 
 ### エンドポイント: `GET /api/v1/groups/:id/members`
 
-凡例: `→` = 次の処理へ進む / 終了 = 処理終了
-
 ```
 1. 開始
 2. GroupDetailPage コンポーネントがマウントされる（useMemberList フックが動作する）
 3. GET /api/v1/groups/:id/members?limit=100&offset=0 を送信する
 4. レスポンス受信
-   - 成功（200）→ 取得したメンバー一覧（最大 100 件）と total をキャッシュする → テーブル形式で全件表示する（thead: □選択 / uuid / 姓名） → テーブル末尾にセンチネル要素を設置する → 終了
+   - 成功（200）→ 取得したメンバー一覧（source_group_id / source_group_name を含む）と total をキャッシュする → MemberList を 4 列のテーブル形式で表示する → 終了
    - 失敗（4xx・5xx）→ エラーメッセージを画面に表示する → 終了
-5. センチネル要素が viewport に入る
-   - lastBatchSize === 100 → テーブル末尾にスピナーを表示する
-   - GET /api/v1/groups/:id/members?limit=100&offset=N を送信する
-     - 成功 → キャッシュに追加して全件表示する → スピナーを非表示にする → 終了
-     - 失敗 → スピナーを非表示にする → テーブル末尾にエラーメッセージを表示する → 終了
-6. ユーザーが検索キーワードを入力する
+5. MemberList の表示
+   - テーブル列: □選択 / uuid / 姓名 / 所属元
+   - 「所属元」列: source_group_id === 親グループ id なら固定テキスト「自グループ」を表示、それ以外は source_group_name を表示
+   - □選択（チェックボックス）セル: 親直属（source_group_id === 親 id）の行のみ表示。子孫由来の行はセルを空にする
+   - 子孫由来行の onMemberClick / 削除アクションは無効（クリックでも詳細遷移しない）
+6. 「全選択」チェックボックスの判定
+   - 親直属メンバー数 = members の中で source_group_id === 親 id の行の数
+   - selectedIds.size === 親直属メンバー数 のとき全選択状態とする（子孫由来は計算対象外）
+7. ユーザーが検索キーワードを入力する
    - 300ms デバウンス後にキャッシュをクリアして offset=0 でリセットする
    - GET /api/v1/groups/:id/members?limit=100&offset=0&q={keyword} を送信する
-   - 手順 4 と同様に受信・表示する → 終了
+   - 結果は親 + 全子孫を対象に絞り込まれて返るので、手順 4〜5 と同様に表示する → 終了
+8. 無限スクロール
+   - センチネル要素が viewport に入り lastBatchSize === 100 のとき GET /api/v1/groups/:id/members?limit=100&offset=N を送信
+   - 取得結果をキャッシュに追加して全件即時表示する
+9. サブグループの追加 / 削除発生時
+   - useSubgroupList の追加 / 削除コールバックから useMemberList.refetch() を呼ぶ（一覧を最新化）
 ```
 
 ---
@@ -104,26 +128,29 @@
 
 ### sample-api
 
-| 対応ステップ  | パス                                            | 役割                                                                                                                  |
-| ------------- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| 5-2           | `sample-api/domain/group.go`                    | Group Entity（変更なし。domain.User は既に UUID string フィールドを持つため型変更不要）                               |
-| 5-2           | `sample-api/group/service.go`                   | GroupRepository interface に ListGroupMembers 追加・ListGroupMembers ビジネスロジック（変更なし）                     |
-| 5-5           | `sample-api/group/service_test.go`              | Service ユニットテスト（ListGroupMembers）— mock データの domain.User に UUID 値を追加                                |
-| 5-1, 5-2, 5-4 | `sample-api/internal/rest/group.go`             | HTTP Handler（ListGroupMembers）（変更なし）                                                                          |
-| 5-5           | `sample-api/internal/rest/group_test.go`        | Handler ユニットテスト — mock データの domain.User に UUID 追加・レスポンス JSON の uuid フィールドアサーションを追加 |
-| 5-2, 5-3      | `sample-api/internal/repository/mysql/group.go` | ListGroupMembers: SELECT に `u.uuid` を追加、Scan に `&m.UUID` を追加                                                 |
+| 対応ステップ  | パス                                                   | 役割                                                                                                                                                            |
+| ------------- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 5-2           | `sample-api/domain/group.go`                           | 新型 `GroupMember`（既存 `domain.User` 全フィールド + `SourceGroupID uint64` + `SourceGroupName string`）を追加（外部 import なし）                             |
+| 5-2           | `sample-api/group/service.go`                          | `GroupRepository.ListGroupMembers` IF（消費側 IF 宣言）の戻り値型を `([]domain.GroupMember, int, error)` に変更・`GroupService.ListGroupMembers` 実装の repository 呼び出しと戻り値型を `[]domain.GroupMember` に追従                   |
+| 5-5           | `sample-api/group/service_test.go`                     | Service ユニットテスト更新（重複排除・最浅祖先採用・q フィルター・total 計算・mock データの GroupMember 移行）                                                  |
+| 5-2           | `sample-api/group/mocks/group_repository_mock.go`      | `ListGroupMembers` mock の戻り値型を `[]domain.GroupMember` に追従                                                                                              |
+| 5-2, 5-4      | `sample-api/internal/rest/group.go`                    | `GroupService.ListGroupMembers` IF の戻り値型を `([]domain.GroupMember, int, error)` に変更（消費側 IF 宣言を更新）・`groupMemberListResponse.Members` を `[]domain.GroupMember` ベースに変更し JSON に `source_group_id` / `source_group_name` を含める（既存フィールドは維持）・`getStatusCode` の `ErrBadParamInput` / `ErrNotFound` / `ErrInternalServerError` マッピングが既に存在することを確認 |
+| 5-5           | `sample-api/internal/rest/group_test.go`               | Handler ユニットテスト更新（拡張レスポンスのアサーション・重複排除動作・モックデータの GroupMember 移行・source 列の確認）                                      |
+| 5-2           | `sample-api/internal/rest/mocks/group_service_mock.go` | `GroupService.ListGroupMembers` mock の戻り値型を `[]domain.GroupMember` に追従                                                                                 |
+| 5-2, 5-3      | `sample-api/internal/repository/mysql/group.go`        | `ListGroupMembers` 実装を `WITH RECURSIVE`（自身 + 全子孫の (group_id, depth) 集合構築）+ `ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY depth, group_id)` で重複排除 + JOIN groups で source_group_name 解決 + q 絞り込み + depth ASC → user.id ASC ソート + limit/offset 適用までを 1 クエリで完結 |
 
 ### sample-front
 
-| 対応ステップ | パス                                                                   | 役割                                                                                                                                                |
-| ------------ | ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 5-2-FE       | `sample-front/src/pages/group-detail/ui/MemberList.tsx`                | uuid 列変更: 列ヘッダー `'id'` → `'uuid'`、表示値 `member.id` → `member.uuid`。選択状態管理は引き続き `member.id` をキーとして使用                  |
-| 5-2-FE       | `sample-front/src/pages/group-detail/model/group-detail.ts`            | `UserSummary` 型に `uuid: string` を追加                                                                                                            |
-| 5-2-FE       | `sample-front/src/pages/group-detail/ui/MemberList.styles.ts`          | `tableHeaderCellUuid` スタイルを追加（ヘッダーセルの uuid 列用。データセルは既存の `tableCellId` を流用）                                           |
-| 5-5          | `sample-front/src/pages/group-detail/ui/__tests__/MemberList.test.tsx` | 列ヘッダー確認テストを `'uuid'` に更新。モックデータ `UserSummary` に `uuid` を追加。`onMemberClick` コールバックの期待値に `uuid` フィールドを追加 |
-| 5-2-FE       | `sample-front/src/pages/group-detail/api/fetch-group-members.ts`       | GET /api/v1/groups/:id/members 呼び出し（limit=100 に変更）                                                                                         |
-| 5-2-FE       | `sample-front/src/pages/group-detail/model/member-list.ts`             | メンバー一覧取得・無限スクロールカスタムフック（`useMemberList` を export。`displayedCount`・`isFetchingMore` 追加・ページネーション状態削除）      |
-| 5-5          | `e2e/tests/group-detail.spec.ts`                                       | メンバー 0 件検索 E2E テスト（ページネーション UI 非存在確認に更新）                                                                                |
+| 対応ステップ | パス                                                                   | 役割                                                                                                                                                                |
+| ------------ | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 5-2-FE       | `sample-front/src/pages/group-detail/model/group-detail.ts`            | `UserSummary` 型に `source_group_id: number` / `source_group_name: string` を追加                                                                                   |
+| 5-2-FE       | `sample-front/src/pages/group-detail/api/fetch-group-members.ts`       | レスポンス型拡張に追従（fetch 実装ロジック自体に変更なし）                                                                                                          |
+| 5-2-FE       | `sample-front/src/pages/group-detail/model/member-list.ts`             | `useMemberList` フックは挙動変更なし。型のみ追従。`refetch` は既存どおり、サブグループ追加 / 削除ハンドラから呼び出し可能                                            |
+| 5-2-FE       | `sample-front/src/pages/group-detail/ui/MemberList.tsx`                | テーブルに「所属元」列を追加。`source_group_id === groupId ? '自グループ' : source_group_name`。チェックボックスセルは親直属のみ表示・子孫由来は空セル。`SkeletonMemberRow` の `colSpan` を +1 し、所属元列のスケルトンセルを追加。「全選択」判定を親直属メンバー数基準に変更 |
+| 5-2-FE       | `sample-front/src/pages/group-detail/ui/MemberList.styles.ts`          | `tableHeaderCellSource` / `tableCellSource` のスタイル定数を追加                                                                                                    |
+| 5-5          | `sample-front/src/pages/group-detail/ui/__tests__/MemberList.test.tsx` | 「所属元」列ヘッダーの確認・親直属 / 子孫由来の表示分岐・チェックボックス表示制御・全選択判定（親直属基準）・onMemberClick 制御テストを追加                          |
+
+> DB スキーマ変更なし。`group_relations` テーブル定義・制約・FK の詳細は [plans/schema.md](../../schema.md) を参照。
 
 ---
 
@@ -142,15 +169,41 @@
       "id": 1,
       "uuid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
       "first_name": "太郎",
-      "last_name": "山田"
+      "last_name": "山田",
+      "source_group_id": 10,
+      "source_group_name": "Engineering"
+    },
+    {
+      "id": 5,
+      "uuid": "yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy",
+      "first_name": "花子",
+      "last_name": "佐藤",
+      "source_group_id": 11,
+      "source_group_name": "Frontend Team"
     }
   ],
   "total": 250
 }
 ```
 
-※ `total`: `q` フィルターを適用したメンバー件数（`q` 未指定時は全メンバー数と等しい）
-※ `members`: 今回のフェッチで返ったメンバー一覧（最大 100 件。フロントエンドは limit=100 で送信）
+#### フィールド仕様
+
+| フィールド                    | 型               | 説明                                                                                                                                |
+| ----------------------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `members[]`                   | array            | 重複排除後のメンバー一覧（最大 `limit` 件、デフォルト 500、FE は 100）。並び順: depth ASC → user.id ASC                            |
+| `members[].id`                | integer (uint64) | ユーザー ID                                                                                                                         |
+| `members[].uuid`              | string           | ユーザー UUID                                                                                                                       |
+| `members[].first_name`        | string           | 名                                                                                                                                  |
+| `members[].last_name`         | string           | 姓                                                                                                                                  |
+| `members[].source_group_id`   | integer (uint64) | 採用された所属元グループ ID。`= :id` のとき親直属、それ以外は親に最も近い祖先サブグループ ID                                        |
+| `members[].source_group_name` | string           | `source_group_id` に対応するグループ名（BE 側で必ず JOIN groups により解決済み・空文字は返さない）                                  |
+| `total`                       | integer          | `q` 適用かつ重複排除後の総件数（`members[]` のページサイズに依存しない）                                                            |
+
+#### 補足
+
+- `q` フィルター適用後、結果が 0 件のときは `members: []` / `total: 0` を返す（404 にしない）
+- 親グループ自体は `members[]` の対象に含まれない（あくまでメンバー一覧。グループ階層構造の情報は含めない）
+- レスポンスフィールドは既存（`id` / `uuid` / `first_name` / `last_name` / `total`）を維持し、`source_group_id` / `source_group_name` のみ追加（非破壊拡張）
 
 ### エラーケース一覧
 
@@ -160,9 +213,16 @@
 | `id` が 1 未満                         | Handler                            | 400 Bad Request           | `{ "message": "given param is not valid" }`         |
 | `limit` が整数でない / 1〜500 の範囲外 | Handler                            | 400 Bad Request           | `{ "message": "given param is not valid" }`         |
 | `offset` が整数でない / 0 未満         | Handler                            | 400 Bad Request           | `{ "message": "given param is not valid" }`         |
+| `authUser` 取得失敗                    | Handler                            | 401 Unauthorized          | `{ "message": "Unauthorized" }`                     |
 | 対象グループが存在しない               | Service / Repository               | 404 Not Found             | `{ "message": "your requested item is not found" }` |
-| DB エラー                              | Repository                         | 500 Internal Server Error | `{ "message": "internal server error" }`            |
+| DB エラー（再帰クエリ含む）            | Repository                         | 500 Internal Server Error | `{ "message": "internal server error" }`            |
 | ネットワークエラー                     | フロントエンド: API クライアント層 | —                         | エラーメッセージ表示                                |
+
+### 使用するエラーセンチネル
+
+- `ErrBadParamInput`（400）
+- `ErrNotFound`（404）
+- `ErrInternalServerError`（500）
 
 ---
 
@@ -172,86 +232,94 @@
 
 **Handler テスト** (`internal/rest/group_test.go`):
 
-| #   | 観点     | テスト内容                               | 入力例                      | 期待結果                      |
-| --- | -------- | ---------------------------------------- | --------------------------- | ----------------------------- |
-| 1   | 正常系   | メンバーが存在するグループのリスト取得   | `id=1, limit=500, offset=0` | 200 OK + members 配列 + total |
-| 2   | 正常系   | パラメータなしでデフォルト値が適用される | `id=1`（パラメータなし）    | 200 OK + members=[] + total=0 |
-| 3   | 正常系   | 検索キーワードでメンバー絞り込み         | `id=1, q=Yamada`            | 200 OK + 該当メンバーのみ     |
-| 4   | 異常系   | id が文字列                              | `id=abc`                    | 400 Bad Request               |
-| 5   | 境界値   | limit=501（上限超え）                    | `limit=501`                 | 400 Bad Request               |
-| 6   | 境界値   | limit=0                                  | `limit=0`                   | 400 Bad Request               |
-| 7   | 境界値   | offset=-1（最小値未満）                  | `offset=-1`                 | 400 Bad Request               |
-| 8   | 異常系   | 存在しないグループ ID                    | `id=9999`                   | 404 Not Found                 |
-| 9   | 例外処理 | DB 接続エラー発生時                      | DB mock がエラーを返す      | 500 Internal Server Error     |
-| 10  | 境界値   | limit=500（上限）                        | `limit=500`                 | 200 OK                        |
-| 11  | 境界値   | offset=0（最小値）                       | `offset=0`                  | 200 OK                        |
+| #   | 観点     | テスト内容                                                                  | 入力例                       | 期待結果                                                                                      |
+| --- | -------- | --------------------------------------------------------------------------- | ---------------------------- | --------------------------------------------------------------------------------------------- |
+| 1   | 正常系   | 親直属 + 子孫サブグループメンバーを統合した一覧を取得する                   | `id=1`                       | 200 OK + 親直属（source_group_id=1）と子孫由来メンバーが混在した members 配列 + total         |
+| 2   | 正常系   | サブグループなしのとき親直属のみが返る                                      | `id=2`（子孫なし）           | 200 OK + 全 members が source_group_id=2（自グループ扱い）                                    |
+| 3   | 正常系   | 親と子孫に重複所属するユーザーは親優先で 1 行                               | `id=1`                       | 200 OK + 重複ユーザーは 1 行のみ・source_group_id=1                                           |
+| 4   | 正常系   | q フィルターが親 + 子孫全体に適用される                                     | `id=1, q=Yamada`             | 200 OK + 該当メンバーのみ・total=該当件数                                                     |
+| 5   | 正常系   | 並び順が depth ASC → user.id ASC                                            | `id=1`                       | 200 OK + members[0..n] が階層順 → 同階層内 id 昇順                                            |
+| 6   | 正常系   | source_group_id / source_group_name が JSON に含まれる                      | `id=1`                       | 200 OK + 各 member に source_group_id / source_group_name フィールドが存在                    |
+| 7   | 異常系   | id が文字列                                                                 | `id=abc`                     | 400 Bad Request                                                                               |
+| 8   | 境界値   | id=0                                                                        | `id=0`                       | 400 Bad Request                                                                               |
+| 9   | 境界値   | limit=501（上限超え）                                                       | `limit=501`                  | 400 Bad Request                                                                               |
+| 10  | 境界値   | offset=-1（最小値未満）                                                     | `offset=-1`                  | 400 Bad Request                                                                               |
+| 11  | 異常系   | 存在しないグループ ID                                                       | `id=9999`                    | 404 Not Found                                                                                 |
+| 12  | 異常系   | `authUser` を取得できない                                                   | —                            | 401 Unauthorized                                                                              |
+| 13  | 例外処理 | service が ErrInternalServerError を返す                                    | DB エラー                    | 500 Internal Server Error                                                                     |
 
 **Service テスト** (`group/service_test.go`):
 
-| #   | 観点     | テスト内容                             | 入力例                            | 期待結果               |
-| --- | -------- | -------------------------------------- | --------------------------------- | ---------------------- |
-| 12  | 正常系   | メンバーが存在するグループのリスト取得 | `id=1, limit=500, offset=0, q=""` | members + total        |
-| 13  | 正常系   | 検索キーワードでメンバー絞り込み       | `id=1, q=Yamada`                  | 該当メンバーのみ       |
-| 14  | 異常系   | 存在しないグループ ID                  | `id=9999`                         | ErrNotFound            |
-| 15  | 境界値   | id=0（最小境界外）                     | `id=0`                            | ErrBadParamInput       |
-| 16  | 境界値   | limit=0（下限未満）                    | `limit=0`                         | ErrBadParamInput       |
-| 17  | 境界値   | limit=501（上限超え）                  | `limit=501`                       | ErrBadParamInput       |
-| 18  | 例外処理 | Repository がエラーを返す              | repo mock がエラーを返す          | ErrInternalServerError |
-| 19  | 正常系   | メンバーが 0 人のグループ              | `id=1`（返値が空）                | members=[] + total=0   |
+| #   | 観点     | テスト内容                                                                  | 入力例                      | 期待結果                                                                                 |
+| --- | -------- | --------------------------------------------------------------------------- | --------------------------- | ---------------------------------------------------------------------------------------- |
+| 14  | 正常系   | 親 + 全子孫を再帰で集約した結果を返す                                        | `id=1`（孫含む 3 階層）     | members に 3 階層分のユーザーが depth 順で並ぶ・total = 重複排除後件数                   |
+| 15  | 正常系   | 親優先の重複排除が働く                                                       | 親と子に同一 user_id        | members は 1 行のみ・source_group_id = 親                                                |
+| 16  | 正常系   | 子孫由来は最浅祖先の group_id を source として採用                           | 親→subA→subB の 3 階層      | subB のみに所属するユーザーの source_group_id = subA の id                               |
+| 17  | 正常系   | q フィルター適用                                                             | `id=1, q=Sato`              | search_key にマッチするメンバーのみ・total = 該当件数                                    |
+| 18  | 正常系   | サブグループが空でも親直属メンバーが返る                                     | 子孫なし                    | members は親直属のみ・全行 source_group_id = 親                                          |
+| 19  | 正常系   | メンバーが 0 人のグループ                                                    | `id=1`（親も子孫も空）      | members=[] + total=0                                                                     |
+| 20  | 異常系   | 存在しないグループ ID                                                        | `id=9999`                   | ErrNotFound                                                                              |
+| 21  | 境界値   | id=0（最小境界外）                                                           | `id=0`                      | ErrBadParamInput                                                                         |
+| 22  | 境界値   | limit=0 / limit=501                                                          | `limit=0` / `limit=501`     | ErrBadParamInput                                                                         |
+| 23  | 例外処理 | repository が DB エラーを返す                                                | repo mock がエラーを返す    | ErrInternalServerError                                                                   |
 
 **フロントエンドテスト** (`MemberList.test.tsx`):
 
-| #   | 観点         | テスト内容                                                                           | 期待結果                                                          |
-| --- | ------------ | ------------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
-| 15  | 列ヘッダー   | `uuid`・`姓名` の列ヘッダーが存在する                                                | `columnheader` ロールで `uuid` / `姓名` が取得できる              |
-| 16  | アバターなし | アバターアイコン（イニシャル円形）が存在しない                                       | `MemberAvatar` に相当する要素が DOM に存在しない                  |
-| 17  | モックデータ | `UserSummary` モックオブジェクトに `uuid` フィールドが含まれる                       | TypeScript コンパイルエラーなし                                   |
-| 18  | コールバック | `onMemberClick` 呼び出し時の引数に `uuid` フィールドが含まれる                       | `{ id, uuid, first_name, last_name }` を含む `UserSummary` が渡る |
-| 19  | 既存テスト   | メンバー名表示・空状態・検索・チェックボックス等の既存テストがテーブル形式で通過する | 既存テストがテーブル形式（`<tr>` / `<td>`）対応で全 pass          |
+| #   | 観点                 | テスト内容                                                                                | 期待結果                                                                                  |
+| --- | -------------------- | ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| 24  | 列ヘッダー           | 「所属元」列ヘッダーが追加されている                                                       | `columnheader` ロールで「所属元」が取得できる（既存の uuid / 姓名 と並ぶ）                |
+| 25  | 表示分岐             | `source_group_id === groupId` のとき「自グループ」が表示される                             | 該当行の所属元セルに「自グループ」テキストが表示される                                    |
+| 26  | 表示分岐             | `source_group_id !== groupId` のとき `source_group_name` が表示される                      | 該当行の所属元セルにサブグループ名が表示される                                            |
+| 27  | チェックボックス制御 | 親直属行のみチェックボックスが表示される                                                   | source_group_id === groupId の行は checkbox が描画され、それ以外の行はセルを空にする      |
+| 28  | コールバック         | 親直属メンバー選択時に `onMemberClick` が呼ばれる                                          | 引数に source_group_id / source_group_name を含む UserSummary が渡る                      |
+| 29  | コールバック         | 子孫由来メンバー行ではクリックしても `onMemberClick` が呼ばれない                          | 子孫行で click しても `onMemberSelect` / `onMemberClick` が呼ばれない                     |
+| 30  | 全選択判定           | 全選択チェックボックスは親直属メンバー数基準で判定される                                   | selectedIds.size === 親直属メンバー数 のとき checked 状態。子孫由来は計算対象外           |
+| 31  | スケルトン           | ローディング中のスケルトン行が 4 列構成（または 3 列）で正しく描画される                   | `colSpan` が新しい列数に追従し、所属元セルもスケルトンとして描画される                    |
+| 32  | 既存テスト互換       | 既存テスト（メンバー名表示・空状態・検索・チェックボックス等）が新型 `UserSummary` で通る | 既存テストが拡張型データで全 pass                                                         |
 
----
-
-## 確認ステップ 5-6: E2E テストケース（Playwright）
-
-### エンドポイント: メンバー一覧・検索 0 件時の UI 挙動
-
-| #   | 観点   | テスト内容                                            | 操作手順                                                                    | 期待結果                                                |
-| --- | ------ | ----------------------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------- |
-| 1   | 正常系 | メンバー検索 0 件時に空状態メッセージが表示される     | `/groups/1` → networkidle → メンバー検索欄に `ZZZZNONEXISTENT` → 500ms 待機 | `"No members found."` が表示される                      |
-| 2   | 正常系 | メンバー検索 0 件時にページネーション UI が存在しない | `/groups/1` → networkidle → メンバー検索欄に `ZZZZNONEXISTENT` → 500ms 待機 | Previous / Next ボタン・件数セレクタが DOM に存在しない |
-| 3   | 正常系 | メンバー検索 0 件時にメンバー行が表示されない         | `/groups/1` → networkidle → メンバー検索欄に `ZZZZNONEXISTENT` → 500ms 待機 | `data-testid="member-row"` 要素が 0 件                  |
-
-> **備考**: MemberRow コンポーネントに `data-testid="member-row"` を追加し、E2E テストのセレクターを安定化させる。`total` は API 側でフィルターなし全件数を返す設計のため、フロントエンドは `cachedMembers.length`（実際の取得件数）を使用して空状態表示・追加フェッチトリガーを制御する。
+> E2E テスト（Playwright）は `/e2e-gen` で改めて設計するため、この PRD には含めない。
 
 ---
 
 ## 最低要件
 
-1. `GET /api/v1/groups/:id/members` が実装されており、メンバー一覧（id, uuid, first_name, last_name）と total を返す
-2. `users` テーブルが作成されている（id, first_name, last_name）
-3. `group_members` テーブルが `user_id`（FK→users）を持つ構成に更新されている
-4. `id` が整数でない / 0 以下の場合に 400 を返す
-5. `limit` が 1〜500 の範囲外の場合に 400 を返す
-6. 対象グループが存在しない場合に 404 を返す
-7. `q` パラメータで search_key LIKE 検索が動作する（姓名・名姓順両方向対応）
-8. 詳細ページにメンバー一覧が取得した全件で表示される（`displayedCount` による分割表示なし）
-9. キャッシュが枯渇かつ `lastBatchSize === 100` のとき `offset+=100` で追加フェッチし、取得結果をキャッシュに追加して全件即時表示する
-10. 追加フェッチ中はテーブル末尾にスピナーを表示する
-11. 追加フェッチ失敗時はテーブル末尾にエラーメッセージを表示する（既存表示アイテムは維持）
-12. メンバー検索で 0 件のとき、"No members found." を表示する
-13. UI から Previous/Next ボタンおよび件数セレクタ（20/50/100）を削除する
-14. `currentPage` / `totalPages` / `perPage` / `handlePerPageChange` の状態を削除する
-15. MemberRow コンポーネントに `data-testid="member-row"` を付与し、E2E テストのセレクターを安定化させる
-16. MemberList が `<table>` 形式（`<table>` + `<thead>` + `<tbody>`）で表示される
-17. `<thead>` に空の `<th>`（チェックボックス列、`aria-label="選択"`）・`uuid`・`姓名` の 3 列ヘッダーが存在する
-18. アバターアイコン（イニシャル円形）を表示しない（各メンバー行に `MemberAvatar` は使用しない）
-19. テーブルヘッダーの `columnheader` ロールで `uuid` および `姓名` が取得できる
-20. `MemberList.styles.ts` に UserList と同パターンのテーブル用スタイル定数が定義されている
+1. `GET /api/v1/groups/:id/members` が実装されており、メンバー一覧（id, uuid, first_name, last_name, source_group_id, source_group_name）と total を返す
+2. レスポンスは親グループ + 全子孫サブグループのメンバーを統合した結果になる（再帰）
+3. 親 + 子孫に重複所属するユーザーは親優先で 1 行のみ返す
+4. 子孫由来メンバーの所属元は親に最も近い祖先サブグループ（最浅祖先）の id / name とする
+5. 親直属メンバーの source_group_id は親自身の id と一致する
+6. 並び順は depth ASC → user.id ASC である
+7. q が指定された場合は親 + 全子孫メンバー全体に対して search_key の双方向 LIKE 絞り込みを適用する
+8. total は q 適用後・重複排除後の件数と一致する（members.length とは独立して全件件数）
+9. `id` が整数でない / 0 以下の場合に 400 を返す
+10. `limit` が 1〜500 の範囲外の場合に 400 を返す
+11. `offset` が 0 未満の場合に 400 を返す
+12. 対象グループが存在しない場合に 404 を返す
+13. `authUser` 取得失敗時に 401 を返す
+14. DB エラー時に 500 を返す
+15. WITH RECURSIVE で「自身 + 全子孫」の (group_id, depth) 集合を構築する
+16. ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY depth, group_id) で重複排除を DB 側で行う
+17. JOIN groups で source_group_name を BE 側で解決する（FE のフォールバック表示は持たない）
+18. 戻り値型は `domain.GroupMember`（既存 `domain.User` 全フィールド + `SourceGroupID uint64` + `SourceGroupName string`）であり、`domain/group.go` に新設する。既存 `domain.User` は変更しない
+19. `GroupRepository.ListGroupMembers` / `GroupService.ListGroupMembers` / `groupMemberListResponse.Members` の型を `[]domain.GroupMember` に統一する
+20. グループ詳細画面のメンバー一覧テーブルは `□選択 / uuid / 姓名 / 所属元` の 4 列構成
+21. 「所属元」列は親直属 → 固定テキスト「自グループ」、子孫由来 → `source_group_name` を表示する
+22. □選択（チェックボックス）セルは親直属行のみ描画し、子孫由来行はセルを空にする
+23. 子孫由来行の `onMemberClick` / 削除アクションは無効である
+24. 「全選択」チェックボックスの判定は親直属メンバー数基準（`selectedIds.size === 親直属メンバー数`）で行う
+25. `SkeletonMemberRow` の `colSpan` は列追加に合わせて +1 し、所属元列のスケルトンセルを追加する
+26. `useMemberList` フック自体の挙動（無限スクロール・q 検索・refetch）は変更しない
+27. サブグループの追加 / 削除コールバックから `useMemberList.refetch()` を呼ぶことで一覧を最新化する
+28. MemberRow コンポーネントに `data-testid="member-row"` を維持する（E2E セレクター安定化）
 
 ---
 
 ## 対象外
 
 - 認証・認可の追加実装（既存の AuthMiddleware で対応済み）
-- メンバーの追加・削除
-- ページネーション（サーバーサイド）— クライアントサイドページネーションのみ対応
+- 子孫由来メンバーへの操作（削除・編集・チェックボックス選択）
+- サブグループへのメンバー追加 UI（親詳細から）
+- WITH RECURSIVE のパフォーマンスチューニング（10 グループ・5 階層が上限のため問題化しにくい）
+- E2E テスト（`/e2e-gen` フェーズで設計）
+- DB スキーマ変更（既存 `groups` / `group_members` / `group_relations` / `users` のみで完結）
+- 親グループ自体の情報をレスポンスに含める拡張（メンバー一覧に専念）
