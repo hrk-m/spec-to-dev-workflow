@@ -53,7 +53,7 @@ jobs:
             git fetch origin "$BRANCH" main
             git checkout "$BRANCH"
             if ! git merge origin/main --no-edit; then
-              git merge --abort
+              git merge --abort 2>/dev/null || true
               git reset --hard origin/main
             fi
           else
