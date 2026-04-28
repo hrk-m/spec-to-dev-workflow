@@ -2,13 +2,13 @@
 
 ## 概要
 
-| 項目         | 内容                                                                             |
-| ------------ | -------------------------------------------------------------------------------- |
-| 機能名       | `delete-subgroup`                                                                |
-| 目的         | グループのツリー構造から特定の親子関係を解除する                                 |
-| API          | `DELETE /api/v1/groups/:id/subgroups/:childId`                                   |
-| 認証         | 必要（AuthMiddleware）                                                           |
-| データソース | MySQL (`sample-api/internal/repository/mysql`)                                   |
+| 項目         | 内容                                             |
+| ------------ | ------------------------------------------------ |
+| 機能名       | `delete-subgroup`                                |
+| 目的         | グループのツリー構造から特定の親子関係を解除する |
+| API          | `DELETE /api/v1/groups/:id/subgroups/:childId`   |
+| 認証         | 必要（AuthMiddleware）                           |
+| データソース | MySQL (`sample-api/internal/repository/mysql`)   |
 
 ---
 
@@ -18,21 +18,21 @@
 
 **リクエスト仕様**
 
-| フィールド        | 型      | 必須 | 説明                       |
-| ----------------- | ------- | ---- | -------------------------- |
-| `id` (path)       | integer | ✓    | 親グループ ID（正の整数）  |
-| `childId` (path)  | integer | ✓    | 子グループ ID（正の整数）  |
+| フィールド       | 型      | 必須 | 説明                      |
+| ---------------- | ------- | ---- | ------------------------- |
+| `id` (path)      | integer | ✓    | 親グループ ID（正の整数） |
+| `childId` (path) | integer | ✓    | 子グループ ID（正の整数） |
 
 **バリデーション一覧**
 
-| # | 対象フィールド    | ルール                                                                                          | エラー時の挙動  |
-| - | ----------------- | ----------------------------------------------------------------------------------------------- | --------------- |
-| 1 | `id` (path)       | 整数に変換できること                                                                            | 400 Bad Request |
-| 2 | `id` (path)       | 1 以上の正の整数であること                                                                      | 400 Bad Request |
-| 3 | `childId` (path)  | 整数に変換できること                                                                            | 400 Bad Request |
-| 4 | `childId` (path)  | 1 以上の正の整数であること                                                                      | 400 Bad Request |
-| 5 | 認証              | コンテキストから `authUser` を取得できること                                                    | 401 Unauthorized |
-| 6 | 存在チェック      | 対象の親子関係 `(parent_group_id, child_group_id)` が DB に存在すること（RowsAffected=0 で判定）| 404 Not Found   |
+| #   | 対象フィールド   | ルール                                                                                           | エラー時の挙動   |
+| --- | ---------------- | ------------------------------------------------------------------------------------------------ | ---------------- |
+| 1   | `id` (path)      | 整数に変換できること                                                                             | 400 Bad Request  |
+| 2   | `id` (path)      | 1 以上の正の整数であること                                                                       | 400 Bad Request  |
+| 3   | `childId` (path) | 整数に変換できること                                                                             | 400 Bad Request  |
+| 4   | `childId` (path) | 1 以上の正の整数であること                                                                       | 400 Bad Request  |
+| 5   | 認証             | コンテキストから `authUser` を取得できること                                                     | 401 Unauthorized |
+| 6   | 存在チェック     | 対象の親子関係 `(parent_group_id, child_group_id)` が DB に存在すること（RowsAffected=0 で判定） | 404 Not Found    |
 
 ---
 
@@ -92,26 +92,27 @@
 
 ### sample-api
 
-| ファイル                                                               | 役割                                                                                                                             |
-| ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `sample-api/group/service.go`                                          | `GroupRelationRepository` IF に `DeleteRelation` 追加・`DeleteSubGroup` メソッド                                                 |
-| `sample-api/group/service_test.go`                                     | `DeleteSubGroup` サービステスト追加                                                                                              |
-| `sample-api/group/mocks/group_relation_repository_mock.go`             | `DeleteRelation` mock 追加（`add-subgroup` 実装時に新規作成済み）                                                                |
-| `sample-api/internal/rest/group.go`                                    | `DeleteSubGroup` ハンドラ・`GroupService` IF に `DeleteSubGroup` 追加・ルート登録（DELETE /api/v1/groups/:id/subgroups/:childId） |
-| `sample-api/internal/rest/group_test.go`                               | `DeleteSubGroup` ハンドラテスト追加                                                                                              |
-| `sample-api/internal/rest/mocks/group_service_mock.go`                 | `GroupService` mock に `DeleteSubGroup` 追加                                                                                     |
-| `sample-api/internal/repository/mysql/group_relation.go`               | `DeleteRelation` 実装追加（`add-subgroup` 実装時に新規作成済み）                                                                 |
+| ファイル                                                   | 役割                                                                                                                              |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `sample-api/group/service.go`                              | `GroupRelationRepository` IF に `DeleteRelation` 追加・`DeleteSubGroup` メソッド                                                  |
+| `sample-api/group/service_test.go`                         | `DeleteSubGroup` サービステスト追加                                                                                               |
+| `sample-api/group/mocks/group_relation_repository_mock.go` | `DeleteRelation` mock 追加（`add-subgroup` 実装時に新規作成済み）                                                                 |
+| `sample-api/internal/rest/group.go`                        | `DeleteSubGroup` ハンドラ・`GroupService` IF に `DeleteSubGroup` 追加・ルート登録（DELETE /api/v1/groups/:id/subgroups/:childId） |
+| `sample-api/internal/rest/group_test.go`                   | `DeleteSubGroup` ハンドラテスト追加                                                                                               |
+| `sample-api/internal/rest/mocks/group_service_mock.go`     | `GroupService` mock に `DeleteSubGroup` 追加                                                                                      |
+| `sample-api/internal/repository/mysql/group_relation.go`   | `DeleteRelation` 実装追加（`add-subgroup` 実装時に新規作成済み）                                                                  |
 
 > `group_relation.go` と `group_relation_repository_mock.go` は `add-subgroup` 実装時に作成される。`delete-subgroup` はそれらに追加する形で実装する。
 
 ### sample-front
 
-| ファイル                                                                                      | 役割                                                                         |
-| --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `sample-front/src/pages/group-detail/api/delete-subgroup.ts`                                 | DELETE /api/v1/groups/:id/subgroups/:childId fetch 関数（既存・変更なし）    |
-| `sample-front/src/pages/group-detail/model/useDeleteSubgroup.ts`                             | 削除ロジック・loading・error を管理するカスタムフック（新規）                |
-| `sample-front/src/pages/group-detail/ui/DeleteSubgroupDialog.tsx`                            | AlertDialog コンポーネント（新規）                                           |
-| `sample-front/src/pages/group-detail/ui/SubgroupList.tsx`                                    | [×] を [Delete] ボタンに変更・`deletingSubgroupId` state 追加（変更）       |
+| ファイル                                                          | 役割                                                                  |
+| ----------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `sample-front/src/pages/group-detail/api/delete-subgroup.ts`      | DELETE /api/v1/groups/:id/subgroups/:childId fetch 関数（新規）       |
+| `sample-front/src/pages/group-detail/model/useDeleteSubgroup.ts`  | 削除ロジック・loading・error を管理するカスタムフック（新規）         |
+| `sample-front/src/pages/group-detail/ui/DeleteSubgroupDialog.tsx` | AlertDialog コンポーネント（新規）                                    |
+| `sample-front/src/pages/group-detail/ui/SubgroupList.tsx`         | [×] を [Delete] ボタンに変更・`deletingSubgroupId` state 追加（変更） |
+| `sample-front/src/pages/group-detail/ui/GroupDetailContent.tsx`   | SubgroupList に `groupId`・`refetch` を props として渡す（変更）      |
 
 > DB スキーマ（`group_relations` テーブル定義・制約・FK）の詳細は [plans/schema.md](../../schema.md) を参照。
 
@@ -127,15 +128,15 @@
 
 ### エラーケース一覧
 
-| 条件                           | 発生レイヤー | ステータス                | レスポンス                                          | FE 表示箇所                      |
-| ------------------------------ | ------------ | ------------------------- | --------------------------------------------------- | -------------------------------- |
-| `id` が整数に変換不可          | Handler      | 400 Bad Request           | `{"message": "given param is not valid"}`           | ダイアログ内インライン表示        |
-| `id` が 0 以下                 | Handler      | 400 Bad Request           | `{"message": "given param is not valid"}`           | ダイアログ内インライン表示        |
-| `childId` が整数に変換不可     | Handler      | 400 Bad Request           | `{"message": "given param is not valid"}`           | ダイアログ内インライン表示        |
-| `childId` が 0 以下            | Handler      | 400 Bad Request           | `{"message": "given param is not valid"}`           | ダイアログ内インライン表示        |
-| `authUser` 取得失敗            | Handler      | 401 Unauthorized          | `{"message": "Unauthorized"}`                       | ダイアログ内インライン表示        |
-| 対象の親子関係が存在しない     | Repository   | 404 Not Found             | `{"message": "your requested item is not found"}`   | ダイアログ内インライン表示        |
-| DB エラー                      | Repository   | 500 Internal Server Error | `{"message": "internal server error"}`              | ダイアログ内インライン表示（汎用）|
+| 条件                       | 発生レイヤー | ステータス                | レスポンス                                        | FE 表示箇所                        |
+| -------------------------- | ------------ | ------------------------- | ------------------------------------------------- | ---------------------------------- |
+| `id` が整数に変換不可      | Handler      | 400 Bad Request           | `{"message": "given param is not valid"}`         | ダイアログ内インライン表示         |
+| `id` が 0 以下             | Handler      | 400 Bad Request           | `{"message": "given param is not valid"}`         | ダイアログ内インライン表示         |
+| `childId` が整数に変換不可 | Handler      | 400 Bad Request           | `{"message": "given param is not valid"}`         | ダイアログ内インライン表示         |
+| `childId` が 0 以下        | Handler      | 400 Bad Request           | `{"message": "given param is not valid"}`         | ダイアログ内インライン表示         |
+| `authUser` 取得失敗        | Handler      | 401 Unauthorized          | `{"message": "Unauthorized"}`                     | ダイアログ内インライン表示         |
+| 対象の親子関係が存在しない | Repository   | 404 Not Found             | `{"message": "your requested item is not found"}` | ダイアログ内インライン表示         |
+| DB エラー                  | Repository   | 500 Internal Server Error | `{"message": "internal server error"}`            | ダイアログ内インライン表示（汎用） |
 
 ---
 
@@ -145,34 +146,34 @@
 
 **FE コンポーネントテスト** (`pages/group-detail/ui/__tests__/SubgroupList.test.tsx` 更新):
 
-| #  | 観点     | テスト内容                                                    | 期待結果                                                         |
-| -- | -------- | ------------------------------------------------------------- | ---------------------------------------------------------------- |
-| 1  | 正常系   | [Delete] 押下 → ダイアログが開く                             | AlertDialog が表示される                                         |
-| 2  | 正常系   | ダイアログの Delete 押下 → 204 成功                          | ダイアログが閉じ、一覧が再取得される                             |
-| 3  | 異常系   | ダイアログの Delete 押下 → 404 返却                          | ダイアログ内にエラーメッセージが表示される（ダイアログは閉じない）|
-| 4  | 例外処理 | ダイアログの Delete 押下 → 500 返却                          | ダイアログ内に汎用エラーメッセージが表示される                   |
-| 5  | キャンセル | ダイアログの Cancel 押下                                   | ダイアログが閉じ、API は呼ばれない                               |
+| #   | 観点       | テスト内容                          | 期待結果                                                           |
+| --- | ---------- | ----------------------------------- | ------------------------------------------------------------------ |
+| 1   | 正常系     | [Delete] 押下 → ダイアログが開く    | AlertDialog が表示される                                           |
+| 2   | 正常系     | ダイアログの Delete 押下 → 204 成功 | ダイアログが閉じ、一覧が再取得される                               |
+| 3   | 異常系     | ダイアログの Delete 押下 → 404 返却 | ダイアログ内にエラーメッセージが表示される（ダイアログは閉じない） |
+| 4   | 例外処理   | ダイアログの Delete 押下 → 500 返却 | ダイアログ内に汎用エラーメッセージが表示される                     |
+| 5   | キャンセル | ダイアログの Cancel 押下            | ダイアログが閉じ、API は呼ばれない                                 |
 
 **Handler テスト** (`internal/rest/group_test.go`):
 
-| # | 観点     | テスト内容                                      | 入力例                 | 期待結果                  |
-| - | -------- | ----------------------------------------------- | ---------------------- | ------------------------- |
-| 1 | 正常系   | 存在する親子関係を削除する                      | id=1, childId=2        | 204 No Content            |
-| 2 | 異常系   | `authUser` を取得できない（型アサーション失敗） | —                      | 401 Unauthorized          |
-| 3 | 異常系   | id が文字列                                     | id=abc                 | 400 Bad Request           |
-| 4 | 境界値   | id=0（最小境界外）                              | id=0                   | 400 Bad Request           |
-| 5 | 異常系   | childId が文字列                                | childId=abc            | 400 Bad Request           |
-| 6 | 境界値   | childId=0（最小境界外）                         | childId=0              | 400 Bad Request           |
-| 7 | 異常系   | service が ErrNotFound を返す                   | 存在しない親子関係     | 404 Not Found             |
-| 8 | 例外処理 | service が ErrInternalServerError を返す        | DB エラー              | 500 Internal Server Error |
+| #   | 観点     | テスト内容                                      | 入力例             | 期待結果                  |
+| --- | -------- | ----------------------------------------------- | ------------------ | ------------------------- |
+| 1   | 正常系   | 存在する親子関係を削除する                      | id=1, childId=2    | 204 No Content            |
+| 2   | 異常系   | `authUser` を取得できない（型アサーション失敗） | —                  | 401 Unauthorized          |
+| 3   | 異常系   | id が文字列                                     | id=abc             | 400 Bad Request           |
+| 4   | 境界値   | id=0（最小境界外）                              | id=0               | 400 Bad Request           |
+| 5   | 異常系   | childId が文字列                                | childId=abc        | 400 Bad Request           |
+| 6   | 境界値   | childId=0（最小境界外）                         | childId=0          | 400 Bad Request           |
+| 7   | 異常系   | service が ErrNotFound を返す                   | 存在しない親子関係 | 404 Not Found             |
+| 8   | 例外処理 | service が ErrInternalServerError を返す        | DB エラー          | 500 Internal Server Error |
 
 **Service テスト** (`group/service_test.go`):
 
-| #  | 観点     | テスト内容                                         | 入力例                  | 期待結果               |
-| -- | -------- | -------------------------------------------------- | ----------------------- | ---------------------- |
-| 9  | 正常系   | 存在する親子関係を削除する                         | parent=1, child=2       | nil（削除成功）        |
-| 10 | 異常系   | 対象の親子関係が存在しない（RowsAffected=0）       | 存在しない組み合わせ    | ErrNotFound            |
-| 11 | 例外処理 | repository が DB エラーを返す                      | mock がエラーを返す     | ErrInternalServerError |
+| #   | 観点     | テスト内容                                   | 入力例               | 期待結果               |
+| --- | -------- | -------------------------------------------- | -------------------- | ---------------------- |
+| 9   | 正常系   | 存在する親子関係を削除する                   | parent=1, child=2    | nil（削除成功）        |
+| 10  | 異常系   | 対象の親子関係が存在しない（RowsAffected=0） | 存在しない組み合わせ | ErrNotFound            |
+| 11  | 例外処理 | repository が DB エラーを返す                | mock がエラーを返す  | ErrInternalServerError |
 
 ---
 

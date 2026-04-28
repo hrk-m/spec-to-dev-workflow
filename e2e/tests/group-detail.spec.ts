@@ -245,7 +245,7 @@ test.describe("サブグループ管理", () => {
     ).toBeVisible({ timeout: 10000 });
   });
 
-  test("A-3: 未選択時「追加する」ボタンが disabled", async ({ page }) => {
+  test("A-3: 未選択時「追加」ボタンが disabled", async ({ page }) => {
     await page.goto("/groups/1");
     await page.waitForLoadState("networkidle");
 
@@ -255,8 +255,8 @@ test.describe("サブグループ管理", () => {
       page.getByPlaceholder("Search by name or description"),
     ).toBeVisible({ timeout: 10000 });
 
-    // "追加する" button should be disabled when no group is selected
-    const submitButton = page.getByRole("button", { name: "追加する" });
+    // "追加" button should be disabled when no group is selected
+    const submitButton = page.locator('[role="dialog"]').getByRole("button", { name: "追加", exact: true });
     await expect(submitButton).toBeVisible({ timeout: 10000 });
     await expect(submitButton).toBeDisabled();
   });
@@ -316,8 +316,8 @@ test.describe("サブグループ管理", () => {
     await expect(group004Radio).toBeVisible({ timeout: 10000 });
     await group004Radio.click();
 
-    // Click "追加する"
-    const submitButton = page.getByRole("button", { name: "追加する" });
+    // Click "追加"
+    const submitButton = page.locator('[role="dialog"]').getByRole("button", { name: "追加", exact: true });
     await expect(submitButton).toBeEnabled({ timeout: 5000 });
     await submitButton.click();
 
@@ -401,8 +401,8 @@ test.describe("サブグループ管理", () => {
     await expect(group004Radio).toBeVisible({ timeout: 10000 });
     await group004Radio.click();
 
-    // Click "追加する"
-    const submitButton = page.getByRole("button", { name: "追加する" });
+    // Click "追加"
+    const submitButton = page.locator('[role="dialog"]').getByRole("button", { name: "追加", exact: true });
     await expect(submitButton).toBeEnabled({ timeout: 5000 });
     await submitButton.click();
 
@@ -451,5 +451,178 @@ test.describe("サブグループ管理", () => {
     await expect(
       page.getByText("サブグループはまだありません"),
     ).toBeVisible({ timeout: 10000 });
+  });
+});
+
+test.describe("サブグループ削除", () => {
+  // Helper: SubgroupList 内の Delete ボタンを取得する。
+  // GroupDetailContent には "Delete"(グループ削除) と SubgroupList 内の "Delete" が存在するため、
+  // Group 006 テキストと Delete ボタンを両方持つ最内部コンテナに限定することで誤クリックを防ぐ。
+  function getSubgroupDeleteButton(page: import("@playwright/test").Page) {
+    // Group 006 テキストと Delete ボタンを持つ最小コンテナ (SubgroupList の各行 Flex) を取得
+    const row = page
+      .locator("div")
+      .filter({ has: page.getByText("Group 006", { exact: true }) })
+      .filter({ has: page.getByRole("button", { name: "Delete" }) })
+      .last();
+    return row.getByRole("button", { name: "Delete" });
+  }
+
+  // D-2: [Delete] 押下 → AlertDialog が表示される
+  test("D-2: [Delete] ボタン押下で確認ダイアログが表示される", async ({ page }) => {
+    await page.goto("/groups/5");
+    await page.waitForLoadState("networkidle");
+
+    // Group 005 has Group 006 as subgroup (seed data)
+    await expect(page.getByText("Group 006", { exact: true })).toBeVisible({ timeout: 10000 });
+
+    // Click [Delete] button on the subgroup row (not the group-level Delete button)
+    const subgroupDeleteBtn = getSubgroupDeleteButton(page);
+    await expect(subgroupDeleteBtn).toBeVisible({ timeout: 10000 });
+    await subgroupDeleteBtn.click();
+
+    // AlertDialog should appear
+    const dialog = page.getByRole("alertdialog");
+    await expect(dialog).toBeVisible({ timeout: 5000 });
+
+    // Verify title and description
+    await expect(dialog.getByText("Delete Subgroup")).toBeVisible();
+    await expect(
+      dialog.getByText("Are you sure you want to delete this subgroup? This action cannot be undone."),
+    ).toBeVisible();
+  });
+
+  // D-1: Delete 成功 → ダイアログ閉・一覧から消える
+  test("D-1: Delete 確認 → 204 成功 → ダイアログが閉じサブグループが一覧から消える", async ({ page }) => {
+    // Mock DELETE to prevent actual data modification
+    await page.route("**/api/v1/groups/5/subgroups/6", async (route) => {
+      if (route.request().method() === "DELETE") {
+        await route.fulfill({
+          status: 204,
+          body: "",
+        });
+      } else {
+        await route.continue();
+      }
+    });
+
+    await page.goto("/groups/5");
+    await page.waitForLoadState("networkidle");
+
+    // Verify Group 006 is visible
+    await expect(page.getByText("Group 006", { exact: true })).toBeVisible({ timeout: 10000 });
+
+    // Click [Delete] button on the subgroup row
+    const subgroupDeleteBtn = getSubgroupDeleteButton(page);
+    await expect(subgroupDeleteBtn).toBeVisible({ timeout: 10000 });
+    await subgroupDeleteBtn.click();
+
+    // Confirm in dialog
+    const dialog = page.getByRole("alertdialog");
+    await expect(dialog).toBeVisible({ timeout: 5000 });
+    await dialog.getByRole("button", { name: "Delete" }).click();
+
+    // Dialog should close
+    await expect(dialog).not.toBeVisible({ timeout: 10000 });
+  });
+
+  // D-5: Cancel 押下 → ダイアログが閉じ API 未送信
+  test("D-5: Cancel 押下 → ダイアログが閉じ API は呼ばれない", async ({ page }) => {
+    let deleteApiCalled = false;
+    await page.route("**/api/v1/groups/5/subgroups/6", async (route) => {
+      if (route.request().method() === "DELETE") {
+        deleteApiCalled = true;
+        await route.continue();
+      } else {
+        await route.continue();
+      }
+    });
+
+    await page.goto("/groups/5");
+    await page.waitForLoadState("networkidle");
+
+    // Click [Delete] button on the subgroup row
+    const subgroupDeleteBtn = getSubgroupDeleteButton(page);
+    await expect(subgroupDeleteBtn).toBeVisible({ timeout: 10000 });
+    await subgroupDeleteBtn.click();
+
+    // Click Cancel in dialog
+    const dialog = page.getByRole("alertdialog");
+    await expect(dialog).toBeVisible({ timeout: 5000 });
+    await dialog.getByRole("button", { name: "Cancel" }).click();
+
+    // Dialog should close
+    await expect(dialog).not.toBeVisible({ timeout: 5000 });
+
+    // API must not have been called
+    expect(deleteApiCalled).toBe(false);
+  });
+
+  // D-3: 404 → ダイアログ内エラー・閉じない
+  test("D-3: Delete 確認 → 404 → ダイアログ内にエラーメッセージが表示されダイアログは閉じない", async ({ page }) => {
+    await page.route("**/api/v1/groups/5/subgroups/6", async (route) => {
+      if (route.request().method() === "DELETE") {
+        await route.fulfill({
+          status: 404,
+          contentType: "application/json",
+          body: JSON.stringify({ message: "your requested item is not found" }),
+        });
+      } else {
+        await route.continue();
+      }
+    });
+
+    await page.goto("/groups/5");
+    await page.waitForLoadState("networkidle");
+
+    // Click [Delete] button on the subgroup row
+    const subgroupDeleteBtn = getSubgroupDeleteButton(page);
+    await expect(subgroupDeleteBtn).toBeVisible({ timeout: 10000 });
+    await subgroupDeleteBtn.click();
+
+    // Confirm in dialog
+    const dialog = page.getByRole("alertdialog");
+    await expect(dialog).toBeVisible({ timeout: 5000 });
+    await dialog.getByRole("button", { name: "Delete" }).click();
+
+    // Dialog should remain open with error message
+    await expect(dialog).toBeVisible({ timeout: 5000 });
+    await expect(
+      dialog.getByText("対象のサブグループ関係が見つかりませんでした"),
+    ).toBeVisible({ timeout: 5000 });
+  });
+
+  // D-4: 500 → ダイアログ内に汎用エラーメッセージ
+  test("D-4: Delete 確認 → 500 → ダイアログ内に汎用エラーメッセージが表示される", async ({ page }) => {
+    await page.route("**/api/v1/groups/5/subgroups/6", async (route) => {
+      if (route.request().method() === "DELETE") {
+        await route.fulfill({
+          status: 500,
+          contentType: "application/json",
+          body: JSON.stringify({ message: "internal server error" }),
+        });
+      } else {
+        await route.continue();
+      }
+    });
+
+    await page.goto("/groups/5");
+    await page.waitForLoadState("networkidle");
+
+    // Click [Delete] button on the subgroup row
+    const subgroupDeleteBtn = getSubgroupDeleteButton(page);
+    await expect(subgroupDeleteBtn).toBeVisible({ timeout: 10000 });
+    await subgroupDeleteBtn.click();
+
+    // Confirm in dialog
+    const dialog = page.getByRole("alertdialog");
+    await expect(dialog).toBeVisible({ timeout: 5000 });
+    await dialog.getByRole("button", { name: "Delete" }).click();
+
+    // Dialog should remain open with generic error message
+    await expect(dialog).toBeVisible({ timeout: 5000 });
+    await expect(
+      dialog.getByText("サブグループの削除に失敗しました。しばらくしてから再度お試しください"),
+    ).toBeVisible({ timeout: 5000 });
   });
 });
