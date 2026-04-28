@@ -187,7 +187,9 @@ test.describe("グループメンバー削除", () => {
         timeout: 5000,
       });
 
-      await expect(page.getByText("0 total")).toBeVisible({ timeout: 5000 });
+      // "0 total" appears in both the Subgroups section and the Members section.
+      // Use last() to target the Members section counter (DOM order: Subgroups first, Members last).
+      await expect(page.getByText("0 total").last()).toBeVisible({ timeout: 5000 });
     },
   );
 

@@ -8,6 +8,7 @@ type: project
 
 - `Group`: ID(uint64), Name(string), Description(string), MemberCount(int)
 - `User`: ID(uint64), UUID(string), FirstName(string), LastName(string)
+- `GroupRelation`: ParentGroupID(uint64), ChildGroupID(uint64)
 
 ## DB スキーマ
 
@@ -17,6 +18,7 @@ type: project
   - インデックス: `idx_users_active(deleted_at, id)`
   - `search_key` VIRTUAL GENERATED COLUMN: `CONCAT(first_name, last_name, last_name, first_name)`（20260411120000）
 - `group_members`: id, group_id, user_id（ユニーク制約あり）（20260403120000）
+- `group_relations`: id, parent_group_id, child_group_id, created_at（UNIQUE: uk_parent_child, FK→groups CASCADE）（20260425000000）
 
 ## Soft Delete の実装
 
@@ -35,6 +37,7 @@ type: project
 | PUT | /api/v1/groups/:id | Update |
 | DELETE | /api/v1/groups/:id | Delete (soft delete, 204 No Content) |
 | DELETE | /api/v1/groups/:id/members | DeleteGroupMembers（204 No Content） |
+| POST | /api/v1/groups/:id/subgroups | CreateSubGroup（201 + GroupRelation JSON） |
 
 ## GroupService インターフェース（internal/rest/group.go）
 
@@ -49,6 +52,7 @@ type GroupService interface {
     ListNonGroupMembers(ctx context.Context, groupID uint64, limit, offset int, q string) ([]domain.User, int, error)
     AddGroupMembers(ctx context.Context, groupID uint64, userIDs []uint64) ([]domain.User, error)
     RemoveGroupMembers(ctx context.Context, groupID uint64, userIDs []uint64) error
+    CreateSubGroup(ctx context.Context, parentGroupID, childGroupID uint64) (domain.GroupRelation, error)
 }
 ```
 
@@ -76,7 +80,12 @@ type UserRepository interface {
 }
 ```
 
-- `NewService(repo GroupRepository, userRepo UserRepository) *Service` — 2 引数シグネチャ
+- `NewService(repo GroupRepository, userRepo UserRepository) *Service` — 2 引数シグネチャ（互換維持）
+- `NewServiceWithRelation(repo, userRepo, relationRepo) *Service` — GroupRelationRepository を注入する 3 引数シグネチャ。main.go では `NewServiceWithRelation` を使用
+- `GroupRelationRepository` インターフェース（group/service.go）: `GetAncestorIDs`, `GetDescendantIDs`, `CountComponentGroups`, `MaxDepthInComponent`, `CreateRelation`
+- MySQL 実装: `internal/repository/mysql/group_relation.go`（WITH RECURSIVE CTE で祖先・子孫集合を取得）
+- `group/mocks/group_relation_repository_mock.go`（手動 mock）
+- サイクル検出: GetAncestorIDs(parent) に child が含まれる OR GetDescendantIDs(child) に parent が含まれるなら 400
 - MySQL 実装: `internal/repository/mysql/user.go` の `UserRepository` 型が `group.UserRepository`・`user.UserRepository`・`auth.UserRepository` の 3 つを実装
 - `main.go` では `groupRepo` と `userRepo` を分けて生成して両方のサービスに渡す
 - `AddGroupMembers` のユーザー存在確認は `userRepo.CountByIDs` で 1 クエリ
