@@ -1,0 +1,1 @@
+- [Codebase patterns for prd-checker](project_codebase_patterns.md) — error response strings, parsePathID behavior, handler response type pattern, FE file conventions
