@@ -77,9 +77,8 @@ test.describe("シートナビゲーション", () => {
     await expect(page.getByRole("dialog")).toBeVisible();
 
     await page.getByTestId("sheet-overlay").click({ force: true });
-    await page.waitForTimeout(600);
 
-    await expect(page.getByRole("dialog")).not.toBeVisible();
+    await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 3000 });
   });
 
   test("シート内にグループ名・説明・メンバー一覧が表示される", async ({
