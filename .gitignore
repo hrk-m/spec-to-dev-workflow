@@ -6,6 +6,10 @@ node_modules/
 # 個人環境依存の Claude Code 設定
 .claude/settings.local.json
 .claude/*.local.md
+.claude/worktrees/
+
+# E2E ディレクトリ内の Claude Code 設定
+e2e/.claude/
 
 # Ralph workflow scratch files
 .claude/ralph-*.md

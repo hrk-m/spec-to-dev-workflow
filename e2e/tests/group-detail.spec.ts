@@ -226,7 +226,7 @@ test.describe("サブグループ管理", () => {
     await expect(page.getByText("Subgroups")).toBeVisible({ timeout: 10000 });
 
     // Seed data: Group 005 (id=5) has Group 006 (id=6) as child
-    await expect(page.getByText("Group 006", { exact: true })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Group 006", { exact: true }).first()).toBeVisible({ timeout: 10000 });
   });
 
   test("A-2: AddSubgroupSheet が開く", async ({ page }) => {
@@ -452,6 +452,78 @@ test.describe("サブグループ管理", () => {
       page.getByText("サブグループはまだありません"),
     ).toBeVisible({ timeout: 10000 });
   });
+
+  test("A-9: POST 400（循環参照・上限超過等）→ Sheet 内にエラーメッセージが表示される", async ({ page }) => {
+    // Handle /groups/** requests: POST to subgroups returns 400, others continue.
+    await page.route("**/api/v1/groups/**", async (route) => {
+      const url = route.request().url();
+      const method = route.request().method();
+
+      if (method === "POST" && url.includes("/api/v1/groups/3/subgroups")) {
+        await route.fulfill({
+          status: 400,
+          contentType: "application/json",
+          body: JSON.stringify({ message: "given param is not valid" }),
+        });
+      } else {
+        await route.continue();
+      }
+    });
+
+    // Mock GET /api/v1/groups list endpoint to return selectable groups.
+    await page.route(/\/api\/v1\/groups(\?.*)?$/, async (route) => {
+      if (route.request().method() === "GET") {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            groups: [
+              { id: 4, name: "Group 004", description: "Description for Group 004" },
+            ],
+            total: 1,
+          }),
+        });
+      } else {
+        await route.continue();
+      }
+    });
+
+    await page.goto("/groups/3");
+    await page.waitForLoadState("networkidle");
+
+    // Open Sheet
+    await page.getByRole("button", { name: "追加", exact: true }).click();
+    await expect(
+      page.getByPlaceholder("Search by name or description"),
+    ).toBeVisible({ timeout: 10000 });
+
+    // Select Group 004
+    const group004Radio = page.locator('input[type="radio"][aria-label="Group 004"]');
+    await expect(group004Radio).toBeVisible({ timeout: 10000 });
+    await group004Radio.click();
+
+    // Click "追加"
+    const submitButton = page.locator('[role="dialog"]').getByRole("button", { name: "追加", exact: true });
+    await expect(submitButton).toBeEnabled({ timeout: 5000 });
+    await submitButton.click();
+
+    // Error message should appear in Sheet (not close)
+    await expect(page.locator('[role="dialog"]').getByText(/given param is not valid|エラー|Error/i)).toBeVisible({ timeout: 10000 });
+  });
+
+  test("M-1: サブグループ行にメンバー数が表示される", async ({ page }) => {
+    // Group 005 has Group 006 as subgroup (seed data)
+    // Group 006 has 1 direct member in seed data (group_members id=33: group_id=6, user_id=3)
+    await page.goto("/groups/5");
+    await page.waitForLoadState("networkidle");
+
+    // Subgroups section should be visible
+    await expect(page.getByText("Subgroups")).toBeVisible({ timeout: 10000 });
+
+    // Group 006 subgroup row should show "1 members"
+    await expect(page.getByText("Group 006", { exact: true }).first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("1 members")).toBeVisible({ timeout: 10000 });
+  });
 });
 
 test.describe("サブグループ削除", () => {
@@ -474,7 +546,7 @@ test.describe("サブグループ削除", () => {
     await page.waitForLoadState("networkidle");
 
     // Group 005 has Group 006 as subgroup (seed data)
-    await expect(page.getByText("Group 006", { exact: true })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Group 006", { exact: true }).first()).toBeVisible({ timeout: 10000 });
 
     // Click [Delete] button on the subgroup row (not the group-level Delete button)
     const subgroupDeleteBtn = getSubgroupDeleteButton(page);
@@ -510,7 +582,7 @@ test.describe("サブグループ削除", () => {
     await page.waitForLoadState("networkidle");
 
     // Verify Group 006 is visible
-    await expect(page.getByText("Group 006", { exact: true })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Group 006", { exact: true }).first()).toBeVisible({ timeout: 10000 });
 
     // Click [Delete] button on the subgroup row
     const subgroupDeleteBtn = getSubgroupDeleteButton(page);

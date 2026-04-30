@@ -128,7 +128,7 @@
 
 | ファイル                                                             | 役割                                                                                                                   |
 | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `sample-api/domain/group_relation.go`                                | `GroupRelation` Entity（parent_group_id, child_group_id）定義（独立ファイル）                                          |
+| `sample-api/domain/group.go`                                         | `GroupRelation` Entity（parent_group_id, child_group_id）を `Group` / `GroupMember` と同ファイルに定義                 |
 | `sample-api/group/service.go`                                        | `GroupRelationRepository` IF 追加・`CreateSubGroup` メソッド                                                           |
 | `sample-api/group/service_test.go`                                   | `CreateSubGroup` サービステスト                                                                                        |
 | `sample-api/group/mocks/group_relation_repository_mock.go`           | `GroupRelationRepository` 手動 mock（新規作成）                                                                        |
@@ -146,7 +146,9 @@
 | `sample-front/src/pages/group-detail/api/add-subgroup.ts`                    | POST /api/v1/groups/:id/subgroups fetch 関数（新規）                                                                                                              |
 | `sample-front/src/pages/group-detail/api/fetch-groups.ts`                    | GET /api/v1/groups fetch 関数。`fetchGroupsForSheet(q?: string)` に `q` パラメータを追加し、クエリ文字列として付与する                                            |
 | `sample-front/src/pages/group-detail/ui/AddSubgroupSheet.tsx`                | グループ選択 Sheet。検索フォーム（TextField + 虫眼鏡アイコン）・`q` state・300ms デバウンス（`useEffect + setTimeout`）・"X groups" 件数表示（`total`）を追加する |
+| `sample-front/src/pages/group-detail/ui/SubgroupList.tsx`                    | サブグループ一覧の表示コンポーネント。各サブグループのメンバー数（`member_count`）を "N members" の形式で表示する                                                 |
 | `sample-front/src/pages/group-detail/ui/__tests__/AddSubgroupSheet.test.tsx` | 検索機能テストケースを追加する（既存テストファイルに追記）                                                                                                        |
+| `sample-front/src/pages/group-detail/ui/__tests__/SubgroupList.test.tsx`     | SubgroupList コンポーネントのテスト。メンバー数表示・空リスト表示・削除ダイアログの動作を確認する（既存テストファイルに追記）                                     |
 
 > DB スキーマ（`group_relations` テーブル定義・制約・FK）の詳細は [plans/schema.md](../../schema.md) を参照。
 
@@ -182,7 +184,7 @@
 | 循環参照検出                           | Service            | 400 Bad Request           | `{"message": "given param is not valid"}`         |
 | ツリー全体グループ数が 10 超（追加後） | Service            | 400 Bad Request           | `{"message": "given param is not valid"}`         |
 | 階層深度（ノード数）が 5 超（追加後）  | Service            | 400 Bad Request           | `{"message": "given param is not valid"}`         |
-| 重複（UNIQUE 制約違反）                | Repository         | 409 Conflict              | `{"message": "given param is not valid"}`         |
+| 重複（UNIQUE 制約違反）                | Repository         | 409 Conflict              | `{"message": "your item already exist"}`          |
 | DB エラー                              | Repository         | 500 Internal Server Error | `{"message": "internal server error"}`            |
 
 ---
@@ -191,21 +193,31 @@
 
 ### エンドポイント: `POST /api/v1/groups/:id/subgroups`
 
+**FE コンポーネントテスト** (`pages/group-detail/ui/__tests__/SubgroupList.test.tsx`):
+
+| #   | 観点   | テスト内容                                      | 期待結果                                    |
+| --- | ------ | ----------------------------------------------- | ------------------------------------------- |
+| 10  | 正常系 | サブグループ一覧が描画される                    | 各サブグループの名前が表示される            |
+| 11  | 正常系 | 空リストの場合に空状態メッセージが表示される    | "サブグループはまだありません" が表示される |
+| 12  | 正常系 | 各サブグループのメンバー数が表示される          | "N members" の形式でメンバー数が表示される  |
+| 13  | 境界値 | member_count: 0 のとき "0 members" が表示される | "0 members" が表示される                    |
+
 **FE コンポーネントテスト** (`pages/group-detail/ui/__tests__/AddSubgroupSheet.test.tsx`):
 
-| #   | 観点     | テスト内容                                               | 期待結果                                                      |
-| --- | -------- | -------------------------------------------------------- | ------------------------------------------------------------- |
-| 1   | 正常系   | グループ選択 → 追加ボタン押下 → 201 成功                 | onClose が呼ばれ一覧が refetch される                         |
-| 2   | 分岐条件 | グループ未選択時は追加ボタンが disabled                  | ボタンがクリック不可                                          |
-| 3   | 分岐条件 | グループ選択後は追加ボタンが enabled                     | ボタンがクリック可                                            |
-| 4   | 異常系   | POST API が 400 を返す                                   | Sheet 内にエラーメッセージが表示される                        |
-| 5   | 異常系   | POST API が 409 を返す                                   | 「すでに追加済みです」が表示される                            |
-| 6   | 正常系   | Sheet 開封時に全件取得され "X groups" の件数が表示される | `fetchGroupsForSheet("")` が呼ばれ total 件数が表示される     |
-| 7   | 正常系   | キーワード入力後 300ms で `q` 付き API が呼ばれる        | `fetchGroupsForSheet("dev")` が呼ばれ groups 一覧が更新される |
-| 8   | 分岐条件 | 検索結果が 0 件のとき "0 groups" が表示される            | "0 groups" が表示される                                       |
-| 9   | 分岐条件 | 検索フィールドをクリアすると q なしで全件取得される      | `fetchGroupsForSheet("")` が再度呼ばれる                      |
-| 10  | 異常系   | グループ取得 API がエラーを返す                          | Sheet 内にエラーメッセージが表示される                        |
-| 11  | 外部依存 | `fetchGroupsForSheet` はモックに差し替える               | 実際の HTTP 通信は発生しない                                  |
+| #   | 観点     | テスト内容                                                   | 期待結果                                                      |
+| --- | -------- | ------------------------------------------------------------ | ------------------------------------------------------------- |
+| 1   | 正常系   | グループ選択 → 追加ボタン押下 → 201 成功                     | onClose が呼ばれ一覧が refetch される                         |
+| 2   | 分岐条件 | グループ未選択時は追加ボタンが disabled                      | ボタンがクリック不可                                          |
+| 3   | 分岐条件 | グループ選択後は追加ボタンが enabled                         | ボタンがクリック可                                            |
+| 4   | 異常系   | POST API が 400 を返す                                       | Sheet 内にエラーメッセージが表示される                        |
+| 5   | 異常系   | POST API が 409 を返す                                       | 「すでに追加済みです」が表示される                            |
+| 6   | 正常系   | Sheet 開封時に全件取得され "X groups" の件数が表示される     | `fetchGroupsForSheet("")` が呼ばれ total 件数が表示される     |
+| 7   | 正常系   | キーワード入力後 300ms で `q` 付き API が呼ばれる            | `fetchGroupsForSheet("dev")` が呼ばれ groups 一覧が更新される |
+| 8   | 分岐条件 | 検索結果が 0 件のとき "0 groups" が表示される                | "0 groups" が表示される                                       |
+| 9   | 分岐条件 | 検索フィールドをクリアすると q なしで全件取得される          | `fetchGroupsForSheet("")` が再度呼ばれる                      |
+| 10  | 異常系   | グループ取得 API がエラーを返す                              | Sheet 内にエラーメッセージが表示される                        |
+| 11  | 外部依存 | `fetchGroupsForSheet` はモックに差し替える                   | 実際の HTTP 通信は発生しない                                  |
+| 12  | 分岐条件 | 既存サブグループに含まれるグループは選択リストに表示されない | 既存サブグループの ID に一致するグループが一覧から除外される  |
 
 **Handler テスト** (`internal/rest/group_test.go`):
 
@@ -260,6 +272,7 @@
 16. 入力後 300ms デバウンス後に API を再送信する（`useEffect + setTimeout` で実装）
 17. API レスポンスの `total` を "X groups" としてフォーム上部に表示する
 18. バックエンドの変更はなし
+19. SubgroupList でサブグループごとのメンバー数（`member_count`）を "N members" の形式で表示する
 
 ---
 

@@ -68,7 +68,15 @@ test.describe("グループメンバー削除", () => {
             status: 200,
             contentType: "application/json",
             body: JSON.stringify({
-              members: [{ id: 2, first_name: "Hanako", last_name: "Suzuki" }],
+              members: [
+                {
+                  id: 2,
+                  uuid: "uuid-002",
+                  first_name: "Hanako",
+                  last_name: "Suzuki",
+                  source_groups: [{ group_id: 1, group_name: "Group 001" }],
+                },
+              ],
               total: 1,
             }),
           });
@@ -86,6 +94,7 @@ test.describe("グループメンバー削除", () => {
             name: "Group 001",
             description: "Description for Group 001",
             member_count: 1,
+            subgroups: [],
           }),
         });
       });
@@ -144,8 +153,20 @@ test.describe("グループメンバー削除", () => {
               contentType: "application/json",
               body: JSON.stringify({
                 members: [
-                  { id: 1, first_name: "Taro", last_name: "Yamada" },
-                  { id: 2, first_name: "Hanako", last_name: "Suzuki" },
+                  {
+                    id: 1,
+                    uuid: "uuid-001",
+                    first_name: "Taro",
+                    last_name: "Yamada",
+                    source_groups: [{ group_id: 1, group_name: "Group 001" }],
+                  },
+                  {
+                    id: 2,
+                    uuid: "uuid-002",
+                    first_name: "Hanako",
+                    last_name: "Suzuki",
+                    source_groups: [{ group_id: 1, group_name: "Group 001" }],
+                  },
                 ],
                 total: 2,
               }),
@@ -165,6 +186,7 @@ test.describe("グループメンバー削除", () => {
             name: "Group 001",
             description: "Description for Group 001",
             member_count: 0,
+            subgroups: [],
           }),
         });
       });
@@ -233,7 +255,15 @@ test.describe("グループメンバー削除", () => {
             status: 200,
             contentType: "application/json",
             body: JSON.stringify({
-              members: [{ id: 2, first_name: "Hanako", last_name: "Suzuki" }],
+              members: [
+                {
+                  id: 2,
+                  uuid: "uuid-002",
+                  first_name: "Hanako",
+                  last_name: "Suzuki",
+                  source_groups: [{ group_id: 1, group_name: "Group 001" }],
+                },
+              ],
               total: 1,
             }),
           });
@@ -251,6 +281,7 @@ test.describe("グループメンバー削除", () => {
             name: "Group 001",
             description: "Description for Group 001",
             member_count: 1,
+            subgroups: [],
           }),
         });
       });
@@ -440,6 +471,7 @@ test.describe("グループメンバー削除", () => {
             name: "Group 001",
             description: "Description for Group 001",
             member_count: 0,
+            subgroups: [],
           }),
         });
       });
@@ -462,8 +494,20 @@ test.describe("グループメンバー削除", () => {
               contentType: "application/json",
               body: JSON.stringify({
                 members: [
-                  { id: 1, first_name: "Taro", last_name: "Yamada" },
-                  { id: 2, first_name: "Hanako", last_name: "Suzuki" },
+                  {
+                    id: 1,
+                    uuid: "uuid-001",
+                    first_name: "Taro",
+                    last_name: "Yamada",
+                    source_groups: [{ group_id: 1, group_name: "Group 001" }],
+                  },
+                  {
+                    id: 2,
+                    uuid: "uuid-002",
+                    first_name: "Hanako",
+                    last_name: "Suzuki",
+                    source_groups: [{ group_id: 1, group_name: "Group 001" }],
+                  },
                 ],
                 total: 2,
               }),

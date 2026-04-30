@@ -9,6 +9,8 @@ type: project
 - `Group`: ID(uint64), Name(string), Description(string), MemberCount(int)
 - `User`: ID(uint64), UUID(string), FirstName(string), LastName(string)
 - `GroupRelation`: ParentGroupID(uint64), ChildGroupID(uint64)
+- `GroupMemberSource`: GroupID(uint64), GroupName(string)
+- `GroupMember`: ID(uint64), UUID(string), FirstName(string), LastName(string), SearchKey(string), Sources([]GroupMemberSource) — SourceGroupID/SourceGroupName を廃止して複数所属元を配列で保持。domain.User は変更しない
 
 ## DB スキーマ
 
@@ -38,14 +40,15 @@ type: project
 | DELETE | /api/v1/groups/:id | Delete (soft delete, 204 No Content) |
 | DELETE | /api/v1/groups/:id/members | DeleteGroupMembers（204 No Content） |
 | POST | /api/v1/groups/:id/subgroups | CreateSubGroup（201 + GroupRelation JSON） |
+| DELETE | /api/v1/groups/:id/subgroups/:childId | DeleteSubGroup（204 No Content） |
 
 ## GroupService インターフェース（internal/rest/group.go）
 
 ```go
 type GroupService interface {
     ListGroups(ctx context.Context, q string, limit, offset int) ([]domain.Group, int, error)
-    GetByID(ctx context.Context, id uint64) (domain.Group, error)
-    ListGroupMembers(ctx context.Context, id uint64, limit, offset int, q string) ([]domain.User, int, error)
+    GetByID(ctx context.Context, id uint64) (domain.Group, []domain.Group, error)
+    ListGroupMembers(ctx context.Context, id uint64, limit, offset int, q string) ([]domain.GroupMember, int, error)
     Store(ctx context.Context, name, description string, userID uint64) (domain.Group, error)
     Update(ctx context.Context, id uint64, name, description string, userID uint64) (*domain.Group, error)
     Delete(ctx context.Context, id uint64, userID uint64) error
@@ -53,6 +56,7 @@ type GroupService interface {
     AddGroupMembers(ctx context.Context, groupID uint64, userIDs []uint64) ([]domain.User, error)
     RemoveGroupMembers(ctx context.Context, groupID uint64, userIDs []uint64) error
     CreateSubGroup(ctx context.Context, parentGroupID, childGroupID uint64) (domain.GroupRelation, error)
+    DeleteSubGroup(ctx context.Context, parentGroupID, childGroupID uint64) error
 }
 ```
 
@@ -66,7 +70,7 @@ type GroupService interface {
 `ListGroupMembers`, `ListNonGroupMembers`, `AddGroupMembers`, `RemoveGroupMembers` が追加されている。
 
 シグネチャは全レイヤーで統一：
-- `ListGroupMembers(ctx, id uint64, limit, offset int, q string) ([]domain.User, int, error)`
+- `ListGroupMembers(ctx, id uint64, limit, offset int, q string) ([]domain.GroupMember, int, error)` — WITH RECURSIVE + JSON_ARRAYAGG で全子孫を辿り、ユーザーごとに全所属元グループを source_groups 配列として返す。repository 内部で sourceGroupRow struct を使い JSON を Unmarshal して domain.GroupMemberSource スライスに変換する
 - `ListNonGroupMembers(ctx, groupID uint64, limit, offset int, q string) ([]domain.User, int, error)`
 - `RemoveGroupMembers(ctx, groupID uint64, userIDs []uint64) error`
 
@@ -82,7 +86,7 @@ type UserRepository interface {
 
 - `NewService(repo GroupRepository, userRepo UserRepository) *Service` — 2 引数シグネチャ（互換維持）
 - `NewServiceWithRelation(repo, userRepo, relationRepo) *Service` — GroupRelationRepository を注入する 3 引数シグネチャ。main.go では `NewServiceWithRelation` を使用
-- `GroupRelationRepository` インターフェース（group/service.go）: `GetAncestorIDs`, `GetDescendantIDs`, `CountComponentGroups`, `MaxDepthInComponent`, `CreateRelation`
+- `GroupRelationRepository` インターフェース（group/service.go）: `GetAncestorIDs`, `GetDescendantIDs`, `CountComponentGroups`, `MaxDepthInComponent`, `CreateRelation`, `ListChildren`, `DeleteRelation`
 - MySQL 実装: `internal/repository/mysql/group_relation.go`（WITH RECURSIVE CTE で祖先・子孫集合を取得）
 - `group/mocks/group_relation_repository_mock.go`（手動 mock）
 - サイクル検出: GetAncestorIDs(parent) に child が含まれる OR GetDescendantIDs(child) に parent が含まれるなら 400
