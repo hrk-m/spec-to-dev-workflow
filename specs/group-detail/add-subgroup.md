@@ -13,16 +13,17 @@
   │
   ├─ AddSubgroupSheet が SheetStack に積まれ、右からスライドインして表示される
   ├─ GET /api/v1/groups を送信する（全グループ一覧取得）
+  ├─ 取得件数が "X groups" としてシート上部に表示される（total）
   ├─ グループ一覧がシート内にリスト表示される（自分自身と既存子グループを除外）
   ├─ ユーザーが検索キーワードを入力する（300ms デバウンス）
   │    ├─ GET /api/v1/groups?q={keyword} を送信する
-  │    └─ 検索結果で一覧を更新する
+  │    └─ 検索結果と "X groups" 件数表示を更新する
   ├─ ユーザーがグループ行またはラジオボタンをクリックしてグループを選択する
   │    └─ 選択済み行が青系の背景色でハイライトされる
-  ├─ 「追加」ボタンをクリックする
+  ├─ 「追加」ボタンをクリックする（未選択時は disabled）
   ├─ POST /api/v1/groups/:id/subgroups { "child_group_id": {selectedId} } を送信する
   ├─ API が 201 Created を返す
-  ├─ useGroupDetail.refetch() でグループ詳細（subgroups）を更新する
+  ├─ onSuccess() コールバックでグループ詳細（subgroups）を更新する
   └─ AddSubgroupSheet が閉じる（onClose() 経由）
 ```
 
@@ -52,22 +53,23 @@
 
 ## 使用コンポーネント・状態
 
-| 要素                  | 種別           | 役割                                                                                             |
-| --------------------- | -------------- | ------------------------------------------------------------------------------------------------ |
-| `GroupDetailContent`  | コンポーネント | 「追加」ボタンを配置し、`openSheet()` で AddSubgroupSheet を SheetStack に登録する               |
+| 要素                  | 種別           | 役割                                                                                                                                                          |
+| --------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GroupDetailContent`  | コンポーネント | 「追加」ボタンを配置し、`openSheet()` で AddSubgroupSheet を SheetStack に登録する                                                                            |
 | `SubgroupList`        | コンポーネント | サブグループ一覧をカードリスト形式で表示する。各行にグループ名・説明・メンバー数（"N members"）を表示する。空状態は「サブグループはまだありません」を表示する |
-| `AddSubgroupSheet`    | コンポーネント | 検索入力・ラジオ選択付きグループ一覧・「追加する」ボタンを提供するシートコンテンツ               |
-| `fetchGroupsForSheet` | API 関数       | `GET /api/v1/groups` を呼び出して全グループ一覧と total を取得する                               |
-| `addSubgroup`         | API 関数       | `POST /api/v1/groups/:id/subgroups` を呼び出す                                                   |
-| `selectedGroupId`     | state          | ラジオ選択されたグループの ID（`number \| null`）                                                |
-| `searchQuery`         | state          | 検索フィールドの入力値。300ms デバウンス後に API リクエストを送信する                            |
-| `groups`              | state          | GET で取得したグループ一覧                                                                       |
-| `availableGroups`     | 派生値         | `groups` から自分自身（`groupId`）と既存子グループ（`existingChildIds`）を除外したリスト         |
-| `fetchError`          | state          | GET /api/v1/groups のエラーメッセージ                                                            |
-| `submitError`         | state          | POST /api/v1/groups/:id/subgroups のエラーメッセージ（409 時は「すでに追加済みです」）           |
-| `isSubmitting`        | state          | API 呼び出し中かどうか。「追加する」ボタンの disabled 制御に使用                                 |
-| `isFetchingGroups`    | state          | グループ一覧取得中かどうか。`true` のときスケルトン表示（4 行）                                  |
-| `isActiveRef`         | ref            | デバウンスタイマーのクリーンアップ用フラグ。アンマウント後の state 更新を防ぐ                    |
+| `AddSubgroupSheet`    | コンポーネント | 検索入力・ラジオ選択付きグループ一覧・「追加」ボタンを提供するシートコンテンツ                                                                                |
+| `fetchGroupsForSheet` | API 関数       | `GET /api/v1/groups` を呼び出して全グループ一覧と total を取得する                                                                                            |
+| `addSubgroup`         | API 関数       | `POST /api/v1/groups/:id/subgroups` を呼び出す                                                                                                                |
+| `selectedGroupId`     | state          | ラジオ選択されたグループの ID（`number \| null`）                                                                                                             |
+| `searchQuery`         | state          | 検索フィールドの入力値。300ms デバウンス後に API リクエストを送信する                                                                                         |
+| `groups`              | state          | GET で取得したグループ一覧                                                                                                                                    |
+| `total`               | state          | GET /api/v1/groups のレスポンス件数。"X groups" としてシート上部に表示する（`number \| null`）                                                                |
+| `availableGroups`     | 派生値         | `groups` から自分自身（`groupId`）と既存子グループ（`existingChildIds`）を除外したリスト                                                                      |
+| `fetchError`          | state          | GET /api/v1/groups のエラーメッセージ                                                                                                                         |
+| `submitError`         | state          | POST /api/v1/groups/:id/subgroups のエラーメッセージ（409 時は「すでに追加済みです」）                                                                        |
+| `isSubmitting`        | state          | API 呼び出し中かどうか。「追加」ボタンの disabled 制御に使用                                                                                                  |
+| `isFetchingGroups`    | state          | グループ一覧取得中かどうか。`true` のときスケルトン表示（4 行）                                                                                               |
+| `isActiveRef`         | ref            | デバウンスタイマーのクリーンアップ用フラグ。アンマウント後の state 更新を防ぐ                                                                                 |
 
 ---
 
