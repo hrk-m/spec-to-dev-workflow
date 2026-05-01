@@ -150,12 +150,13 @@
 
 ### sample-front
 
-| 対応ステップ | パス                                                              | 役割                                                                                   |
-| ------------ | ----------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| 5-2-FE       | `sample-front/src/pages/group-detail/api/delete-group-members.ts` | API クライアント（DELETE /api/v1/groups/:id/members）                                  |
-| 5-2-FE       | `sample-front/src/pages/group-detail/model/member-list.ts`        | メンバー一覧の状態管理・削除後のキャッシュクリア                                       |
-| 5-2-FE       | `sample-front/src/pages/group-detail/ui/MemberList.tsx`           | ヘッダー checkbox 追加・全選択ロジック・indeterminate DOM 反映の副作用フック・削除処理 |
-| 5-2-FE       | `sample-front/src/pages/group-detail/ui/MemberList.styles.ts`     | ヘッダー checkbox 用スタイル定数追加（headerCheckboxInput 等）                         |
+| 対応ステップ | パス                                                                   | 役割                                                                                      |
+| ------------ | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| 5-2-FE       | `sample-front/src/pages/group-detail/api/delete-group-members.ts`      | API クライアント（DELETE /api/v1/groups/:id/members）                                     |
+| 5-2-FE       | `sample-front/src/pages/group-detail/model/member-list.ts`             | メンバー一覧の状態管理・削除後のキャッシュクリア                                          |
+| 5-2-FE       | `sample-front/src/pages/group-detail/ui/MemberList.tsx`                | ヘッダー checkbox 追加・全選択ロジック・indeterminate DOM 反映の副作用フック・削除処理    |
+| 5-2-FE       | `sample-front/src/pages/group-detail/ui/MemberList.styles.ts`          | ヘッダー checkbox 用スタイル定数追加（headerCheckboxInput 等）                            |
+| 5-5          | `sample-front/src/pages/group-detail/ui/__tests__/MemberList.test.tsx` | FE コンポーネントテスト（ヘッダーチェックボックス全選択・削除フロー・エラー・キャンセル） |
 
 ---
 
@@ -222,15 +223,20 @@
 
 **FE コンポーネントテスト** (`sample-front/src/pages/group-detail/ui/__tests__/MemberList.test.tsx`):
 
-| #   | 観点   | テスト内容                                             | 期待結果                               |
-| --- | ------ | ------------------------------------------------------ | -------------------------------------- |
-| 17  | 全選択 | 全未選択時にヘッダー checkbox が unchecked             | checked=false かつ indeterminate=false |
-| 18  | 全選択 | 全メンバー個別選択後にヘッダー checkbox が checked     | checked=true かつ indeterminate=false  |
-| 19  | 全選択 | 一部選択時にヘッダー checkbox が indeterminate=true    | indeterminate=true                     |
-| 20  | 全選択 | 全未選択→ヘッダークリックで全メンバーが選択される      | 全行 aria-checked="true"               |
-| 21  | 全選択 | 全選択→ヘッダークリックで全メンバーが解除される        | 全行 aria-checked="false"              |
-| 22  | 全選択 | indeterminate→ヘッダークリックで全メンバーが選択される | 全行 aria-checked="true"               |
-| 23  | 境界値 | メンバー 0 件時にヘッダー checkbox が disabled=true    | disabled=true                          |
+| #   | 観点   | テスト内容                                                                            | 期待結果                                                                  |
+| --- | ------ | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| 17  | 全選択 | 全未選択時にヘッダー checkbox が unchecked                                            | checked=false かつ indeterminate=false                                    |
+| 18  | 全選択 | 全メンバー個別選択後にヘッダー checkbox が checked                                    | checked=true かつ indeterminate=false                                     |
+| 19  | 全選択 | 一部選択時にヘッダー checkbox が indeterminate=true                                   | indeterminate=true                                                        |
+| 20  | 全選択 | 全未選択→ヘッダークリックで全メンバーが選択される                                     | 全行 aria-checked="true"                                                  |
+| 21  | 全選択 | 全選択→ヘッダークリックで全メンバーが解除される                                       | 全行 aria-checked="false"                                                 |
+| 22  | 全選択 | indeterminate→ヘッダークリックで全メンバーが選択される                                | 全行 aria-checked="true"                                                  |
+| 23  | 境界値 | メンバー 0 件時にヘッダー checkbox が disabled=true                                   | disabled=true                                                             |
+| 24  | 正常系 | 0 件チェック時は削除ボタンが disabled、1 件以上で enabled になる                      | 削除ボタンの enabled / disabled が選択件数に連動する                      |
+| 25  | 正常系 | 削除ボタン押下で確認ダイアログが開く                                                  | AlertDialog に「選択した N 名をグループから削除しますか」文言が表示される |
+| 26  | 正常系 | 削除成功後に clearMemberListCache と onRefetch が呼ばれ、チェック状態がリセットされる | clearMemberListCache と onRefetch が呼ばれ、削除ボタンが disabled に戻る  |
+| 27  | 正常系 | キャンセルでダイアログが閉じ、チェック状態が維持される                                | ダイアログが閉じ、削除ボタンは enabled のまま                             |
+| 28  | 異常系 | 4xx/5xx エラー時にエラーメッセージを表示する                                          | AlertDialog 内にエラーメッセージが表示される                              |
 
 ---
 

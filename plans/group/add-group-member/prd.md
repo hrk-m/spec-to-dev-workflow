@@ -271,17 +271,17 @@
 
 #### エラーケース一覧
 
-| 条件                                           | 発生レイヤー                       | ステータス                | レスポンス                                            |
-| ---------------------------------------------- | ---------------------------------- | ------------------------- | ----------------------------------------------------- |
-| `id` が整数に変換不可                          | Handler                            | 400 Bad Request           | `{ "message": "given param is not valid" }`           |
-| `id` が 1 未満                                 | Handler                            | 400 Bad Request           | `{ "message": "given param is not valid" }`           |
-| `user_ids` が存在しない / 空配列               | Handler                            | 400 Bad Request           | `{ "message": "given param is not valid" }`           |
-| 対象グループが存在しない                       | Service / Repository               | 404 Not Found             | `{ "message": "your requested item is not found" }`   |
-| `user_ids` 内に存在しないユーザー ID がある    | Service / Repository               | 404 Not Found             | `{ "message": "your requested item is not found" }`   |
-| `user_ids` 内にすでにメンバーの user_id がある | Service / Repository               | 409 Conflict              | `{ "message": "your item already exist" }` |
-| UNIQUE 制約エラー（並行リクエスト）            | Repository                         | 409 Conflict              | `{ "message": "your item already exist" }` |
-| DB エラー                                      | Repository                         | 500 Internal Server Error | `{ "message": "internal server error" }`              |
-| ネットワークエラー                             | フロントエンド: API クライアント層 | —                         | エラーメッセージ表示                                  |
+| 条件                                           | 発生レイヤー                       | ステータス                | レスポンス                                          |
+| ---------------------------------------------- | ---------------------------------- | ------------------------- | --------------------------------------------------- |
+| `id` が整数に変換不可                          | Handler                            | 400 Bad Request           | `{ "message": "given param is not valid" }`         |
+| `id` が 1 未満                                 | Handler                            | 400 Bad Request           | `{ "message": "given param is not valid" }`         |
+| `user_ids` が存在しない / 空配列               | Handler                            | 400 Bad Request           | `{ "message": "given param is not valid" }`         |
+| 対象グループが存在しない                       | Service / Repository               | 404 Not Found             | `{ "message": "your requested item is not found" }` |
+| `user_ids` 内に存在しないユーザー ID がある    | Service / Repository               | 404 Not Found             | `{ "message": "your requested item is not found" }` |
+| `user_ids` 内にすでにメンバーの user_id がある | Service / Repository               | 409 Conflict              | `{ "message": "your item already exist" }`          |
+| UNIQUE 制約エラー（並行リクエスト）            | Repository                         | 409 Conflict              | `{ "message": "your item already exist" }`          |
+| DB エラー                                      | Repository                         | 500 Internal Server Error | `{ "message": "internal server error" }`            |
+| ネットワークエラー                             | フロントエンド: API クライアント層 | —                         | エラーメッセージ表示                                |
 
 ---
 
