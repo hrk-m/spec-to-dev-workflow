@@ -166,7 +166,7 @@
       - 終了
 10. 各 user_id について group_members に既存レコードがないか確認（重複チェック）
     - 1 件でも重複がある（ErrConflict）→
-      - 409 Conflict { "message": "your requested item already exists" } を返す
+      - 409 Conflict { "message": "your item already exist" } を返す
       - 終了
 11. トランザクションを開始し、全 user_id を group_members へ INSERT
     - UNIQUE 制約エラーが発生した場合 → ロールバックして 409 Conflict を返す
@@ -224,6 +224,7 @@
   "users": [
     {
       "id": 1,
+      "uuid": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
       "first_name": "太郎",
       "last_name": "山田"
     }
@@ -260,6 +261,7 @@
   "members": [
     {
       "id": 1,
+      "uuid": "550e8400-e29b-41d4-a716-446655440001",
       "first_name": "太郎",
       "last_name": "山田"
     }
@@ -276,8 +278,8 @@
 | `user_ids` が存在しない / 空配列               | Handler                            | 400 Bad Request           | `{ "message": "given param is not valid" }`           |
 | 対象グループが存在しない                       | Service / Repository               | 404 Not Found             | `{ "message": "your requested item is not found" }`   |
 | `user_ids` 内に存在しないユーザー ID がある    | Service / Repository               | 404 Not Found             | `{ "message": "your requested item is not found" }`   |
-| `user_ids` 内にすでにメンバーの user_id がある | Service / Repository               | 409 Conflict              | `{ "message": "your requested item already exists" }` |
-| UNIQUE 制約エラー（並行リクエスト）            | Repository                         | 409 Conflict              | `{ "message": "your requested item already exists" }` |
+| `user_ids` 内にすでにメンバーの user_id がある | Service / Repository               | 409 Conflict              | `{ "message": "your item already exist" }` |
+| UNIQUE 制約エラー（並行リクエスト）            | Repository                         | 409 Conflict              | `{ "message": "your item already exist" }` |
 | DB エラー                                      | Repository                         | 500 Internal Server Error | `{ "message": "internal server error" }`              |
 | ネットワークエラー                             | フロントエンド: API クライアント層 | —                         | エラーメッセージ表示                                  |
 

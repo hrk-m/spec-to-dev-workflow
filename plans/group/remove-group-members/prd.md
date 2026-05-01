@@ -77,19 +77,18 @@
       - 400 Bad Request { "message": "given param is not valid" } を返す
       - 終了
 5. Service.RemoveGroupMembers(ctx, groupID, userIDs) を呼び出す
-6. Repository.GetByID(ctx, groupID) でグループ存在確認
+6. deduplicateUint64 で重複 ID を除去する
+7. Repository.GetByID(ctx, groupID) でグループ存在確認
    - 存在しない（ErrNotFound）→
-      - 404 Not Found { "message": "your requested item is not found" } を返す
-      - 終了
-7. deduplicateUint64 で重複 ID を除去したのち、group_members に対して COUNT クエリで全 user_id のメンバー存在確認
-   - 期待カウントと実際のカウントが一致しない（非メンバーが 1 件以上）→
       - 404 Not Found { "message": "your requested item is not found" } を返す
       - 終了
 8. トランザクションを開始し、DELETE FROM group_members WHERE group_id = :group_id AND user_id IN (:user_ids) を実行
    - DB エラーの場合 → ロールバックして 500 Internal Server Error を返す
-9. トランザクションをコミット
-10. 200 OK（ボディなし）を返す
-11. 終了
+9. RowsAffected が指定 user_ids 数と一致しない（非メンバーが含まれていた）
+   - ロールバック → 404 Not Found { "message": "your requested item is not found" } を返す
+10. トランザクションをコミット
+11. 204 No Content（ボディなし）を返す
+12. 終了
 ```
 
 ---

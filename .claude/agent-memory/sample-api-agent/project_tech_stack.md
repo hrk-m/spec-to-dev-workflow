@@ -14,6 +14,8 @@ type: project
 - **Lint**: golangci-lint v2
 - **インフラ**: Docker Compose（MySQL）
 - **DB マイグレーション**: golang-migrate（`db/migrate/` に `.up.sql` のみ）
+- **ログ**: `log/slog`（Go 1.21+ 標準ライブラリ）を使用。`slog.NewJSONHandler(os.Stdout, nil)` で JSON 形式で stdout に出力。`log.Fatal` は起動時エラーのみに使用
+- **ヘルスチェック**: `health.go` で `DBPinger` IF を消費側（`internal/rest/`）で定義し `*sql.DB` が実装（`GET /health`）
 
 ## Clean Architecture レイヤー構成
 
