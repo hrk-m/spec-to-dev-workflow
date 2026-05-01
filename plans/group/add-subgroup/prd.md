@@ -79,7 +79,7 @@
     - 追加後に 5 ノード超となる場合 → 400 Bad Request {"message": "given param is not valid"} → 終了
     - DB エラー → 500 Internal Server Error → 終了
 13. group_relations に (parent_group_id, child_group_id) を INSERT する
-    - UNIQUE 制約違反 → 409 Conflict {"message": "given param is not valid"} → 終了
+    - UNIQUE 制約違反 → 409 Conflict {"message": "your item already exist"} → 終了
     - DB エラー → 500 Internal Server Error → 終了
 14. 201 Created {"parent_group_id": N, "child_group_id": M} を返す → 終了
 ```
