@@ -139,14 +139,15 @@
 
 ### sample-front
 
-| 対応ステップ | パス                                                                   | 役割                                                                                                                                                                                                                                                                          |
-| ------------ | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 5-2-FE       | `sample-front/src/pages/group-detail/model/group-detail.ts`            | `UserSummary` 型に `source_group_id: number` / `source_group_name: string` を追加                                                                                                                                                                                             |
-| 5-2-FE       | `sample-front/src/pages/group-detail/api/fetch-group-members.ts`       | レスポンス型拡張に追従（fetch 実装ロジック自体に変更なし）                                                                                                                                                                                                                    |
-| 5-2-FE       | `sample-front/src/pages/group-detail/model/member-list.ts`             | `useMemberList` フックは挙動変更なし。型のみ追従。`refetch` は既存どおり、サブグループ追加 / 削除ハンドラから呼び出し可能                                                                                                                                                     |
-| 5-2-FE       | `sample-front/src/pages/group-detail/ui/MemberList.tsx`                | テーブルに「所属元」列を追加。`source_group_id === groupId ? '自グループ' : source_group_name`。チェックボックスセルは親直属のみ表示・子孫由来は空セル。`SkeletonMemberRow` の `colSpan` を +1 し、所属元列のスケルトンセルを追加。「全選択」判定を親直属メンバー数基準に変更 |
-| 5-2-FE       | `sample-front/src/pages/group-detail/ui/MemberList.styles.ts`          | `tableHeaderCellSource` / `tableCellSource` のスタイル定数を追加                                                                                                                                                                                                              |
-| 5-5          | `sample-front/src/pages/group-detail/ui/__tests__/MemberList.test.tsx` | 「所属元」列ヘッダーの確認・親直属 / 子孫由来の表示分岐・チェックボックス表示制御・全選択判定（親直属基準）・onMemberClick 制御テストを追加                                                                                                                                   |
+| 対応ステップ | パス                                                                        | 役割                                                                                                                                                                                                                                                                          |
+| ------------ | --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 5-2-FE       | `sample-front/src/pages/group-detail/model/group-detail.ts`                 | `UserSummary` 型に `source_group_id: number` / `source_group_name: string` を追加                                                                                                                                                                                             |
+| 5-2-FE       | `sample-front/src/pages/group-detail/api/fetch-group-members.ts`            | レスポンス型拡張に追従（fetch 実装ロジック自体に変更なし）                                                                                                                                                                                                                    |
+| 5-2-FE       | `sample-front/src/pages/group-detail/model/member-list.ts`                  | `useMemberList` フックは挙動変更なし。型のみ追従。`refetch` は既存どおり、サブグループ追加 / 削除ハンドラから呼び出し可能                                                                                                                                                     |
+| 5-2-FE       | `sample-front/src/pages/group-detail/ui/MemberList.tsx`                     | テーブルに「所属元」列を追加。`source_group_id === groupId ? '自グループ' : source_group_name`。チェックボックスセルは親直属のみ表示・子孫由来は空セル。`SkeletonMemberRow` の `colSpan` を +1 し、所属元列のスケルトンセルを追加。「全選択」判定を親直属メンバー数基準に変更 |
+| 5-2-FE       | `sample-front/src/pages/group-detail/ui/MemberList.styles.ts`               | `tableHeaderCellSource` / `tableCellSource` のスタイル定数を追加                                                                                                                                                                                                              |
+| 5-5          | `sample-front/src/pages/group-detail/ui/__tests__/MemberList.test.tsx`      | 「所属元」列ヘッダーの確認・親直属 / 子孫由来の表示分岐・チェックボックス表示制御・全選択判定（親直属基準）・onMemberClick 制御テストを追加                                                                                                                                   |
+| 5-5          | `sample-front/src/pages/group-detail/model/__tests__/useMemberList.test.ts` | フックユニットテスト（マウント時 API 呼び出し・エラー・検索デバウンス・clearMemberListCache 再フェッチ・無限スクロール・fetchMoreError）                                                                                                                                      |
 
 > DB スキーマ変更なし。`group_relations` テーブル定義・制約・FK の詳細は [plans/schema.md](../../schema.md) を参照。
 
@@ -271,6 +272,20 @@
 | 30  | 全選択判定           | 全選択チェックボックスは親直属メンバー数基準で判定される                                     | selectedIds.size === 親直属メンバー数 のとき checked 状態。子孫由来は計算対象外                  |
 | 31  | スケルトン           | ローディング中のスケルトン行が 4 列構成（または 3 列）で正しく描画される                     | `colSpan` が新しい列数に追従し、所属元セルもスケルトンとして描画される                           |
 | 32  | 既存テスト互換       | 既存テスト（メンバー名表示・空状態・検索・チェックボックス等）が新型 `UserSummary` で通る    | 既存テストが拡張型データで全 pass                                                                |
+
+**フックユニットテスト** (`model/__tests__/useMemberList.test.ts`):
+
+| #   | 観点           | テスト内容                                                                                | 期待結果                                                                                     |
+| --- | -------------- | ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| 33  | 正常系         | マウント時に API を呼び出し members と total をセットする                                 | members と total が正しくセットされ isLoading=false になる                                   |
+| 34  | 異常系         | API エラー時に error をセットする                                                         | error にメッセージがセットされ members=[] になる                                             |
+| 35  | 正常系         | 検索クエリを 300ms デバウンスしてから API を呼び出す                                      | デバウンス前は未呼び出し、300ms 後に q パラメータ付きで呼ばれる                              |
+| 36  | 正常系         | 初期ローディング状態が true である                                                        | isLoading=true、members=[]、error=null                                                       |
+| 37  | 正常系         | clearMemberListCache 呼び出し後に useMemberList が再フェッチする                          | 再フェッチが実行され最新データが返る                                                         |
+| 38  | 正常系（無限） | members は cachedMembers の全件を返す                                                     | 全件（55 件）が即時返る                                                                      |
+| 39  | 正常系（無限） | sentinel が visible になったら doFetchMore を呼ぶ（lastBatchSize === FETCH_LIMIT のとき） | 次 offset でフェッチされる                                                                   |
+| 40  | 正常系（無限） | sentinel が visible になった後に追加データが表示される                                    | 既存 + 追加の全件が返る                                                                      |
+| 41  | 異常系（無限） | 追加フェッチ失敗時に fetchMoreError がセットされ既存メンバーは維持される                  | fetchMoreError にメッセージがセットされ、既存メンバーが維持され、isFetchingMore=false になる |
 
 > E2E テスト（Playwright）は `/e2e-gen` で改めて設計するため、この PRD には含めない。
 

@@ -23,11 +23,11 @@
 
 ### ファイル
 
-| ファイル | 役割 |
-| --- | --- |
-| `internal/rest/access_log.go` | ミドルウェア実装 |
-| `internal/rest/access_log_test.go` | ユニットテスト |
-| `app/main.go` | ミドルウェア登録 |
+| ファイル                           | 役割             |
+| ---------------------------------- | ---------------- |
+| `internal/rest/access_log.go`      | ミドルウェア実装 |
+| `internal/rest/access_log_test.go` | ユニットテスト   |
+| `app/main.go`                      | ミドルウェア登録 |
 
 ### ミドルウェア登録順（`app/main.go`）
 
@@ -59,16 +59,16 @@ apiGroup.Use(rest.AccessLogMiddleware(logger))      // 2 層目（内側）
 
 ### ログ項目
 
-| フィールド | 型 | 内容 |
-| --- | --- | --- |
-| `time` | string | ISO 8601 形式（`slog` の自動付与） |
-| `level` | string | `"INFO"` 固定（`slog` の自動付与） |
-| `msg` | string | `"access"` 固定（`slog` の自動付与） |
-| `endpoint` | string | `METHOD /path`（実パス、例: `GET /api/v1/users/123`） |
-| `login_user` | string | `authUser.UUID`（未設定 = `""`） |
-| `latency_s` | float64 | レスポンスまでの秒数 |
-| `status` | int | HTTP ステータスコード |
-| `header` | object | リクエストヘッダー（`Authorization` は `[REDACTED]` にマスクする） |
+| フィールド   | 型      | 内容                                                               |
+| ------------ | ------- | ------------------------------------------------------------------ |
+| `time`       | string  | ISO 8601 形式（`slog` の自動付与）                                 |
+| `level`      | string  | `"INFO"` 固定（`slog` の自動付与）                                 |
+| `msg`        | string  | `"access"` 固定（`slog` の自動付与）                               |
+| `endpoint`   | string  | `METHOD /path`（実パス、例: `GET /api/v1/users/123`）              |
+| `login_user` | string  | `authUser.UUID`（未設定 = `""`）                                   |
+| `latency_s`  | float64 | レスポンスまでの秒数                                               |
+| `status`     | int     | HTTP ステータスコード                                              |
+| `header`     | object  | リクエストヘッダー（`Authorization` は `[REDACTED]` にマスクする） |
 
 ### ヘッダーマスク仕様
 
@@ -77,7 +77,16 @@ apiGroup.Use(rest.AccessLogMiddleware(logger))      // 2 層目（内側）
 ### ログサンプル
 
 ```json
-{"time":"2026-04-30T10:00:01Z","level":"INFO","msg":"access","endpoint":"GET /api/v1/users/123","login_user":"abc-uuid","latency_s":0.042,"status":200,"header":{"Authorization":["[REDACTED]"],"User-Agent":["Mozilla/5.0"]}}
+{
+  "time": "2026-04-30T10:00:01Z",
+  "level": "INFO",
+  "msg": "access",
+  "endpoint": "GET /api/v1/users/123",
+  "login_user": "abc-uuid",
+  "latency_s": 0.042,
+  "status": 200,
+  "header": { "Authorization": ["[REDACTED]"], "User-Agent": ["Mozilla/5.0"] }
+}
 ```
 
 ### `slog` 設定
@@ -88,13 +97,13 @@ apiGroup.Use(rest.AccessLogMiddleware(logger))      // 2 層目（内側）
 
 ### テストケース
 
-| # | ケース | 検証内容 |
-| --- | --- | --- |
-| 1 | 認証済みリクエスト（authUser セット済み） | `login_user` に UUID が記録される／`X-Login-User` レスポンスヘッダーが付与される |
-| 2 | `authUser` が未設定（単体テスト用：`AuthMiddleware` を通さない直接呼び出し） | `login_user = ""` |
-| 3 | レイテンシ | `latency_s ≥ 0` の float64 |
-| 4 | ステータスコード | 実際のレスポンスステータスが記録される |
-| 5 | `Authorization` ヘッダーのマスク | ログの `header.Authorization` が `["[REDACTED]"]` になる |
+| #   | ケース                                                                       | 検証内容                                                                         |
+| --- | ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| 1   | 認証済みリクエスト（authUser セット済み）                                    | `login_user` に UUID が記録される／`X-Login-User` レスポンスヘッダーが付与される |
+| 2   | `authUser` が未設定（単体テスト用：`AuthMiddleware` を通さない直接呼び出し） | `login_user = ""`                                                                |
+| 3   | レイテンシ                                                                   | `latency_s ≥ 0` の float64                                                       |
+| 4   | ステータスコード                                                             | 実際のレスポンスステータスが記録される                                           |
+| 5   | `Authorization` ヘッダーのマスク                                             | ログの `header.Authorization` が `["[REDACTED]"]` になる                         |
 
 ---
 
@@ -102,11 +111,11 @@ apiGroup.Use(rest.AccessLogMiddleware(logger))      // 2 層目（内側）
 
 ### ファイル
 
-| ファイル | 役割 |
-| --- | --- |
-| `src/index.ts` | サーバーエントリー（ルート登録のみ） |
-| `src/proxy.ts` | `handleApiProxy` 関数（プロキシ + ログ処理） |
-| `src/proxy.test.ts` | ユニットテスト |
+| ファイル            | 役割                                         |
+| ------------------- | -------------------------------------------- |
+| `src/index.ts`      | サーバーエントリー（ルート登録のみ）         |
+| `src/proxy.ts`      | `handleApiProxy` 関数（プロキシ + ログ処理） |
+| `src/proxy.test.ts` | ユニットテスト                               |
 
 ### 対象パス
 
@@ -133,15 +142,15 @@ apiGroup.Use(rest.AccessLogMiddleware(logger))      // 2 層目（内側）
 
 ### ログ項目
 
-| フィールド | 型 | 内容 |
-| --- | --- | --- |
-| `time` | string | ISO 8601 形式（`new Date().toISOString()`） |
-| `endpoint` | string | `METHOD /path`（実パス、例: `GET /api/users/123`） |
-| `login_user` | string | `x-login-user` ヘッダー値（なければ `""`） |
-| `latency_s` | number | レスポンスまでの秒数（`(performance.now() - start) / 1000`） |
-| `status` | number | HTTP ステータスコード（BE 接続失敗時 = `0`） |
-| `header` | object | リクエストヘッダー（`authorization` は `[REDACTED]` にマスクする。`Record<string, string>`） |
-| `error_message` | string | BE 接続失敗時のみ追加 |
+| フィールド      | 型     | 内容                                                                                         |
+| --------------- | ------ | -------------------------------------------------------------------------------------------- |
+| `time`          | string | ISO 8601 形式（`new Date().toISOString()`）                                                  |
+| `endpoint`      | string | `METHOD /path`（実パス、例: `GET /api/users/123`）                                           |
+| `login_user`    | string | `x-login-user` ヘッダー値（なければ `""`）                                                   |
+| `latency_s`     | number | レスポンスまでの秒数（`(performance.now() - start) / 1000`）                                 |
+| `status`        | number | HTTP ステータスコード（BE 接続失敗時 = `0`）                                                 |
+| `header`        | object | リクエストヘッダー（`authorization` は `[REDACTED]` にマスクする。`Record<string, string>`） |
+| `error_message` | string | BE 接続失敗時のみ追加                                                                        |
 
 ### ヘッダーマスク仕様
 
@@ -150,7 +159,14 @@ apiGroup.Use(rest.AccessLogMiddleware(logger))      // 2 層目（内側）
 ### ログサンプル
 
 ```json
-{"time":"2026-04-30T10:00:01Z","endpoint":"GET /api/v1/users/123","login_user":"abc-uuid","latency_s":0.045,"status":200,"header":{"authorization":"[REDACTED]","user-agent":"Mozilla/5.0"}}
+{
+  "time": "2026-04-30T10:00:01Z",
+  "endpoint": "GET /api/v1/users/123",
+  "login_user": "abc-uuid",
+  "latency_s": 0.045,
+  "status": 200,
+  "header": { "authorization": "[REDACTED]", "user-agent": "Mozilla/5.0" }
+}
 ```
 
 ### lint 対応
@@ -166,10 +182,10 @@ apiGroup.Use(rest.AccessLogMiddleware(logger))      // 2 層目（内側）
 
 ### テストケース
 
-| # | ケース | 検証内容 |
-| --- | --- | --- |
-| 1 | BE 接続成功 + `x-login-user` あり | `login_user` に UUID が記録される |
-| 2 | BE 接続成功 + `x-login-user` なし | `login_user = ""` |
-| 3 | BE 接続成功 | ブラウザ向けレスポンスに `x-login-user` ヘッダーが存在しない |
-| 4 | BE 接続失敗（`fetch` 例外） | `error_message` フィールドが追加される、`status = 0` |
-| 5 | `authorization` ヘッダーのマスク | ログの `header.authorization` が `"[REDACTED]"` になる |
+| #   | ケース                            | 検証内容                                                     |
+| --- | --------------------------------- | ------------------------------------------------------------ |
+| 1   | BE 接続成功 + `x-login-user` あり | `login_user` に UUID が記録される                            |
+| 2   | BE 接続成功 + `x-login-user` なし | `login_user = ""`                                            |
+| 3   | BE 接続成功                       | ブラウザ向けレスポンスに `x-login-user` ヘッダーが存在しない |
+| 4   | BE 接続失敗（`fetch` 例外）       | `error_message` フィールドが追加される、`status = 0`         |
+| 5   | `authorization` ヘッダーのマスク  | ログの `header.authorization` が `"[REDACTED]"` になる       |

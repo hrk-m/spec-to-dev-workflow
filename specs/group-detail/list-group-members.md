@@ -50,25 +50,26 @@
 
 ## 使用コンポーネント・状態
 
-| 要素                | 種別           | 役割                                                                                                                                                                                                                           |
-| ------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `MemberList`        | コンポーネント | メンバー検索・一覧・無限スクロール（センチネル要素）を表示する                                                                                                                                                                 |
-| `MemberRow`         | コンポーネント | 個々のメンバー行（□選択 / uuid / 姓名 / 所属元 の 4 列）を表示する。チェックボックスと onMemberClick は親直属行（`isDirect=true`）のみ有効。`data-testid="member-row"` が付与されており E2E テストのセレクターとして使用される |
-| `useMemberList`     | カスタム Hook  | fetch・検索・無限スクロール・キャッシュの状態と処理を管理する                                                                                                                                                                  |
-| `isDirectMember`    | ユーティリティ | `member.source_groups.some(sg => sg.group_id === groupId)` で親直属か判定する                                                                                                                                                  |
-| `buildSourceLabel`  | ユーティリティ | `source_groups` を `groupId` を先頭に並べ替え、「自グループ」または `group_name` に変換してカンマ区切りで結合する。複数所属元がある場合はすべてカンマ区切りで表示する                                                          |
-| `cachedMembers`     | state          | サーバーから取得したメンバーをキャッシュする（100 件単位でフェッチ）                                                                                                                                                           |
-| `total`             | state          | メンバーの総件数を保持する（検索時は cachedMembers.length）                                                                                                                                                                    |
-| `searchQuery`       | state          | メンバー検索キーワードを保持する                                                                                                                                                                                               |
-| `debouncedQuery`    | state          | 300ms デバウンス済みの検索キーワード（API リクエストに使用）                                                                                                                                                                   |
-| `isFetchingMore`    | state          | センチネルトリガーによる追加フェッチ中かどうか                                                                                                                                                                                 |
-| `fetchMoreError`    | state          | 追加フェッチのエラーメッセージ（null なら正常）                                                                                                                                                                                |
-| `lastBatchSize`     | state          | 直前のフェッチで取得した件数（FETCH_LIMIT 未満なら末尾到達と判定）                                                                                                                                                             |
-| `fetchedOffset`     | state          | サーバーから取得済みのオフセット位置を保持する                                                                                                                                                                                 |
-| `sentinelRef`       | ref            | リスト末尾のセンチネル要素への参照。IntersectionObserver に渡す                                                                                                                                                                |
-| `effectiveTotal`    | derived        | 検索中は cachedMembers.length、非検索時は API の total を使用する                                                                                                                                                              |
-| `directMembers`     | derived        | `cachedMembers` から `isDirectMember` が true のメンバーのみ抽出したリスト。全選択チェックボックスの判定に使用する                                                                                                             |
-| `directMemberCount` | derived        | `directMembers.length`。全選択チェックボックスの disabled 判定に使用する                                                                                                                                                       |
+| 要素                   | 種別           | 役割                                                                                                                                                                                                                           |
+| ---------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `MemberList`           | コンポーネント | メンバー検索・一覧・無限スクロール（センチネル要素）を表示する                                                                                                                                                                 |
+| `MemberRow`            | コンポーネント | 個々のメンバー行（□選択 / uuid / 姓名 / 所属元 の 4 列）を表示する。チェックボックスと onMemberClick は親直属行（`isDirect=true`）のみ有効。`data-testid="member-row"` が付与されており E2E テストのセレクターとして使用される |
+| `useMemberList`        | カスタム Hook  | fetch・検索・無限スクロール・キャッシュの状態と処理を管理する                                                                                                                                                                  |
+| `isDirectMember`       | ユーティリティ | `member.source_groups.some(sg => sg.group_id === groupId)` で親直属か判定する                                                                                                                                                  |
+| `buildSourceLabel`     | ユーティリティ | `source_groups` を `groupId` を先頭に並べ替え、「自グループ」または `group_name` に変換してカンマ区切りで結合する。複数所属元がある場合はすべてカンマ区切りで表示する                                                          |
+| `cachedMembers`        | state          | サーバーから取得したメンバーをキャッシュする（100 件単位でフェッチ）                                                                                                                                                           |
+| `total`                | state          | メンバーの総件数を保持する（検索時は cachedMembers.length）                                                                                                                                                                    |
+| `searchQuery`          | state          | メンバー検索キーワードを保持する                                                                                                                                                                                               |
+| `debouncedQuery`       | state          | 300ms デバウンス済みの検索キーワード（API リクエストに使用）                                                                                                                                                                   |
+| `isFetchingMore`       | state          | センチネルトリガーによる追加フェッチ中かどうか                                                                                                                                                                                 |
+| `fetchMoreError`       | state          | 追加フェッチのエラーメッセージ（null なら正常）                                                                                                                                                                                |
+| `lastBatchSize`        | state          | 直前のフェッチで取得した件数（FETCH_LIMIT 未満なら末尾到達と判定）                                                                                                                                                             |
+| `fetchedOffset`        | state          | サーバーから取得済みのオフセット位置を保持する                                                                                                                                                                                 |
+| `sentinelRef`          | ref            | リスト末尾のセンチネル要素への参照。IntersectionObserver に渡す                                                                                                                                                                |
+| `effectiveTotal`       | derived        | 検索中は cachedMembers.length、非検索時は API の total を使用する                                                                                                                                                              |
+| `directMembers`        | derived        | `cachedMembers` から `isDirectMember` が true のメンバーのみ抽出したリスト。全選択チェックボックスの判定に使用する                                                                                                             |
+| `directMemberCount`    | derived        | `directMembers.length`。全選択チェックボックスの disabled 判定に使用する                                                                                                                                                       |
+| `clearMemberListCache` | 関数           | メンバー一覧のクライアントキャッシュをクリアし、`useMemberList` に再フェッチをトリガーする。メンバー追加・削除成功後に呼び出される                                                                                             |
 
 ---
 
@@ -91,6 +92,8 @@
 - [ ] メンバーが 0 件のとき「No members found.」が表示される
 - [ ] 検索結果が 0 件のとき `data-testid="member-row"` 要素が DOM に存在しない
 - [ ] バックエンドへの通信が失敗するとエラーメッセージが表示される
+- [ ] 追加フェッチ（センチネルトリガー）が失敗したときリスト末尾にエラーメッセージが表示され、既存アイテムは維持される
+- [ ] `clearMemberListCache` が呼ばれると再フェッチが実行され、メンバー一覧が最新化される
 - [ ] ページネーション（Previous / Next ボタン）が表示されない
 ```
 
