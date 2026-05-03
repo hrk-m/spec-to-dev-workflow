@@ -46,3 +46,4 @@ sample-front/.env.local
 
 # Superpowers
 .superpowers/
+docs/superpowers/**
