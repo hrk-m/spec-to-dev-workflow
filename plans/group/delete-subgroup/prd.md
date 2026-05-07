@@ -62,11 +62,11 @@
 
 ## 確認ステップ 5-2-FE: フロントエンド処理フロー
 
-### サブグループ削除（SubgroupList の [Delete] ボタン → 確認ダイアログ）
+### サブグループ削除（SubgroupManagementSheet の [Delete] ボタン → 確認ダイアログ）
 
 ```
 1. 開始
-2. SubgroupList の行の [Delete] ボタン押下
+2. SubgroupManagementSheet の行の [Delete] ボタン押下
 3. 削除対象のサブグループ ID を state にセットし、確認ダイアログ（AlertDialog）を開く
    - Title: "Delete Subgroup"
    - Description: "Are you sure you want to delete this subgroup? This action cannot be undone."
@@ -92,27 +92,25 @@
 
 ### sample-api
 
-| ファイル                                                   | 役割                                                                                                                              |
-| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `sample-api/group/service.go`                              | `GroupRelationRepository` IF に `DeleteRelation` 追加・`DeleteSubGroup` メソッド                                                  |
-| `sample-api/group/service_test.go`                         | `DeleteSubGroup` サービステスト追加                                                                                               |
-| `sample-api/group/mocks/group_relation_repository_mock.go` | `DeleteRelation` mock 追加（`add-subgroup` 実装時に新規作成済み）                                                                 |
-| `sample-api/internal/rest/group.go`                        | `DeleteSubGroup` ハンドラ・`GroupService` IF に `DeleteSubGroup` 追加・ルート登録（DELETE /api/v1/groups/:id/subgroups/:childId） |
-| `sample-api/internal/rest/group_test.go`                   | `DeleteSubGroup` ハンドラテスト追加                                                                                               |
-| `sample-api/internal/rest/mocks/group_service_mock.go`     | `GroupService` mock に `DeleteSubGroup` 追加                                                                                      |
-| `sample-api/internal/repository/mysql/group_relation.go`   | `DeleteRelation` 実装追加（`add-subgroup` 実装時に新規作成済み）                                                                  |
-
-> `group_relation.go` と `group_relation_repository_mock.go` は `add-subgroup` 実装時に作成される。`delete-subgroup` はそれらに追加する形で実装する。
+| ファイル                                                   | 役割                                                                                                                                |
+| ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `sample-api/group/service.go`                              | `GroupRelationRepository` IF（`DeleteRelation` を含む）・`GroupService.DeleteSubGroup` ロジック                                     |
+| `sample-api/group/service_test.go`                         | `DeleteSubGroup` Service ユニットテスト                                                                                             |
+| `sample-api/group/mocks/group_relation_repository_mock.go` | `GroupRelationRepository` の手動 mock（`DeleteRelation` を含む）                                                                    |
+| `sample-api/internal/rest/group.go`                        | `DeleteSubGroup` ハンドラ・`GroupService` IF（`DeleteSubGroup` を含む）・ルート登録（DELETE /api/v1/groups/:id/subgroups/:childId） |
+| `sample-api/internal/rest/group_test.go`                   | `DeleteSubGroup` Handler ユニットテスト                                                                                             |
+| `sample-api/internal/rest/mocks/group_service_mock.go`     | `GroupService` の手動 mock（`DeleteSubGroup` を含む）                                                                               |
+| `sample-api/internal/repository/mysql/group_relation.go`   | `GroupRelationRepository` の MySQL 実装（`DeleteRelation` を含む）                                                                  |
 
 ### sample-front
 
-| ファイル                                                          | 役割                                                                  |
-| ----------------------------------------------------------------- | --------------------------------------------------------------------- |
-| `sample-front/src/pages/group-detail/api/delete-subgroup.ts`      | DELETE /api/v1/groups/:id/subgroups/:childId fetch 関数（新規）       |
-| `sample-front/src/pages/group-detail/model/useDeleteSubgroup.ts`  | 削除ロジック・loading・error を管理するカスタムフック（新規）         |
-| `sample-front/src/pages/group-detail/ui/DeleteSubgroupDialog.tsx` | AlertDialog コンポーネント（新規）                                    |
-| `sample-front/src/pages/group-detail/ui/SubgroupList.tsx`         | [×] を [Delete] ボタンに変更・`deletingSubgroupId` state 追加（変更） |
-| `sample-front/src/pages/group-detail/ui/GroupDetailContent.tsx`   | SubgroupList に `groupId`・`refetch` を props として渡す（変更）      |
+| ファイル                                                             | 役割                                                                |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `sample-front/src/pages/group-detail/api/delete-subgroup.ts`         | DELETE /api/v1/groups/:id/subgroups/:childId fetch 関数             |
+| `sample-front/src/pages/group-detail/model/useDeleteSubgroup.ts`     | 削除ロジック・loading・error を管理するカスタムフック               |
+| `sample-front/src/pages/group-detail/ui/DeleteSubgroupDialog.tsx`    | サブグループ削除を確認する AlertDialog コンポーネント               |
+| `sample-front/src/pages/group-detail/ui/SubgroupManagementSheet.tsx` | [Delete] ボタン・`deletingSubgroupId` state                         |
+| `sample-front/src/pages/group-detail/ui/GroupDetailContent.tsx`      | SubgroupManagementSheet に `groupId`・`refetch` を props として渡す |
 
 > DB スキーマ（`group_relations` テーブル定義・制約・FK）の詳細は [plans/schema.md](../../schema.md) を参照。
 
@@ -144,7 +142,7 @@
 
 ### エンドポイント: `DELETE /api/v1/groups/:id/subgroups/:childId`
 
-**FE コンポーネントテスト** (`pages/group-detail/ui/__tests__/SubgroupList.test.tsx` 更新):
+**FE コンポーネントテスト** (`pages/group-detail/ui/__tests__/SubgroupManagementSheet.test.tsx` 更新):
 
 | #   | 観点       | テスト内容                          | 期待結果                                                           |
 | --- | ---------- | ----------------------------------- | ------------------------------------------------------------------ |
@@ -174,6 +172,9 @@
 | 9   | 正常系   | 存在する親子関係を削除する                   | parent=1, child=2    | nil（削除成功）        |
 | 10  | 異常系   | 対象の親子関係が存在しない（RowsAffected=0） | 存在しない組み合わせ | ErrNotFound            |
 | 11  | 例外処理 | repository が DB エラーを返す                | mock がエラーを返す  | ErrInternalServerError |
+| 12  | 境界値   | parentGroupID が 0（invalid）                | parent=0, child=2    | ErrBadParamInput       |
+| 13  | 境界値   | childGroupID が 0（invalid）                 | parent=1, child=0    | ErrBadParamInput       |
+| 14  | 異常系   | parent と child が同一 ID（自己参照）        | parent=1, child=1    | ErrBadParamInput       |
 
 ---
 
@@ -186,7 +187,7 @@
 5. 削除成功時は 204 No Content を返す（ボディなし）
 6. 存在チェックと DELETE を 1 回の SQL で実行し、RowsAffected=0 で 404 を判定する
 7. 各バリデーションで使用するエラーセンチネル: `ErrNotFound`（404）・`ErrInternalServerError`（500）
-8. SubgroupList の各行に [Delete] ボタンを表示し、押下で確認ダイアログを開く
+8. SubgroupManagementSheet の各行に [Delete] ボタンを表示し、押下で確認ダイアログを開く
 9. 確認ダイアログ（AlertDialog）は Title `"Delete Subgroup"`・Description `"Are you sure you want to delete this subgroup? This action cannot be undone."` を表示する
 10. Cancel ボタンでダイアログを閉じ、削除をキャンセルできる
 11. Delete ボタン押下で API を送信し、成功時はダイアログを閉じて一覧を再取得する

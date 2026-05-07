@@ -57,27 +57,27 @@
 
 ## 確認ステップ 5-2-FE: フロントエンド処理フロー
 
-### コンポーネント: `ProtectedRoute`
+### コンポーネント: `ProtectedRoute` / フック: `useInitializeAuth`
 
 凡例: → = 次の処理へ進む / 終了 = 処理終了
 
 ```
+【useInitializeAuth フック】
 1. ローディング状態で初期化する
-
 2. GET /api/v1/me を送信する
-
 3. レスポンス受信（成功）
    - ユーザー情報を認証コンテキストにセットする（snake_case から camelCase にマッピング）
    - 認証済み状態に更新する
-
 4. レスポンス受信（エラー）
    - 401 → 未認証状態に更新する
    - その他（ネットワークエラー・5xx 等）→ API 利用不可状態に更新する
 
-5. ローディング中 → 画面を非表示にする → 終了
-6. 未認証状態 → /service-unavailable へリダイレクトする（reason: "unauthenticated"）→ 終了
-7. API 利用不可状態 → /service-unavailable へリダイレクトする（reason: "api_unavailable"）→ 終了
-8. 認証済み状態 → children を表示する → 終了
+【ProtectedRoute コンポーネント】
+5. useInitializeAuth フックから status を取得する
+6. ローディング中 → 画面を非表示にする → 終了
+7. 未認証状態 → /service-unavailable へリダイレクトする（reason: "unauthenticated"）→ 終了
+8. API 利用不可状態 → /service-unavailable へリダイレクトする（reason: "api_unavailable"）→ 終了
+9. 認証済み状態 → children を表示する → 終了
 ```
 
 ---
@@ -94,21 +94,23 @@
 | `sample-api/auth/service_test.go`                               | Service ユニットテスト                                      |
 | `sample-api/auth/mocks/user_repository_mock.go`                 | UserRepository モック                                       |
 | `sample-api/internal/repository/mysql/user.go`                  | ユーザー UUID 検索の DB 実装                                |
-| `sample-api/internal/rest/auth.go`                              | HTTP Handler・AuthMiddleware                                |
+| `sample-api/internal/rest/auth.go`                              | HTTP Handler（GetMe）・ルート登録                           |
+| `sample-api/internal/rest/auth_middleware.go`                   | AuthMiddleware・AuthService interface 定義                  |
 | `sample-api/internal/rest/auth_test.go`                         | Handler ユニットテスト                                      |
 | `sample-api/internal/rest/mocks/auth_service_mock.go`           | AuthService モック                                          |
 | `sample-api/db/migrate/20260415120000_add_uuid_to_users.up.sql` | `users.uuid` カラム追加・マイグレーション（golang-migrate） |
 
 ### sample-front
 
-| ファイル                                                        | 役割                                |
-| --------------------------------------------------------------- | ----------------------------------- |
-| `sample-front/src/app/routes/ProtectedRoute.tsx`                | GET /api/v1/me 呼び出し・認証ガード |
-| `sample-front/src/app/routes/__tests__/ProtectedRoute.test.tsx` | ProtectedRoute ユニットテスト       |
-| `sample-front/src/shared/auth/auth.tsx`                         | AuthContext・useAuth・AuthProvider  |
-| `sample-front/src/shared/auth/index.ts`                         | auth barrel export                  |
-| `sample-front/src/shared/api/client.ts`                         | apiFetch・HttpError 定義            |
-| `sample-front/src/shared/api/index.ts`                          | shared/api barrel export            |
+| ファイル                                                        | 役割                                           |
+| --------------------------------------------------------------- | ---------------------------------------------- |
+| `sample-front/src/app/routes/ProtectedRoute.tsx`                | GET /api/v1/me 呼び出し・認証ガード            |
+| `sample-front/src/app/routes/__tests__/ProtectedRoute.test.tsx` | ProtectedRoute ユニットテスト                  |
+| `sample-front/src/shared/auth/auth.tsx`                         | AuthContext・useAuth・AuthProvider             |
+| `sample-front/src/shared/auth/useInitializeAuth.ts`             | GET /api/v1/me 呼び出し・AuthStatus 管理フック |
+| `sample-front/src/shared/auth/index.ts`                         | auth barrel export                             |
+| `sample-front/src/shared/api/client.ts`                         | apiFetch・HttpError 定義                       |
+| `sample-front/src/shared/api/index.ts`                          | shared/api barrel export                       |
 
 ---
 

@@ -89,17 +89,17 @@
 
 ### sample-api
 
-| 対応ステップ  | パス                                                                   | 役割                                                                                                     |
-| ------------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| 5-2           | `group/service.go`                                                     | `GroupRepository` IF の `Delete` に `userID uint64` を追加・`Service.Delete` シグネチャ更新              |
-| 5-5           | `group/service_test.go`                                                | `Delete` のテスト更新（userID 追加、正常系での渡し確認テスト追加）                                       |
-| 5-5           | `group/mocks/group_repository_mock.go`                                 | `Delete` mock の `userID uint64` を追加                                                                  |
-| 5-1, 5-2, 5-4 | `internal/rest/group.go`                                               | `GroupService` IF の `Delete` に `userID uint64` を追加・ハンドラで authUser 取得・401 返却・userID 渡し |
-| 5-5           | `internal/rest/group_test.go`                                          | `Delete` ハンドラのテスト更新（authUser セット・401 テスト追加）                                         |
-| 5-5           | `internal/rest/mocks/group_service_mock.go`                            | `Delete` mock の `userID uint64` を追加                                                                  |
-| 5-3           | `internal/repository/mysql/group.go`                                   | `Delete` の SQL に `updated_by = ?` を追加・シグネチャに `userID uint64` を追加                          |
-| 5-5           | `internal/repository/mysql/group_test.go`                              | `Delete` integration テスト更新（deleted_at + updated_by 検証追加）                                      |
-| 5-3           | `sample-api/db/migrate/20260417130000_add_updated_by_to_groups.up.sql` | `groups.updated_by` カラム追加・FK 設定（golang-migrate）                                                |
+| 対応ステップ  | パス                                                                   | 役割                                                                                              |
+| ------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| 5-2           | `group/service.go`                                                     | `GroupRepository` IF の `Delete(id, userID uint64)` 定義・`Service.Delete` ロジック               |
+| 5-5           | `group/service_test.go`                                                | `Delete` Service ユニットテスト（userID の渡し確認を含む）                                        |
+| 5-5           | `group/mocks/group_repository_mock.go`                                 | `Delete` mock（`userID uint64` を受け取る）                                                       |
+| 5-1, 5-2, 5-4 | `internal/rest/group.go`                                               | `GroupService` IF の `Delete(id, userID uint64)` 定義・ハンドラで authUser を取得し userID を渡す |
+| 5-5           | `internal/rest/group_test.go`                                          | `Delete` Handler ユニットテスト（authUser セット・401 ケースを含む）                              |
+| 5-5           | `internal/rest/mocks/group_service_mock.go`                            | `Delete` mock（`userID uint64` を受け取る）                                                       |
+| 5-3           | `internal/repository/mysql/group.go`                                   | `Delete(id, userID uint64)` 実装（SQL に `updated_by = ?` を含む）                                |
+| 5-5           | `internal/repository/mysql/group_test.go`                              | `Delete` integration テスト（`deleted_at` + `updated_by` の検証を含む）                           |
+| 5-3           | `sample-api/db/migrate/20260417130000_add_updated_by_to_groups.up.sql` | `groups.updated_by` カラム追加・FK 設定（golang-migrate）                                         |
 
 ### sample-front
 

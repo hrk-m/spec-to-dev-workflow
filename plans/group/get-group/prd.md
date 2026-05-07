@@ -73,9 +73,9 @@
 3. レスポンス受信
    - 成功（200）→ { id, name, description, member_count, subgroups: [...] } を state に格納する → 終了
    - 失敗（4xx/5xx）→ エラーメッセージを画面に表示する → 終了
-4. useGroupDetail が subgroups を返す（useSubgroupList は廃止）
-5. GroupDetailContent は useGroupDetail から subgroups を取得して SubgroupList に渡す
-6. AddSubgroupSheet に subgroups を props で渡す（内部での再フェッチを廃止）
+4. useGroupDetail が subgroups を返す
+5. GroupDetailContent は useGroupDetail から subgroups を取得して SubgroupFilterChips / SubgroupManagementSheet に渡す
+6. AddSubgroupSheet に subgroups を props で渡す
    ※ シート開閉ハンドラのメモ化依存に subgroups を含める
 7. サブグループ追加・削除後は refetch（useGroupDetail の refetch）を呼ぶ
    → GET /api/v1/groups/:id を再取得し subgroups も更新される
@@ -91,29 +91,27 @@
 
 ### sample-api
 
-| ファイル                                               | 変更内容                                                                                                                                                 |
-| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `sample-api/internal/rest/group.go`                    | `getGroupResponse` 専用レスポンス型を追加・`GetByID` ハンドラのレスポンスを差し替え・`ListSubGroups` ハンドラとルート登録を削除                          |
-| `sample-api/internal/rest/mocks/group_service_mock.go` | `GetByID` シグネチャ変更に追随・`ListSubGroups` mock を削除                                                                                              |
-| `sample-api/internal/rest/group_test.go`               | `GetByID` テストに `subgroups` フィールドの検証を追加・`ListSubGroups` テスト（6 ケース）を削除                                                          |
-| `sample-api/group/service.go`                          | `GetByID` で `ListChildren` も呼ぶよう変更・`ListSubGroups` メソッドを削除・`GroupService` IF から `ListSubGroups` を削除・`relationRepo nil` ガード追加 |
-| `sample-api/group/service_test.go`                     | `GetByID` テストに `ListChildren` mock 設定を追加・`ListSubGroups` テスト（3 ケース）を削除                                                              |
+| ファイル                                               | 役割                                                                                                                                           |
+| ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sample-api/internal/rest/group.go`                    | `GetByID` ハンドラ・専用 `getGroupResponse` 型・ルート登録                                                                                     |
+| `sample-api/internal/rest/mocks/group_service_mock.go` | `GroupService` interface の手動 mock                                                                                                           |
+| `sample-api/internal/rest/group_test.go`               | `GetByID` Handler ユニットテスト（`subgroups` フィールドの検証を含む）                                                                         |
+| `sample-api/group/service.go`                          | `GetByID` ロジック（`GroupRepository.GetByID` + `GroupRelationRepository.ListChildren` + `relationRepo nil` ガード）・`GroupService` interface |
+| `sample-api/group/service_test.go`                     | `GetByID` Service ユニットテスト（`ListChildren` mock を含む）                                                                                 |
 
 ### sample-front
 
-| ファイル                                                                       | 変更内容                                                                                                                               |
-| ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `sample-front/src/pages/group-detail/api/fetch-group.ts`                       | レスポンス型に `subgroups: SubgroupSummary[]` を追加                                                                                   |
-| `sample-front/src/pages/group-detail/model/group-detail.ts`                    | `GroupDetail` 型に `subgroups: SubgroupSummary[]` を追加・`SubgroupSummary` 型を定義（fetch-subgroups.ts から移管）                    |
-| `sample-front/src/pages/group-detail/model/group-detail-state.ts`              | `useGroupDetail` の返り値に `subgroups` を追加                                                                                         |
-| `sample-front/src/pages/group-detail/model/subgroup-list.ts`                   | 廃止・削除                                                                                                                             |
-| `sample-front/src/pages/group-detail/api/fetch-subgroups.ts`                   | 廃止・削除                                                                                                                             |
-| `sample-front/src/pages/group-detail/ui/GroupDetailContent.tsx`                | `useSubgroupList` 呼び出しを削除・`useGroupDetail` から `subgroups` を取得・`handleOpenAddSubgroupSheet` の deps に `subgroups` を追加 |
-| `sample-front/src/pages/group-detail/ui/AddSubgroupSheet.tsx`                  | 内部 `useSubgroupList` を削除・`subgroups: SubgroupSummary[]` を props で受け取るよう変更                                              |
-| `sample-front/src/pages/group-detail/ui/SubgroupList.tsx`                      | `SubgroupSummary` の import 先を `model/group-detail.ts` に変更                                                                        |
-| `sample-front/src/pages/group-detail/ui/__tests__/AddSubgroupSheet.test.tsx`   | `useSubgroupList` mock を削除・`subgroups` props のモックに置き換え                                                                    |
-| `sample-front/src/pages/group-detail/ui/__tests__/GroupDetailContent.test.tsx` | `useSubgroupList` mock を削除・`useGroupDetail` 返り値に `subgroups` を追加                                                            |
-| `sample-front/src/pages/group-detail/ui/__tests__/SubgroupList.test.tsx`       | `SubgroupSummary` の import 先を `model/group-detail.ts` に変更                                                                        |
+| ファイル                                                                            | 役割                                                                                            |
+| ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `sample-front/src/pages/group-detail/api/fetch-group.ts`                            | `GET /api/v1/groups/:id` 呼び出し（レスポンス型に `subgroups: SubgroupSummary[]` を含む）       |
+| `sample-front/src/pages/group-detail/model/group-detail.ts`                         | `GroupDetail` 型・`SubgroupSummary` 型の定義                                                    |
+| `sample-front/src/pages/group-detail/model/useGroupDetail.ts`                       | `useGroupDetail` カスタムフック（`group` / `subgroups` / `refetch` を返す）                     |
+| `sample-front/src/pages/group-detail/ui/GroupDetailContent.tsx`                     | `useGroupDetail` から `subgroups` を取得し SubgroupFilterChips / SubgroupManagementSheet に渡す |
+| `sample-front/src/pages/group-detail/ui/AddSubgroupSheet.tsx`                       | `subgroups: SubgroupSummary[]` を props で受け取るシート                                        |
+| `sample-front/src/pages/group-detail/ui/SubgroupManagementSheet.tsx`                | サブグループ管理シート（`SubgroupSummary` を `model/group-detail.ts` から import）              |
+| `sample-front/src/pages/group-detail/ui/__tests__/AddSubgroupSheet.test.tsx`        | AddSubgroupSheet のテスト（`subgroups` props のモック化）                                       |
+| `sample-front/src/pages/group-detail/ui/__tests__/GroupDetailContent.test.tsx`      | GroupDetailContent のテスト（`useGroupDetail` 返り値に `subgroups` を含めるモック）             |
+| `sample-front/src/pages/group-detail/ui/__tests__/SubgroupManagementSheet.test.tsx` | SubgroupManagementSheet のテスト                                                                |
 
 > DB スキーマ（`group_relations` テーブル定義・制約・FK）の詳細は [plans/schema.md](../../schema.md) を参照。
 
@@ -194,11 +192,11 @@
 
 **FE コンポーネントテスト**:
 
-| #   | ファイル                      | 観点   | テスト内容                                                   | 期待結果                                   |
-| --- | ----------------------------- | ------ | ------------------------------------------------------------ | ------------------------------------------ |
-| 13  | `GroupDetailContent.test.tsx` | 正常系 | `useGroupDetail` が subgroups を返し SubgroupList に渡される | SubgroupList が正しい subgroups を受け取る |
-| 14  | `AddSubgroupSheet.test.tsx`   | 正常系 | `subgroups` props を受け取り既存子グループを除外して表示する | 内部フェッチが発生しない                   |
-| 15  | `SubgroupList.test.tsx`       | 正常系 | import 先変更後も既存テストが通る                            | テスト結果に変化なし                       |
+| #   | ファイル                           | 観点   | テスト内容                                                              | 期待結果                                              |
+| --- | ---------------------------------- | ------ | ----------------------------------------------------------------------- | ----------------------------------------------------- |
+| 13  | `GroupDetailContent.test.tsx`      | 正常系 | `useGroupDetail` が subgroups を返し SubgroupManagementSheet に渡される | SubgroupManagementSheet が正しい subgroups を受け取る |
+| 14  | `AddSubgroupSheet.test.tsx`        | 正常系 | `subgroups` props を受け取り既存子グループを除外して表示する            | 内部フェッチが発生しない                              |
+| 15  | `SubgroupManagementSheet.test.tsx` | 正常系 | import 先変更後も既存テストが通る                                       | テスト結果に変化なし                                  |
 
 ---
 
@@ -208,11 +206,9 @@
 2. `id` が整数でない / 0 以下の場合に 400 を返す
 3. 対象グループが存在しない場合に 404 を返す
 4. サブグループ取得時の DB エラーで 500 を返す
-5. `domain.Group` に `Subgroups` フィールドを追加しない（handler 層の `getGroupResponse` で吸収する）
-6. `GET /api/v1/groups/:id/subgroups` エンドポイントを削除する
-7. フロントエンドで `useSubgroupList` フックと `fetch-subgroups.ts` を廃止・削除する
-8. `AddSubgroupSheet` は `subgroups` を props で受け取る（内部フェッチなし）
-9. サブグループ追加・削除後の refetch は `useGroupDetail` の `refetch` に統一する
+5. `domain.Group` に `Subgroups` フィールドは持たず、handler 層の `getGroupResponse` で吸収する
+6. `AddSubgroupSheet` は `subgroups` を props で受け取る（内部フェッチなし）
+7. サブグループ追加・削除後の refetch は `useGroupDetail` の `refetch` に統一する
 
 ---
 
@@ -221,4 +217,3 @@
 - 認証・認可（AuthMiddleware はグループ全体に適用済み。個別ハンドラ内での追加チェックは不要）
 - グループの更新・削除
 - メンバー一覧取得（`list-group-members` で別途管理）
-- `GET /api/v1/groups/:id/subgroups` の deprecation notice（削除のみ）

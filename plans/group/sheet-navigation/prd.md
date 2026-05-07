@@ -2,12 +2,12 @@
 
 ## 概要
 
-| 項目     | 内容                                                                                                                                                                                         |
-| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 機能名   | `sheet-navigation`                                                                                                                                                                           |
-| 目的     | グループ詳細への遷移をページ全体の切り替えからスライドインシートに変更し、コンテキストを保ちながら詳細・ネスト画面を表示できるようにする。またシートから直接フルページへ展開できるようにする |
-| 変更対象 | フロントエンドのみ（API 変更なし）                                                                                                                                                           |
-| 影響機能 | list-groups / get-group / list-group-members                                                                                                                                                 |
+| 項目     | 内容                                                                                                                                                     |
+| -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 機能名   | `sheet-navigation`                                                                                                                                       |
+| 目的     | グループ詳細をスライドインシートで開き、コンテキストを保ったまま詳細・ネスト画面を表示できるようにする。シートからフルページへ直接展開する操作も提供する |
+| 変更対象 | フロントエンドのみ（API 変更なし）                                                                                                                       |
+| 影響機能 | list-groups / get-group / list-group-members                                                                                                             |
 
 ---
 
@@ -196,39 +196,24 @@ export const router = createBrowserRouter([
 
 ## ファイル配置
 
-### 新規作成
-
-| ファイル                                                         | 役割                                                                                             |
-| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `sample-front/src/shared/ui/Sheet.tsx`                           | スライドインシートコンポーネント（90vw・fixed・アニメーション）                                  |
-| `sample-front/src/shared/ui/Sheet.styles.ts`                     | Sheet のスタイル定義                                                                             |
-| `sample-front/src/shared/lib/sheet-stack/SheetStackContext.tsx`  | openSheet / closeSheet / closeAll / sheets を提供する Context                                    |
-| `sample-front/src/shared/lib/sheet-stack/SheetStackProvider.tsx` | Provider + シートスタックのレンダリング                                                          |
-| `sample-front/src/shared/lib/sheet-stack/index.ts`               | barrel export                                                                                    |
-| `sample-front/src/pages/group-detail/ui/GroupDetailSheet.tsx`    | GroupDetailPage のシートコンテンツ版（useParams なし・groupId と onMemberClick を props で受取） |
-| `sample-front/src/pages/group-detail/ui/MemberDetailSheet.tsx`   | メンバー詳細シート（プレースホルダー）                                                           |
-
-### 変更
-
-| ファイル                                                           | 変更内容                                                                                                                                                                                             |
+| ファイル                                                           | 役割                                                                                                                                                                                                 |
 | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `sample-front/src/app/router.tsx`                                  | Layout + HomePageWithSheets を追加（SheetStackProvider・IoC wiring）。GroupDetailRouteSheet に ↗ ボタンを `headerActions` として渡す                                                                 |
+| `sample-front/src/shared/ui/Sheet.tsx`                             | スライドインシートコンポーネント（90vw・fixed・アニメーション・`headerActions?: ReactNode` を ×ボタンの左隣に描画）                                                                                  |
+| `sample-front/src/shared/ui/Sheet.styles.ts`                       | Sheet のスタイル定義                                                                                                                                                                                 |
+| `sample-front/src/shared/ui/index.ts`                              | shared/ui の barrel export（Sheet を含む）                                                                                                                                                           |
+| `sample-front/src/shared/lib/sheet-stack/SheetStackContext.tsx`    | openSheet / closeSheet / closeAll / sheets を提供する Context                                                                                                                                        |
+| `sample-front/src/shared/lib/sheet-stack/SheetStackProvider.tsx`   | Provider + シートスタックのレンダリング                                                                                                                                                              |
+| `sample-front/src/shared/lib/sheet-stack/index.ts`                 | sheet-stack の barrel export                                                                                                                                                                         |
+| `sample-front/src/app/router.tsx`                                  | Layout + HomePageWithSheets（SheetStackProvider・IoC wiring）。GroupDetailRouteSheet に ↗ ボタンを `headerActions` として渡す                                                                        |
 | `sample-front/src/app/routes/GroupNavigationLayout.tsx`            | ↔ ボタン（`TbArrowsHorizontal`）を `headerActions` として `Sheet` に渡し、`navigate('/groups/:id', { replace: true })` を呼び出す app 層のレイアウトコンポーネント（`GroupDetailRouteSheet` の実体） |
-| `sample-front/src/shared/ui/Sheet.tsx`                             | `headerActions?: ReactNode` prop を追加。× ボタンの左隣に描画                                                                                                                                        |
-| `sample-front/src/shared/ui/index.ts`                              | Sheet を再エクスポートに追加                                                                                                                                                                         |
-| `sample-front/src/pages/home/ui/GroupList.tsx`                     | 行クリックに `onGroupClick?: (groupId: number) => void` prop を追加。prop があれば呼ぶ・なければ navigate()                                                                                          |
+| `sample-front/src/pages/home/ui/GroupList.tsx`                     | 行クリックで `onGroupClick?: (groupId: number) => void` を呼ぶ（未指定時は navigate にフォールバック）                                                                                               |
 | `sample-front/src/pages/home/ui/HomePage.tsx`                      | `onGroupClick?: (groupId: number) => void` prop を GroupList に中継                                                                                                                                  |
-| `sample-front/src/pages/group-detail/ui/MemberList.tsx`            | メンバー行に onClick 追加・onMemberClick prop を optional で追加                                                                                                                                     |
-| `sample-front/src/pages/group-detail/index.ts`                     | GroupDetailSheet と MemberDetailSheet を追加エクスポート                                                                                                                                             |
-| `sample-front/src/pages/group-detail/ui/GroupDetailPage.tsx`       | 戻るボタンアイコン（`FaChevronLeft`）に `size={14}` を追加（表示サイズの明示）                                                                                                                       |
-| `sample-front/src/pages/group-detail/ui/GroupDetailPage.styles.ts` | `backButton` スタイルを調整（`color: textSecondary`・`fontSize: 16`・`height: 32` を設定）                                                                                                           |
-
-### 変更しない
-
-| ファイル                       | 理由                                                    |
-| ------------------------------ | ------------------------------------------------------- |
-| `sample-front/src/app/App.tsx` | Layout コンポーネントで Provider を管理するため変更不要 |
-| すべての sample-api ファイル   | API 変更なし                                            |
+| `sample-front/src/pages/group-detail/ui/GroupDetailSheet.tsx`      | GroupDetailPage のシートコンテンツ版（useParams なし・groupId と onMemberClick を props で受取）                                                                                                     |
+| `sample-front/src/pages/group-detail/ui/MemberDetailSheet.tsx`     | メンバー詳細シート（プレースホルダー）                                                                                                                                                               |
+| `sample-front/src/pages/group-detail/ui/MemberList.tsx`            | メンバー行に onClick・`onMemberClick?: (member: Member) => void` を持つ                                                                                                                              |
+| `sample-front/src/pages/group-detail/index.ts`                     | group-detail の barrel export（GroupDetailSheet・MemberDetailSheet を含む）                                                                                                                          |
+| `sample-front/src/pages/group-detail/ui/GroupDetailPage.tsx`       | 戻るボタンアイコン `FaChevronLeft`（`size={14}`）                                                                                                                                                    |
+| `sample-front/src/pages/group-detail/ui/GroupDetailPage.styles.ts` | `backButton` スタイル（`color: textSecondary`・`fontSize: 16`・`height: 32`）                                                                                                                        |
 
 ---
 

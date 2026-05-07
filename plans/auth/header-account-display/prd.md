@@ -2,13 +2,13 @@
 
 ## 概要
 
-| 項目         | 内容                                                                                            |
-| ------------ | ----------------------------------------------------------------------------------------------- |
-| 機能名       | `header-account-display`                                                                        |
-| 目的         | Header の「HR」ハードコードを廃止し、ログインユーザーのアカウント情報をドロップダウンで表示する |
-| API          | なし（AuthContext から取得）                                                                    |
-| 認証         | 必要（ProtectedRoute 配下に配置済み）                                                           |
-| データソース | AuthContext（`useAuth().user`）                                                                 |
+| 項目         | 内容                                                                                     |
+| ------------ | ---------------------------------------------------------------------------------------- |
+| 機能名       | `header-account-display`                                                                 |
+| 目的         | Header にログインユーザーのアカウント情報（UUID とユーザー名）をドロップダウンで表示する |
+| API          | なし（AuthContext から取得）                                                             |
+| 認証         | 必要（ProtectedRoute 配下に配置済み）                                                    |
+| データソース | AuthContext（`useAuth().user`）                                                          |
 
 ---
 
@@ -68,13 +68,13 @@
 
 ### sample-front
 
-| 対応ステップ | パス                                                           | 役割                                                                   |
-| ------------ | -------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| 5-2-FE       | `sample-front/src/app/App.tsx`                                 | AuthProvider を最上位コンポーネントに移動し、Header・Router を内包する |
-| 5-2-FE       | `sample-front/src/app/router.tsx`                              | Layout から AuthProvider を削除し、AuthProvider の重複ラップを解消する |
-| 5-2-FE       | `sample-front/src/widgets/header/ui/Header.tsx`                | useAuth 導入・FaCircleUser ボタン描画・DropdownMenu 実装               |
-| 5-2-FE       | `sample-front/src/widgets/header/ui/Header.styles.ts`          | DropdownMenu コンテンツのスタイル定義                                  |
-| 5-5          | `sample-front/src/widgets/header/ui/__tests__/Header.test.tsx` | テストケース追加（useAuth モック・DropdownMenu 動作）                  |
+| 対応ステップ | パス                                                           | 役割                                                     |
+| ------------ | -------------------------------------------------------------- | -------------------------------------------------------- |
+| 5-2-FE       | `sample-front/src/app/App.tsx`                                 | AuthProvider を最上位に配置し、Header・Router を内包する |
+| 5-2-FE       | `sample-front/src/app/router.tsx`                              | Router 配線（Layout は AuthProvider をラップしない）     |
+| 5-2-FE       | `sample-front/src/widgets/header/ui/Header.tsx`                | useAuth・FaCircleUser ボタン・DropdownMenu 描画          |
+| 5-2-FE       | `sample-front/src/widgets/header/ui/Header.styles.ts`          | DropdownMenu コンテンツのスタイル定義                    |
+| 5-5          | `sample-front/src/widgets/header/ui/__tests__/Header.test.tsx` | Header テスト（useAuth モック・DropdownMenu 動作）       |
 
 ---
 
@@ -110,7 +110,7 @@
 
 ## 要件
 
-1. Header の「HR」ハードコードを廃止し、FaCircleUser アイコンボタンに置き換える
+1. Header に FaCircleUser アイコンボタンを表示する
 2. アイコンボタンをクリックするとアイコン真下にドロップダウンが表示される
 3. ドロップダウン内に UUID（フル形式）とユーザー名（firstName + lastName）を表示する
 4. データは `useAuth().user` から取得し、新規 API 呼び出しは行わない

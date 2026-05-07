@@ -153,7 +153,7 @@
 | 対応ステップ | パス                                                                   | 役割                                                                                      |
 | ------------ | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | 5-2-FE       | `sample-front/src/pages/group-detail/api/delete-group-members.ts`      | API クライアント（DELETE /api/v1/groups/:id/members）                                     |
-| 5-2-FE       | `sample-front/src/pages/group-detail/model/member-list.ts`             | メンバー一覧の状態管理・削除後のキャッシュクリア                                          |
+| 5-2-FE       | `sample-front/src/pages/group-detail/model/useMemberList.ts`           | メンバー一覧の状態管理・削除後のキャッシュクリア                                          |
 | 5-2-FE       | `sample-front/src/pages/group-detail/ui/MemberList.tsx`                | ヘッダー checkbox 追加・全選択ロジック・indeterminate DOM 反映の副作用フック・削除処理    |
 | 5-2-FE       | `sample-front/src/pages/group-detail/ui/MemberList.styles.ts`          | ヘッダー checkbox 用スタイル定数追加（headerCheckboxInput 等）                            |
 | 5-5          | `sample-front/src/pages/group-detail/ui/__tests__/MemberList.test.tsx` | FE コンポーネントテスト（ヘッダーチェックボックス全選択・削除フロー・エラー・キャンセル） |
