@@ -250,7 +250,7 @@
 
 | ファイル                      | 内容                                                             |
 | ----------------------------- | ---------------------------------------------------------------- |
-| `sample-api/db/seed/seed.sql` | groups / users / group_members のシードデータ（FK 依存順に記載） |
+| `sample-api/db/seed/seed.sql` | users / groups / group_members / group_relations のシードデータ（FK 依存順に記載） |
 
 ---
 

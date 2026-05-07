@@ -98,7 +98,7 @@ test.describe("シートナビゲーション", () => {
     await expect(
       dialog.getByText("Description for Group 001"),
     ).toBeVisible();
-    await expect(dialog.getByText("Members")).toBeVisible();
+    await expect(dialog.getByText("すべてのメンバー")).toBeVisible();
   });
 
   test("シートが開いた状態で body.style.overflow が変更されない", async ({
@@ -300,7 +300,7 @@ test.describe("シートナビゲーション", () => {
     const dialog = page.getByRole("dialog");
     await expect(dialog.getByText("Group 002", { exact: true })).toBeVisible();
     await expect(dialog.getByText("Description for Group 002")).toBeVisible();
-    await expect(dialog.getByText("1 total")).toBeVisible();
+    await expect(dialog.getByText("1件")).toBeVisible();
   });
 
   test("GroupDetailSheet 内でメンバー検索 → Yamada で絞り込みが機能する", async ({ page }) => {

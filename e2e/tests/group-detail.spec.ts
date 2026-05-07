@@ -12,7 +12,7 @@ test.describe("グループ詳細ページ", () => {
     await expect(page.getByText("Description for Group 001")).toBeVisible();
 
     // Members section should exist
-    await expect(page.getByText("Members")).toBeVisible();
+    await expect(page.getByText("すべてのメンバー")).toBeVisible();
   });
 
   test("Groups ボタンをクリックすると一覧に戻る", async ({ page }) => {
@@ -53,8 +53,8 @@ test.describe("グループ詳細ページ", () => {
     await page.waitForLoadState("networkidle");
 
     // Group 001 has 2 members according to seed data
-    // The detail page shows "{member_count} total" in the Members section header
-    await expect(page.getByText("2 total")).toBeVisible();
+    // The detail page shows "{member_count}件" in the Members section header
+    await expect(page.getByText("2件")).toBeVisible();
 
     // Verify that actual member rows match: Yamada Taro and Suzuki Hanako
     await expect(page.getByText("Yamada Taro")).toBeVisible();
@@ -128,8 +128,8 @@ test.describe("グループ詳細ページ", () => {
     // Description should be visible
     await expect(page.getByText("Description for Group 002")).toBeVisible();
 
-    // Members section should show 1 total
-    await expect(page.getByText("1 total")).toBeVisible();
+    // Members section should show 1件
+    await expect(page.getByText("1件")).toBeVisible();
 
     // The single member is Yamada Taro (user 1)
     await expect(page.getByText("Yamada Taro")).toBeVisible();
@@ -216,47 +216,58 @@ test.describe("グループ詳細ページ", () => {
   });
 });
 
+// Helper: SubgroupManagementSheet を開く（SubgroupFilterChips の「サブグループ管理」ボタン経由）
+async function openSubgroupManagementSheet(page: import("@playwright/test").Page) {
+  await page.getByRole("button", { name: "サブグループ管理", exact: true }).click();
+  const sheet = page.locator('[role="dialog"]').last();
+  await expect(sheet).toBeVisible({ timeout: 10000 });
+  return sheet;
+}
+
+// Helper: SubgroupManagementSheet 内の「＋ 追加」ボタン → AddSubgroupSheet を開く
+async function openAddSubgroupSheet(page: import("@playwright/test").Page) {
+  const managementSheet = await openSubgroupManagementSheet(page);
+  await managementSheet.getByRole("button", { name: "＋ 追加", exact: true }).click();
+  const searchField = page.getByPlaceholder("Search by name or description");
+  await expect(searchField).toBeVisible({ timeout: 10000 });
+  return { managementSheet, searchField };
+}
+
 test.describe("サブグループ管理", () => {
   test("A-1: Subgroups セクションが表示される", async ({ page }) => {
     // Use Group 005 (id=5): seed data sets Group 005 → Group 006 as subgroup
     await page.goto("/groups/5");
     await page.waitForLoadState("networkidle");
 
-    // "Subgroups" heading should be visible
-    await expect(page.getByText("Subgroups")).toBeVisible({ timeout: 10000 });
+    // SubgroupFilterChips chip-row should be visible with Group 006 chip
+    await expect(page.getByTestId("chip-row")).toBeVisible({ timeout: 10000 });
 
     // Seed data: Group 005 (id=5) has Group 006 (id=6) as child
-    await expect(page.getByText("Group 006", { exact: true }).first()).toBeVisible({ timeout: 10000 });
+    // The chip for Group 006 should appear
+    await expect(page.getByRole("button", { name: "Group 006" })).toBeVisible({ timeout: 10000 });
   });
 
   test("A-2: AddSubgroupSheet が開く", async ({ page }) => {
     await page.goto("/groups/1");
     await page.waitForLoadState("networkidle");
 
-    // Click the "追加" button in the Subgroups section
-    // GroupDetailContent renders <Button variant="soft" onClick={handleOpenAddSubgroupSheet}>追加</Button>
-    const addButton = page.getByRole("button", { name: "追加", exact: true });
-    await expect(addButton).toBeVisible({ timeout: 10000 });
-    await addButton.click();
+    // Open AddSubgroupSheet via サブグループ管理 → ＋ 追加
+    const { searchField } = await openAddSubgroupSheet(page);
 
     // Sheet opens with the search field
-    await expect(
-      page.getByPlaceholder("Search by name or description"),
-    ).toBeVisible({ timeout: 10000 });
+    await expect(searchField).toBeVisible({ timeout: 10000 });
   });
 
   test("A-3: 未選択時「追加」ボタンが disabled", async ({ page }) => {
     await page.goto("/groups/1");
     await page.waitForLoadState("networkidle");
 
-    // Open sheet
-    await page.getByRole("button", { name: "追加", exact: true }).click();
-    await expect(
-      page.getByPlaceholder("Search by name or description"),
-    ).toBeVisible({ timeout: 10000 });
+    // Open AddSubgroupSheet
+    await openAddSubgroupSheet(page);
 
     // "追加" button should be disabled when no group is selected
-    const submitButton = page.locator('[role="dialog"]').getByRole("button", { name: "追加", exact: true });
+    const addSheet = page.locator('[role="dialog"]').last();
+    const submitButton = addSheet.getByRole("button", { name: "追加", exact: true });
     await expect(submitButton).toBeVisible({ timeout: 10000 });
     await expect(submitButton).toBeDisabled();
   });
@@ -305,10 +316,8 @@ test.describe("サブグループ管理", () => {
     await page.goto("/groups/3");
     await page.waitForLoadState("networkidle");
 
-    // Open Sheet
-    await page.getByRole("button", { name: "追加", exact: true }).click();
-    const searchField = page.getByPlaceholder("Search by name or description");
-    await expect(searchField).toBeVisible({ timeout: 10000 });
+    // Open AddSubgroupSheet via サブグループ管理 → ＋ 追加
+    const { searchField } = await openAddSubgroupSheet(page);
 
     // Select Group 004 using the input[type="radio"] to avoid strict mode violation
     // (AddSubgroupSheet renders both <div role="radio"> and <input type="radio" aria-label="Group 004">)
@@ -316,8 +325,9 @@ test.describe("サブグループ管理", () => {
     await expect(group004Radio).toBeVisible({ timeout: 10000 });
     await group004Radio.click();
 
-    // Click "追加"
-    const submitButton = page.locator('[role="dialog"]').getByRole("button", { name: "追加", exact: true });
+    // Click "追加" in AddSubgroupSheet
+    const addSheet = page.locator('[role="dialog"]').last();
+    const submitButton = addSheet.getByRole("button", { name: "追加", exact: true });
     await expect(submitButton).toBeEnabled({ timeout: 5000 });
     await submitButton.click();
 
@@ -330,24 +340,21 @@ test.describe("サブグループ管理", () => {
     await page.goto("/groups/5");
     await page.waitForLoadState("networkidle");
 
-    // Open Sheet - seed data has Group 006 as child of Group 005
-    await page.getByRole("button", { name: "追加", exact: true }).click();
-    await expect(
-      page.getByPlaceholder("Search by name or description"),
-    ).toBeVisible({ timeout: 10000 });
+    // Open AddSubgroupSheet via サブグループ管理 → ＋ 追加
+    await openAddSubgroupSheet(page);
 
     // Wait for groups to load (spinner disappears)
     // AddSubgroupSheet filters out existing child groups (Group 006)
     // Group 006 should NOT appear as a radio option inside the dialog
-    const dialog = page.locator('[role="dialog"]');
-    await expect(dialog).toBeVisible({ timeout: 10000 });
+    const addSheet = page.locator('[role="dialog"]').last();
+    await expect(addSheet).toBeVisible({ timeout: 10000 });
 
     // Wait for loading to complete (skeleton rows disappear)
     await page.waitForTimeout(500);
 
     // "Group 006" should not be selectable (excluded from availableGroups)
     // Use input[type="radio"] to check the actual selectable radio element
-    const group006Radio = dialog.locator('input[type="radio"][aria-label="Group 006"]');
+    const group006Radio = addSheet.locator('input[type="radio"][aria-label="Group 006"]');
     await expect(group006Radio).not.toBeVisible({ timeout: 10000 });
   });
 
@@ -390,19 +397,17 @@ test.describe("サブグループ管理", () => {
     await page.goto("/groups/3");
     await page.waitForLoadState("networkidle");
 
-    // Open Sheet
-    await page.getByRole("button", { name: "追加", exact: true }).click();
-    await expect(
-      page.getByPlaceholder("Search by name or description"),
-    ).toBeVisible({ timeout: 10000 });
+    // Open AddSubgroupSheet via サブグループ管理 → ＋ 追加
+    await openAddSubgroupSheet(page);
 
     // Select Group 004 using input[type="radio"] to avoid strict mode violation
     const group004Radio = page.locator('input[type="radio"][aria-label="Group 004"]');
     await expect(group004Radio).toBeVisible({ timeout: 10000 });
     await group004Radio.click();
 
-    // Click "追加"
-    const submitButton = page.locator('[role="dialog"]').getByRole("button", { name: "追加", exact: true });
+    // Click "追加" in AddSubgroupSheet
+    const addSheet = page.locator('[role="dialog"]').last();
+    const submitButton = addSheet.getByRole("button", { name: "追加", exact: true });
     await expect(submitButton).toBeEnabled({ timeout: 5000 });
     await submitButton.click();
 
@@ -429,16 +434,15 @@ test.describe("サブグループ管理", () => {
     await page.goto("/groups/3");
     await page.waitForLoadState("networkidle");
 
-    // Open Sheet
-    await page.getByRole("button", { name: "追加", exact: true }).click();
-    await expect(
-      page.getByPlaceholder("Search by name or description"),
-    ).toBeVisible({ timeout: 10000 });
+    // Open AddSubgroupSheet via サブグループ管理 → ＋ 追加
+    // Note: The GET /api/v1/groups mock above will return 500 when AddSubgroupSheet loads
+    await openAddSubgroupSheet(page);
 
     // Wait for fetch to complete and error to appear
     // AddSubgroupSheet sets fetchError with "Error <message>" format
     // apiFetch throws HttpError with message "500 Internal Server Error" (statusText may be empty in mocks)
-    await expect(page.locator('[role="dialog"]').getByText(/Error 500|Error\s+\d/)).toBeVisible({
+    const addSheet = page.locator('[role="dialog"]').last();
+    await expect(addSheet.getByText(/Error 500|Error\s+\d/)).toBeVisible({
       timeout: 10000,
     });
   });
@@ -448,8 +452,10 @@ test.describe("サブグループ管理", () => {
     await page.waitForLoadState("networkidle");
 
     // Group 003 has no subgroups in seed data
+    // Open SubgroupManagementSheet to see the empty state
+    const managementSheet = await openSubgroupManagementSheet(page);
     await expect(
-      page.getByText("サブグループはまだありません"),
+      managementSheet.getByText("サブグループはまだありません"),
     ).toBeVisible({ timeout: 10000 });
   });
 
@@ -491,24 +497,22 @@ test.describe("サブグループ管理", () => {
     await page.goto("/groups/3");
     await page.waitForLoadState("networkidle");
 
-    // Open Sheet
-    await page.getByRole("button", { name: "追加", exact: true }).click();
-    await expect(
-      page.getByPlaceholder("Search by name or description"),
-    ).toBeVisible({ timeout: 10000 });
+    // Open AddSubgroupSheet via サブグループ管理 → ＋ 追加
+    await openAddSubgroupSheet(page);
 
     // Select Group 004
     const group004Radio = page.locator('input[type="radio"][aria-label="Group 004"]');
     await expect(group004Radio).toBeVisible({ timeout: 10000 });
     await group004Radio.click();
 
-    // Click "追加"
-    const submitButton = page.locator('[role="dialog"]').getByRole("button", { name: "追加", exact: true });
+    // Click "追加" in AddSubgroupSheet
+    const addSheet = page.locator('[role="dialog"]').last();
+    const submitButton = addSheet.getByRole("button", { name: "追加", exact: true });
     await expect(submitButton).toBeEnabled({ timeout: 5000 });
     await submitButton.click();
 
     // Error message should appear in Sheet (not close)
-    await expect(page.locator('[role="dialog"]').getByText(/given param is not valid|エラー|Error/i)).toBeVisible({ timeout: 10000 });
+    await expect(addSheet.getByText(/given param is not valid|エラー|Error/i)).toBeVisible({ timeout: 10000 });
   });
 
   test("M-1: サブグループ行にメンバー数が表示される", async ({ page }) => {
@@ -517,27 +521,30 @@ test.describe("サブグループ管理", () => {
     await page.goto("/groups/5");
     await page.waitForLoadState("networkidle");
 
-    // Subgroups section should be visible
-    await expect(page.getByText("Subgroups")).toBeVisible({ timeout: 10000 });
+    // Open SubgroupManagementSheet to see subgroup rows
+    const managementSheet = await openSubgroupManagementSheet(page);
 
     // Group 006 subgroup row should show "1 members"
-    await expect(page.getByText("Group 006", { exact: true }).first()).toBeVisible({ timeout: 10000 });
-    await expect(page.getByText("1 members")).toBeVisible({ timeout: 10000 });
+    await expect(managementSheet.getByText("Group 006", { exact: true })).toBeVisible({ timeout: 10000 });
+    await expect(managementSheet.getByText("1 members")).toBeVisible({ timeout: 10000 });
   });
 });
 
 test.describe("サブグループ削除", () => {
-  // Helper: SubgroupList 内の Delete ボタンを取得する。
-  // GroupDetailContent には "Delete"(グループ削除) と SubgroupList 内の "Delete" が存在するため、
-  // Group 006 テキストと Delete ボタンを両方持つ最内部コンテナに限定することで誤クリックを防ぐ。
-  function getSubgroupDeleteButton(page: import("@playwright/test").Page) {
-    // Group 006 テキストと Delete ボタンを持つ最小コンテナ (SubgroupList の各行 Flex) を取得
-    const row = page
-      .locator("div")
-      .filter({ has: page.getByText("Group 006", { exact: true }) })
-      .filter({ has: page.getByRole("button", { name: "Delete" }) })
-      .last();
-    return row.getByRole("button", { name: "Delete" });
+  // Helper: SubgroupManagementSheet を開いて Group 006 の「削除」ボタンを取得する。
+  // 新実装では SubgroupFilterChips の「サブグループ管理」ボタン → SubgroupManagementSheet 内の「削除」ボタン
+  async function openSubgroupManagementAndGetDeleteButton(page: import("@playwright/test").Page) {
+    // SubgroupManagementSheet を開く（「サブグループ管理」ボタンをクリック）
+    await page.getByRole("button", { name: "サブグループ管理", exact: true }).click();
+
+    // SubgroupManagementSheet（role="dialog"）内に Group 006 のデータが表示されるまで待機
+    // filter({ hasText }) により Group 006 が表示されている正しい dialog を特定する
+    const sheet = page.locator('[role="dialog"]').filter({ hasText: "Group 006" });
+    await expect(sheet).toBeVisible({ timeout: 10000 });
+
+    // SubgroupManagementSheet 内の「削除」ボタンを取得
+    const deleteBtn = sheet.getByRole("button", { name: "削除", exact: true });
+    return { deleteBtn };
   }
 
   // D-2: [Delete] 押下 → AlertDialog が表示される
@@ -546,14 +553,12 @@ test.describe("サブグループ削除", () => {
     await page.waitForLoadState("networkidle");
 
     // Group 005 has Group 006 as subgroup (seed data)
-    await expect(page.getByText("Group 006", { exact: true }).first()).toBeVisible({ timeout: 10000 });
+    // Open SubgroupManagementSheet and click Group 006's delete button
+    const { deleteBtn } = await openSubgroupManagementAndGetDeleteButton(page);
+    await expect(deleteBtn).toBeVisible({ timeout: 10000 });
+    await deleteBtn.click();
 
-    // Click [Delete] button on the subgroup row (not the group-level Delete button)
-    const subgroupDeleteBtn = getSubgroupDeleteButton(page);
-    await expect(subgroupDeleteBtn).toBeVisible({ timeout: 10000 });
-    await subgroupDeleteBtn.click();
-
-    // AlertDialog should appear
+    // AlertDialog should appear (DeleteSubgroupDialog)
     const dialog = page.getByRole("alertdialog");
     await expect(dialog).toBeVisible({ timeout: 5000 });
 
@@ -581,13 +586,10 @@ test.describe("サブグループ削除", () => {
     await page.goto("/groups/5");
     await page.waitForLoadState("networkidle");
 
-    // Verify Group 006 is visible
-    await expect(page.getByText("Group 006", { exact: true }).first()).toBeVisible({ timeout: 10000 });
-
-    // Click [Delete] button on the subgroup row
-    const subgroupDeleteBtn = getSubgroupDeleteButton(page);
-    await expect(subgroupDeleteBtn).toBeVisible({ timeout: 10000 });
-    await subgroupDeleteBtn.click();
+    // Open SubgroupManagementSheet and click Group 006's delete button
+    const { deleteBtn } = await openSubgroupManagementAndGetDeleteButton(page);
+    await expect(deleteBtn).toBeVisible({ timeout: 10000 });
+    await deleteBtn.click();
 
     // Confirm in dialog
     const dialog = page.getByRole("alertdialog");
@@ -613,10 +615,10 @@ test.describe("サブグループ削除", () => {
     await page.goto("/groups/5");
     await page.waitForLoadState("networkidle");
 
-    // Click [Delete] button on the subgroup row
-    const subgroupDeleteBtn = getSubgroupDeleteButton(page);
-    await expect(subgroupDeleteBtn).toBeVisible({ timeout: 10000 });
-    await subgroupDeleteBtn.click();
+    // Open SubgroupManagementSheet and click Group 006's delete button
+    const { deleteBtn } = await openSubgroupManagementAndGetDeleteButton(page);
+    await expect(deleteBtn).toBeVisible({ timeout: 10000 });
+    await deleteBtn.click();
 
     // Click Cancel in dialog
     const dialog = page.getByRole("alertdialog");
@@ -647,10 +649,10 @@ test.describe("サブグループ削除", () => {
     await page.goto("/groups/5");
     await page.waitForLoadState("networkidle");
 
-    // Click [Delete] button on the subgroup row
-    const subgroupDeleteBtn = getSubgroupDeleteButton(page);
-    await expect(subgroupDeleteBtn).toBeVisible({ timeout: 10000 });
-    await subgroupDeleteBtn.click();
+    // Open SubgroupManagementSheet and click Group 006's delete button
+    const { deleteBtn } = await openSubgroupManagementAndGetDeleteButton(page);
+    await expect(deleteBtn).toBeVisible({ timeout: 10000 });
+    await deleteBtn.click();
 
     // Confirm in dialog
     const dialog = page.getByRole("alertdialog");
@@ -681,10 +683,10 @@ test.describe("サブグループ削除", () => {
     await page.goto("/groups/5");
     await page.waitForLoadState("networkidle");
 
-    // Click [Delete] button on the subgroup row
-    const subgroupDeleteBtn = getSubgroupDeleteButton(page);
-    await expect(subgroupDeleteBtn).toBeVisible({ timeout: 10000 });
-    await subgroupDeleteBtn.click();
+    // Open SubgroupManagementSheet and click Group 006's delete button
+    const { deleteBtn } = await openSubgroupManagementAndGetDeleteButton(page);
+    await expect(deleteBtn).toBeVisible({ timeout: 10000 });
+    await deleteBtn.click();
 
     // Confirm in dialog
     const dialog = page.getByRole("alertdialog");
@@ -696,5 +698,155 @@ test.describe("サブグループ削除", () => {
     await expect(
       dialog.getByText("サブグループの削除に失敗しました。しばらくしてから再度お試しください"),
     ).toBeVisible({ timeout: 5000 });
+  });
+});
+
+test.describe("サブグループメンバー表示・フィルタ", () => {
+  // S-1: Group 006 経由メンバーがソースラベル付きで表示される
+  test("S-1: Group 006 経由メンバー（Tanaka Jiro）が「Group 006」ソースラベル付きで Group 005 のメンバー一覧に表示される", async ({ page }) => {
+    await page.goto("/groups/5");
+    await page.waitForLoadState("networkidle");
+
+    // Group 005 の直接メンバー (Ken Takahashi, Mika Watanabe) が表示される
+    await expect(page.getByText("Takahashi Ken")).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText("Watanabe Mika")).toBeVisible({ timeout: 10000 });
+
+    // Group 006 経由メンバー (Tanaka Jiro) が表示される
+    await expect(page.getByText("Tanaka Jiro")).toBeVisible({ timeout: 10000 });
+
+    // 所属元テキストに "Group 006" が含まれる行が存在する
+    // MemberList の MemberRow は <td style={tableCellSource}>{sourceLabel}</td> でラベルを出力
+    // buildSourceLabel: source_groups の group_id !== groupId なら group_name を返す → "Group 006"
+    const memberRows = page.getByTestId("member-row");
+    await expect(memberRows.first()).toBeVisible({ timeout: 10000 });
+
+    // Group 006 ラベルが表示されていること
+    await expect(page.getByText("Group 006", { exact: true }).first()).toBeVisible({ timeout: 10000 });
+
+    // 直接メンバーの行に「Group 006」ラベルがないこと（ソースラベルは「自グループ」になる）
+    // Tanaka Jiro の行で Group 006 が表示されている
+    const tanakaRow = page
+      .getByTestId("member-row")
+      .filter({ hasText: "Tanaka Jiro" });
+    await expect(tanakaRow).toBeVisible({ timeout: 10000 });
+    await expect(tanakaRow.getByText("Group 006")).toBeVisible({ timeout: 10000 });
+  });
+
+  // F-1: SubgroupFilterChips のトグルで exclude_group_ids が反映されメンバーが絞られる
+  test("F-1: Group 006 チップを toggle off すると Tanaka Jiro が非表示になり、toggle on で再表示される", async ({ page }) => {
+    await page.goto("/groups/5");
+    await page.waitForLoadState("networkidle");
+
+    // SubgroupFilterChips の chip-row が表示される
+    const chipRow = page.getByTestId("chip-row");
+    await expect(chipRow).toBeVisible({ timeout: 10000 });
+
+    // Group 006 のチップが表示される (aria-label="Group 006", aria-pressed="true")
+    const group006Chip = chipRow.getByRole("button", { name: "Group 006" });
+    await expect(group006Chip).toBeVisible({ timeout: 10000 });
+    await expect(group006Chip).toHaveAttribute("aria-pressed", "true");
+
+    // 初期状態: Tanaka Jiro が表示されている
+    await expect(page.getByText("Tanaka Jiro")).toBeVisible({ timeout: 10000 });
+
+    // Group 006 チップをクリック（toggle off）
+    // GET /api/v1/groups/5/members?exclude_group_ids=6 のリクエストを待機
+    const [responseOff] = await Promise.all([
+      page.waitForResponse(
+        (response) =>
+          response.url().includes("/api/v1/groups/5/members") &&
+          response.url().includes("exclude_group_ids"),
+        { timeout: 10000 },
+      ),
+      group006Chip.click(),
+    ]);
+    expect(responseOff.ok()).toBeTruthy();
+
+    // チップが off 状態になる
+    await expect(group006Chip).toHaveAttribute("aria-pressed", "false");
+
+    // Tanaka Jiro が一覧から消える
+    await expect(page.getByText("Tanaka Jiro")).not.toBeVisible({ timeout: 10000 });
+
+    // 直接メンバーは残っている
+    await expect(page.getByText("Takahashi Ken")).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText("Watanabe Mika")).toBeVisible({ timeout: 5000 });
+
+    // Group 006 チップをもう一度クリック（toggle on）
+    const [responseOn] = await Promise.all([
+      page.waitForResponse(
+        (response) =>
+          response.url().includes("/api/v1/groups/5/members") &&
+          !response.url().includes("exclude_group_ids"),
+        { timeout: 10000 },
+      ),
+      group006Chip.click(),
+    ]);
+    expect(responseOn.ok()).toBeTruthy();
+
+    // チップが on 状態に戻る
+    await expect(group006Chip).toHaveAttribute("aria-pressed", "true");
+
+    // Tanaka Jiro が再表示される
+    await expect(page.getByText("Tanaka Jiro")).toBeVisible({ timeout: 10000 });
+  });
+
+  // Q-1: AddSubgroupSheet 検索ボックスが 300ms デバウンス後に GET /api/v1/groups?q=... を発火
+  test("Q-1: AddSubgroupSheet 検索ボックスに入力すると 300ms デバウンス後に q パラメータ付きで GET /api/v1/groups が発火し結果が絞られる", async ({ page }) => {
+    // Group 003 はサブグループなし（seed: group_relations に group_id=3 なし）
+    await page.goto("/groups/3");
+    await page.waitForLoadState("networkidle");
+
+    // 「サブグループ管理」ボタンで SubgroupManagementSheet を開く
+    // GroupDetailContent の SubgroupFilterChips に「サブグループ管理」ボタンが配置されている
+    await page.getByRole("button", { name: "サブグループ管理", exact: true }).click();
+
+    // SubgroupManagementSheet が開く（role="dialog"）
+    const managementSheet = page.locator('[role="dialog"]').last();
+    await expect(managementSheet).toBeVisible({ timeout: 10000 });
+
+    // SubgroupManagementSheet 内の「＋ 追加」ボタンをクリックして AddSubgroupSheet を開く
+    await managementSheet.getByRole("button", { name: "＋ 追加", exact: true }).click();
+
+    // AddSubgroupSheet が開く（2枚目の dialog）
+    const searchField = page.getByPlaceholder("Search by name or description");
+    await expect(searchField).toBeVisible({ timeout: 10000 });
+
+    // 初回ロード（q なし）の完了を待つ
+    await page.waitForTimeout(500);
+
+    // "Group 005" を入力
+    // デバウンス 300ms 後に GET /api/v1/groups?q=Group%20005 が発火することを waitForRequest で確認
+    const requestPromise = page.waitForRequest(
+      (request) =>
+        request.url().includes("/api/v1/groups") &&
+        request.url().includes("q=") &&
+        request.method() === "GET",
+      { timeout: 5000 },
+    );
+
+    await searchField.fill("Group 005");
+
+    const capturedRequest = await requestPromise;
+    const capturedUrl = capturedRequest.url();
+
+    // q パラメータが含まれていること
+    expect(capturedUrl).toContain("q=");
+    // URLSearchParams を使って q パラメータの値を正確にデコードして確認する
+    // URLSearchParams は %20 も + も共にスペースに変換する
+    const parsedUrl = new URL(capturedUrl);
+    expect(parsedUrl.searchParams.get("q")).toBe("Group 005");
+
+    // レスポンスを待って UI が更新されるのを待つ
+    await page.waitForTimeout(400);
+
+    // Group 005 がリスト内に表示される
+    const addSheet = page.locator('[role="dialog"]').last();
+    await expect(addSheet).toBeVisible({ timeout: 10000 });
+    // Group 005 のラジオ入力要素で存在を確認（getByText は名前+説明の2要素に一致してstrict mode violationになるためinputで確認）
+    await expect(addSheet.locator('input[type="radio"][aria-label="Group 005"]')).toBeVisible({ timeout: 10000 });
+
+    // 関係ないグループ（例: Group 020）が表示されない
+    await expect(addSheet.locator('input[type="radio"][aria-label="Group 020"]')).not.toBeVisible({ timeout: 3000 });
   });
 });
