@@ -4,7 +4,7 @@
 
 グループに所属するメンバーの一覧を検索キーワードで絞り込みながら取得する。グループ詳細画面のメンバーセクション（フィルターチップ行直下）に表示される。クライアントは 100 件単位（FETCH_LIMIT=100）でフェッチしてキャッシュし、リスト末尾のセンチネル要素が viewport に入ると追加フェッチを自動実行する無限スクロール方式を採用する。
 
-フィルターチップ行で OFF にしたサブグループ ID は `excludeGroupIds` としてリクエストに乗り、BE が `exclude_group_ids` クエリパラメータで除外したメンバーのみを返す。BE は重複除外済み総件数を `total`、複数サブグループに重複所属する実ユーザー数を `duplicate_count` で返し、メンバーセクションヘッダーに「N件 / 重複 N件」として表示する。
+フィルターチップ行で OFF にしたサブグループ ID は `excludeGroupIds` としてリクエストに乗り、BE が `exclude_group_ids` クエリパラメータで除外したメンバーのみを返す。BE は重複除外済み総件数を `total`、**2 つ以上の group / subgroup に所属しているユニークユーザー数**を `duplicate_count` で返し（`JSON_LENGTH(source_groups) >= 2` を満たす行を `SUM(CASE WHEN ... THEN 1 ELSE 0 END) OVER()` で集計）、メンバーセクションヘッダーに「N件 / 重複 N件」として表示する。
 
 ---
 
@@ -60,8 +60,8 @@
 | `useMemberList`        | カスタム Hook  | fetch・検索・無限スクロール・キャッシュの状態と処理を管理する。`excludeGroupIds?: number[]` を引数に受け取り、ソート済み・コンマ区切りの `exclude_group_ids` を `fetchGroupMembers` に渡す。フィルター違いごとにキャッシュキーを分離する |
 | `useInfiniteList`      | 共通 Hook      | グループ一覧・メンバー一覧・ユーザー一覧で共有する無限スクロール基盤。`cacheKey`・`cache`・`fetchFn`・`buildParams` を渡して使う                                                                                                         |
 | `excludeGroupIds`      | derived/state  | フィルターチップ行で OFF になっているサブグループ ID + 必要に応じて親グループ ID を含む配列。`GroupDetailContent` で 300ms デバウンス後に `debouncedExcludeGroupIds` として確定し `useMemberList` に渡す                                 |
-| `apiTotal`             | state          | サーバーが返す重複除外済み総件数。フィルター変化中は `null` にリセットされ、`apiTotal ?? memberCount` のフォールバックでメンバーセクションヘッダーに表示する                                                                             |
-| `duplicateCount`       | state          | サーバーが返す重複件数（`duplicate_count`）。複数サブグループに所属する実ユーザー数を表す。0 のときバッジを描画しない                                                                                                                    |
+| `apiTotal`             | state          | サーバーが返す重複除外済み総件数。フィルター変化時は即時リセットせず古い値を 300ms 維持し、次のフェッチ完了時に MemberList 経由で更新される。初期表示時のみ `null` で、その間は `apiTotal ?? memberCount` のフォールバックでメンバーセクションヘッダーに表示する |
+| `duplicateCount`       | state          | サーバーが返す重複件数（`duplicate_count`）。2 つ以上の group / subgroup に所属しているユニークユーザー数を表す。フィルター変化時は即時リセットせず古い値を 300ms 維持し、次のフェッチ完了時に MemberList 経由で更新される。0 のときバッジを描画しない |
 | `isDirectMember`       | ユーティリティ | `member.source_groups.some(sg => sg.group_id === groupId)` で親直属か判定する                                                                                                                                                            |
 | `buildSourceLabel`     | ユーティリティ | `source_groups` を `groupId` を先頭に並べ替え、「自グループ」または `group_name` に変換してカンマ区切りで結合する。複数所属元がある場合はすべてカンマ区切りで表示する                                                                    |
 | `cachedMembers`        | state          | サーバーから取得したメンバーをキャッシュする（100 件単位でフェッチ）                                                                                                                                                                     |
@@ -102,9 +102,10 @@
 - [ ] 追加フェッチ（センチネルトリガー）が失敗したときリスト末尾にエラーメッセージが表示され、既存アイテムは維持される
 - [ ] `clearMemberListCache` が呼ばれると再フェッチが実行され、メンバー一覧が最新化される
 - [ ] フィルターチップを OFF にすると 300ms デバウンス後に `exclude_group_ids` 付きで再フェッチされる
-- [ ] フィルター変化中は `apiTotal` が `null` にリセットされ、フォールバック件数が一時表示される
-- [ ] サーバーが `duplicate_count > 0` を返したときヘッダーに「重複 N件」バッジが表示される
+- [ ] フィルター変化時は `apiTotal` / `duplicateCount` が即時リセットされず古い値が 300ms 維持される（次のフェッチ完了時に MemberList 経由で新しい値に更新される）
+- [ ] サーバーが `duplicate_count > 0` を返したときヘッダーに「重複 N件」バッジが表示される（`duplicate_count` は 2 つ以上の group / subgroup に所属するユニークユーザー数）
 - [ ] サーバーが `duplicate_count = 0` を返したとき重複バッジは描画されない
+- [ ] 重複バッジが表示されている状態でフィルターを切り替えても、フェッチ完了までバッジ表示は古い値で残り、フェッチ完了時に新しい値で更新される（途中で消えてから再表示される現象は発生しない）
 - [ ] ページネーション（Previous / Next ボタン）が表示されない
 ```
 

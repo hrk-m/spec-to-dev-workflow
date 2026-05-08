@@ -517,16 +517,16 @@ test.describe("サブグループ管理", () => {
 
   test("M-1: サブグループ行にメンバー数が表示される", async ({ page }) => {
     // Group 005 has Group 006 as subgroup (seed data)
-    // Group 006 has 1 direct member in seed data (group_members id=33: group_id=6, user_id=3)
+    // Group 006 has 2 direct members in seed data (group_members id=33: group_id=6, user_id=3 and id=46: group_id=6, user_id=5)
     await page.goto("/groups/5");
     await page.waitForLoadState("networkidle");
 
     // Open SubgroupManagementSheet to see subgroup rows
     const managementSheet = await openSubgroupManagementSheet(page);
 
-    // Group 006 subgroup row should show "1 members"
+    // Group 006 subgroup row should show "2 members"
     await expect(managementSheet.getByText("Group 006", { exact: true })).toBeVisible({ timeout: 10000 });
-    await expect(managementSheet.getByText("1 members")).toBeVisible({ timeout: 10000 });
+    await expect(managementSheet.getByText("2 members")).toBeVisible({ timeout: 10000 });
   });
 });
 
@@ -789,6 +789,52 @@ test.describe("サブグループメンバー表示・フィルタ", () => {
 
     // Tanaka Jiro が再表示される
     await expect(page.getByText("Tanaka Jiro")).toBeVisible({ timeout: 10000 });
+  });
+
+  // D-1: 重複所属メンバーがいるグループで「重複 N 件」バッジが表示される
+  test("D-1: group 5 で user 5 が重複所属するため「重複 1件」バッジが表示される", async ({ page }) => {
+    await page.goto("/groups/5");
+    await page.waitForLoadState("networkidle");
+
+    await expect(page.getByText("重複 1件")).toBeVisible({ timeout: 10000 });
+  });
+
+  // D-2: subgroup チップを toggle off → 重複 0 件でバッジが消える / toggle on で復活する
+  test("D-2: Group 006 を toggle off するとバッジが消え、toggle on で復活する（FE bridge 回帰防止）", async ({ page }) => {
+    await page.goto("/groups/5");
+    await page.waitForLoadState("networkidle");
+
+    await expect(page.getByText("重複 1件")).toBeVisible({ timeout: 10000 });
+
+    const chipRow = page.getByTestId("chip-row");
+    const group006Chip = chipRow.getByRole("button", { name: "Group 006" });
+    await expect(group006Chip).toBeVisible({ timeout: 10000 });
+
+    // toggle off
+    const [respOff] = await Promise.all([
+      page.waitForResponse(
+        (r) =>
+          r.url().includes("/api/v1/groups/5/members") &&
+          r.url().includes("exclude_group_ids=6"),
+        { timeout: 10000 },
+      ),
+      group006Chip.click(),
+    ]);
+    expect(respOff.ok()).toBeTruthy();
+    await expect(page.getByText("重複 1件")).not.toBeVisible({ timeout: 10000 });
+
+    // toggle on
+    const [respOn] = await Promise.all([
+      page.waitForResponse(
+        (r) =>
+          r.url().includes("/api/v1/groups/5/members") &&
+          !r.url().includes("exclude_group_ids"),
+        { timeout: 10000 },
+      ),
+      group006Chip.click(),
+    ]);
+    expect(respOn.ok()).toBeTruthy();
+    await expect(page.getByText("重複 1件")).toBeVisible({ timeout: 10000 });
   });
 
   // Q-1: AddSubgroupSheet 検索ボックスが 300ms デバウンス後に GET /api/v1/groups?q=... を発火

@@ -83,10 +83,14 @@
     - 同一 user の全 source_group（root_child_id + groups.name）を `JSON_ARRAYAGG(... ORDER BY min_depth ASC, root_child_id ASC)` で配列として集約する（FE が `source_groups[0]` を最浅祖先として利用するため順序を保証する）
 11. q が指定されている場合は users.search_key の双方向 LIKE 絞り込みを適用する
 12. 重複排除後の件数を total として確定する（q・exclude_group_ids 適用後の件数。COUNT(*) OVER() はウィンドウ関数のため追加 COUNT クエリ不要）
+12-2. 同じ最終 SELECT のウィンドウ関数で duplicate_count を確定する
+    - duplicate_count = `SUM(CASE WHEN JSON_LENGTH(us.source_groups) >= 2 THEN 1 ELSE 0 END) OVER()`
+    - q・exclude_group_ids 適用後の母集団（total と同じ）に対して算出する
+    - 「2 つ以上の group/subgroup に所属しているユニークユーザーの件数」を返す（同一ユーザーが何個所属しても 1 として加算）
 13. 結果を min_depth ASC → user.id ASC でソートし、limit / offset を適用する
 14. source_groups の各 group_id に対応する groups.name を JOIN groups で解決する
     - DB エラー → 500 Internal Server Error {"message": "internal server error"} → 終了
-15. 200 OK + { members: [{id, uuid, first_name, last_name, source_groups: [{group_id, group_name}]}], total } を返す → 終了
+15. 200 OK + { members: [{id, uuid, first_name, last_name, source_groups: [{group_id, group_name}]}], total, duplicate_count } を返す → 終了
 ```
 
 ### 主要設計判断（BE）
@@ -164,13 +168,14 @@
 | ------------ | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 5-1          | `sample-api/internal/rest/params.go`                   | `parseCommaSeparatedUint64(s string) ([]uint64, error)` を追加。空文字列は nil を返し、不正な値は `ErrBadParamInput` を返す                                                                                                                                                                                                                                                                                                        |
 | 5-2          | `sample-api/domain/group.go`                           | `GroupMember`（`ID`, `UUID`, `FirstName`, `LastName`, `SourceGroups []SourceGroup`）と `SourceGroup`（`GroupID uint64`, `GroupName string`）を定義                                                                                                                                                                                                                                                                                 |
-| 5-2          | `sample-api/group/service.go`                          | `GroupRepository.ListGroupMembers(ctx, groupID, excludeGroupIDs []uint64, q, limit, offset) ([]domain.GroupMember, int, error)` の IF（消費側宣言）と `GroupService.ListGroupMembers` ロジック                                                                                                                                                                                                                                     |
+| 5-2          | `sample-api/group/service.go`                          | `GroupRepository.ListGroupMembers(ctx, id uint64, limit, offset int, q string, excludeGroupIDs []uint64) ([]domain.GroupMember, int, int, error)` の IF（消費側宣言）と `GroupService.ListGroupMembers` ロジック。第 2/3 戻り値は `total` / `duplicate_count` の順                                                                                                                                                                  |
 | 5-5          | `sample-api/group/service_test.go`                     | Service ユニットテスト（最浅祖先採用・source 配列・q フィルター・total 計算・excludeGroupIDs フィルターを含む）                                                                                                                                                                                                                                                                                                                    |
-| 5-2          | `sample-api/group/mocks/group_repository_mock.go`      | `ListGroupMembers` mock（`excludeGroupIDs []uint64` を受け取り `[]domain.GroupMember` を返す）                                                                                                                                                                                                                                                                                                                                     |
-| 5-2, 5-4     | `sample-api/internal/rest/group.go`                    | `ListGroupMembersHandler`（`exclude_group_ids` をパースしサービスへ渡す）・`GroupService.ListGroupMembers(ctx, groupID, excludeGroupIDs []uint64, q, limit, offset) ([]domain.GroupMember, int, error)` の IF・`groupMember` 型の `SourceGroups []sourceGroup` を JSON `source_groups` として返す・`getStatusCode` の `ErrBadParamInput` / `ErrNotFound` / `ErrInternalServerError` マッピングを利用                               |
+| 5-2          | `sample-api/group/mocks/group_repository_mock.go`      | `ListGroupMembers` mock（`(id, limit, offset, q, excludeGroupIDs)` を受け取り `([]domain.GroupMember, total int, duplicateCount int, error)` を返す）                                                                                                                                                                                                                                                                              |
+| 5-2, 5-4     | `sample-api/internal/rest/group.go`                    | `ListGroupMembersHandler`（`exclude_group_ids` をパースしサービスへ渡す）・`GroupService.ListGroupMembers(ctx, id uint64, limit, offset int, q string, excludeGroupIDs []uint64) ([]domain.GroupMember, int, int, error)` の IF（第 2/3 戻り値は `total` / `duplicate_count`）・`groupMember` 型の `SourceGroups []sourceGroup` を JSON `source_groups` として返す・`getStatusCode` の `ErrBadParamInput` / `ErrNotFound` / `ErrInternalServerError` マッピングを利用 |
 | 5-5          | `sample-api/internal/rest/group_test.go`               | Handler ユニットテスト（`source_groups` フィールドのアサーション・`excludeGroupIDs` フィルターケースを含む）                                                                                                                                                                                                                                                                                                                       |
-| 5-2          | `sample-api/internal/rest/mocks/group_service_mock.go` | `GroupService.ListGroupMembers` mock（`excludeGroupIDs []uint64` を受け取り `[]domain.GroupMember` を返す）                                                                                                                                                                                                                                                                                                                        |
-| 5-2, 5-3     | `sample-api/internal/repository/mysql/group.go`        | `ListGroupMembers` に `excludeGroupIDs []uint64` を追加。`WITH RECURSIVE`（自身 + 全子孫の (group_id, depth, root_child_id) 集合構築）+ `JSON_ARRAYAGG(... ORDER BY min_depth ASC, root_child_id ASC)` で source_groups 配列集約（先頭が最浅祖先になるよう順序保証）+ q 絞り込み + `WHERE d.root_child_id NOT IN (...)` 条件分岐（空時は WHERE なし）+ min_depth ASC → user.id ASC ソート + limit/offset 適用までを 1 クエリで完結 |
+| 5-2          | `sample-api/internal/rest/mocks/group_service_mock.go` | `GroupService.ListGroupMembers` mock（`(id, limit, offset, q, excludeGroupIDs)` を受け取り `([]domain.GroupMember, total int, duplicateCount int, error)` を返す）                                                                                                                                                                                                                                                                  |
+| 5-2, 5-3     | `sample-api/internal/repository/mysql/group.go`        | `ListGroupMembers` に `excludeGroupIDs []uint64` を追加。`WITH RECURSIVE`（自身 + 全子孫の (group_id, depth, root_child_id) 集合構築）+ `JSON_ARRAYAGG(... ORDER BY min_depth ASC, root_child_id ASC)` で source_groups 配列集約（先頭が最浅祖先になるよう順序保証）+ q 絞り込み + `WHERE d.root_child_id NOT IN (...)` 条件分岐（空時は WHERE なし）+ min_depth ASC → user.id ASC ソート + limit/offset 適用までを 1 クエリで完結。最終 SELECT の `duplicate_count` 算出式は `SUM(CASE WHEN JSON_LENGTH(us.source_groups) >= 2 THEN 1 ELSE 0 END) OVER()`（=2 以上の group/subgroup に所属しているユニークユーザー数）とし、`q` および `exclude_group_ids` 適用後の母集団に対してウィンドウ関数で算出する |
+| 5-5          | `sample-api/internal/repository/mysql/group_test.go`   | `ListGroupMembers` の Repository ユニットテスト T1〜T8 を新規追加（`duplicate_count` の新定義検証）。動的 INSERT + `defer db.Exec(DELETE...)` パターンで group / group_members / group_relations のシードを構築する                                                                                                                                                                                                                                |
 
 ### sample-front
 
@@ -235,7 +240,7 @@
 | `members[].source_groups[].group_id`   | integer (uint64) | 所属元グループ ID。`:id` と一致する場合は親直属                                                         |
 | `members[].source_groups[].group_name` | string           | 所属元グループ名（BE 側で必ず JOIN groups により解決済み）                                              |
 | `total`                                | integer          | `q` および `exclude_group_ids` 適用かつ重複排除後の総件数（`members[]` のページサイズに依存しない）     |
-| `duplicate_count`                      | integer          | 複数のサブグループ経由で重複所属するユーザーの件数（`SUM(JSON_LENGTH(source_groups)) OVER() - COUNT(*) OVER()` で算出） |
+| `duplicate_count`                      | integer          | 2 つ以上の group/subgroup に所属しているユニークユーザーの件数。`q` および `exclude_group_ids` 適用後・重複排除後の母集団に対して `SUM(CASE WHEN JSON_LENGTH(source_groups) >= 2 THEN 1 ELSE 0 END) OVER()` で算出する（同一ユーザーが何個の group に所属していても 1 として加算） |
 
 #### 補足
 
@@ -320,6 +325,21 @@
 | 30  | 正常系   | excludeGroupIDs を repository へ正しく伝播する         | `excludeGroupIDs=[]uint64{28}` | Repository が同じ引数で呼ばれる                                        |
 
 > 既存 #19〜#28 ケースの `mock.On("ListGroupMembers", ...)` に `excludeGroupIDs` 引数（`[]uint64(nil)`）を追加して通す
+
+**Repository テスト** (`internal/repository/mysql/group_test.go` — `duplicate_count` 新定義検証 / 全 T1〜T8 新規追加):
+
+| #   | 観点               | テスト内容                                                                                              | 入力                                                                  | 期待 `duplicate_count` |
+| --- | ------------------ | ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- | ---------------------- |
+| T1  | 正常系             | 全員が単独 group のみに所属（重複なし）                                                                 | 親直属 3 名 + 子孫なし                                                | **0**                  |
+| T2  | 正常系             | 1 人だけが親 + 子の 2 group に重複所属                                                                  | a さん: 親+subA に所属 / b さん: subA のみ                            | **1**                  |
+| T3  | 正常系             | 2 人ともそれぞれ複数 group に重複所属                                                                   | a さん: 親+subA+subB / b さん: subA+subB                              | **2**                  |
+| T4  | 境界値             | 1 人が大量（5 個）の subgroup に重複所属しても 1 とカウント                                             | a さん: 親+sub1+sub2+sub3+sub4 の 5 group                             | **1**                  |
+| T5  | 境界値             | メンバー 0 人（親も子孫も空）                                                                           | 一時グループ（0 人）                                                  | **0**（`total=0` 時）  |
+| T6  | フィルタ組合せ     | `q` 適用後に重複ユーザーが対象外になった場合は重複に含めない                                            | a さん（重複） + b さん（単独） / `q=b` で絞り込み                    | **0**                  |
+| T7  | フィルタ組合せ     | `exclude_group_ids` で除外後、`source_groups` の長さが 1 になったユーザーは重複扱いしない               | a さん: 親+subA / `exclude_group_ids=subA` を指定（残り親のみ）       | **0**                  |
+| T8  | フィルタ組合せ     | `exclude_group_ids` 適用後も 2 個以上残るユーザーは重複扱い                                             | a さん: 親+subA+subB / `exclude_group_ids=subA`（残り親+subB の 2 個） | **1**                  |
+
+> 既存 `group_test.go` には `ListGroupMembers` のテストが無いため、T1〜T8 はすべて新規追加。動的 INSERT + `defer db.Exec(DELETE...)` パターンで seed を構築し、`users` の id は seed 既存値（1〜15）の範囲を使用する（FK 違反回避）。
 
 **フロントエンドテスト** (`MemberList.test.tsx`):
 
@@ -409,6 +429,10 @@
 40. 「自グループを除外」チェック時は親グループ ID を `exclude_group_ids` に含める
 41. subgroups の再フェッチ（サブグループ追加・削除後）時は `checkedSubgroupIds` を全サブグループ ID で全リセットする
 42. フィルター状態はページセッション中のみ保持し、リロードでリセットされる
+43. `duplicate_count` は「2 つ以上の group/subgroup に所属しているユニークユーザー数」を返す（同一ユーザーが何個の group/subgroup に所属していても 1 として加算する）
+44. `duplicate_count` は最終 SELECT のウィンドウ関数 `SUM(CASE WHEN JSON_LENGTH(us.source_groups) >= 2 THEN 1 ELSE 0 END) OVER()` で算出する（既存式 `SUM(JSON_LENGTH) OVER() - COUNT(*) OVER()` を完全に置き換える）
+45. `duplicate_count` は `q` および `exclude_group_ids` 適用後の母集団に対して算出される（フィルタ後に `source_groups` の長さが 1 になったユーザーは重複扱いしない）
+46. `duplicate_count` のレスポンスフィールド名・型（`integer`）・JSON 構造は維持する（破壊的変更なし）
 
 ---
 
@@ -425,3 +449,7 @@
 - フィルター状態の永続化（localStorage / DB 保存）
 - BE での `excludeDirectMembers` 専用パラメータ（親 ID を `exclude_group_ids` に含めることで対応）
 - サブグループの孫・曾孫を個別にフィルターする機能（直属サブグループ単位のみ）
+- FE 側の「重複 X 件」UI 文言の変更（`duplicate_count` の値の意味は変わるが文言は据え置き）
+- FE 側の `duplicate_count` 利用ロジック・型・テストの追加（API 契約に変更がないため触らない）
+- `domain.GroupMember` / `GroupService.ListGroupMembers` / Handler の変更（Repository 層 SQL 1 行のみで完結）
+- DB スキーマ・migration の変更（`groups` / `group_members` / `group_relations` / `users` のみで完結）
