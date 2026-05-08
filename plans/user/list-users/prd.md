@@ -214,7 +214,7 @@
 | 14  | 異常系 | limit = 501（500 超）                                    | `limit=501`               | ErrBadParamInput                            |
 | 15  | 異常系 | offset < 0                                               | `offset=-1`               | ErrBadParamInput                            |
 | 16  | 異常系 | リポジトリがエラーを返す                                 | repo モックがエラーを返す | ErrInternalServerError を伝搬               |
-| 17  | 正常系 | リポジトリが nil を返す場合は空スライスに変換する        | repo が nil 返却          | users=[]（非 nil）・total=0                 |
+| 17  | 正常系 | リポジトリが空スライスを返す場合は空スライスをそのまま返す | repo が [] 返却           | users=[]（非 nil）・total=0                 |
 
 **フロントエンドテスト**:
 

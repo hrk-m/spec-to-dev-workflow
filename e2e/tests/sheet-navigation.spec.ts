@@ -76,7 +76,7 @@ test.describe("シートナビゲーション", () => {
     await page.waitForSelector('[role="dialog"]');
     await expect(page.getByRole("dialog")).toBeVisible();
 
-    await page.getByTestId("sheet-overlay").click({ force: true });
+    await page.getByTestId("sheet-overlay").click({ position: { x: 5, y: 5 } });
 
     await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 3000 });
   });

@@ -56,7 +56,6 @@
    - サブグループなし → 空スライス（nil でなく []）を使用する
 8. handler 層の専用レスポンス型（getGroupResponse）に詰めて 200 OK を返す → 終了
    ※ domain.Group には Subgroups フィールドを追加しない（list 系レスポンスへの波及防止）
-   ※ relationRepo が nil の場合は空スライスを返すガード処理を入れる
 ```
 
 ---

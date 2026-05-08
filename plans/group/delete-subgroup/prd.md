@@ -32,7 +32,8 @@
 | 3   | `childId` (path) | 整数に変換できること                                                                             | 400 Bad Request  |
 | 4   | `childId` (path) | 1 以上の正の整数であること                                                                       | 400 Bad Request  |
 | 5   | 認証             | コンテキストから `authUser` を取得できること                                                     | 401 Unauthorized |
-| 6   | 存在チェック     | 対象の親子関係 `(parent_group_id, child_group_id)` が DB に存在すること（RowsAffected=0 で判定） | 404 Not Found    |
+| 6   | 自己参照         | `parent_group_id == child_group_id` は不可                                                       | 400 Bad Request  |
+| 7   | 存在チェック     | 対象の親子関係 `(parent_group_id, child_group_id)` が DB に存在すること（RowsAffected=0 で判定） | 404 Not Found    |
 
 ---
 
@@ -51,11 +52,13 @@
 4. コンテキストから認証済みユーザー情報を取得する
    - 取得失敗 → 401 Unauthorized {"message": "Unauthorized"} → 終了
 5. サービス層にサブグループ削除を委譲する
-6. group_relations から (parent_group_id, child_group_id) を DELETE する
+6. サービス層で自己参照チェックを行う
+   - parentGroupID == childGroupID の場合 → 400 Bad Request {"message": "given param is not valid"} → 終了
+7. group_relations から (parent_group_id, child_group_id) を DELETE する
    - RowsAffected が 0（対象の関係が存在しない）
      → 404 Not Found {"message": "your requested item is not found"} → 終了
    - DB エラー → 500 Internal Server Error {"message": "internal server error"} → 終了
-7. 204 No Content を返す → 終了
+8. 204 No Content を返す → 終了
 ```
 
 ---
@@ -133,6 +136,7 @@
 | `childId` が整数に変換不可 | Handler      | 400 Bad Request           | `{"message": "given param is not valid"}`         | ダイアログ内インライン表示         |
 | `childId` が 0 以下        | Handler      | 400 Bad Request           | `{"message": "given param is not valid"}`         | ダイアログ内インライン表示         |
 | `authUser` 取得失敗        | Handler      | 401 Unauthorized          | `{"message": "Unauthorized"}`                     | ダイアログ内インライン表示         |
+| 自己参照（id == childId）  | Service      | 400 Bad Request           | `{"message": "given param is not valid"}`         | ダイアログ内インライン表示         |
 | 対象の親子関係が存在しない | Repository   | 404 Not Found             | `{"message": "your requested item is not found"}` | ダイアログ内インライン表示         |
 | DB エラー                  | Repository   | 500 Internal Server Error | `{"message": "internal server error"}`            | ダイアログ内インライン表示（汎用） |
 

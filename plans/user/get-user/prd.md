@@ -103,7 +103,7 @@
 | 5-2-FE       | `sample-front/src/pages/users/ui/UserDetailPage.tsx`                | ユーザー詳細ページコンポーネント（useParams + useUserDetail） |
 | 5-2-FE       | `sample-front/src/pages/users/ui/UserDetailPage.styles.ts`          | ユーザー詳細ページのスタイル定義                              |
 | 5-2-FE       | `sample-front/src/pages/users/api/fetch-user.ts`                    | GET /api/v1/users/:id 呼び出し                                |
-| 5-2-FE       | `sample-front/src/entities/user/model/user.ts`                      | User 型定義                                                   |
+| 5-2-FE       | `sample-front/src/pages/users/model/user.ts`                        | User 型定義                                                   |
 | 5-2-FE       | `sample-front/src/pages/users/model/useUserDetail.ts`               | useUserDetail フック                                          |
 | 5-5          | `sample-front/src/pages/users/api/__tests__/fetch-user.test.ts`     | fetchUser 関数のテスト                                        |
 | 5-5          | `sample-front/src/pages/users/ui/__tests__/UserDetailPage.test.tsx` | UserDetailPage コンポーネントのテスト                         |

@@ -217,7 +217,8 @@
       "source_groups": [{ "group_id": 11, "group_name": "Frontend Team" }]
     }
   ],
-  "total": 250
+  "total": 250,
+  "duplicate_count": 3
 }
 ```
 
@@ -234,6 +235,7 @@
 | `members[].source_groups[].group_id`   | integer (uint64) | 所属元グループ ID。`:id` と一致する場合は親直属                                                         |
 | `members[].source_groups[].group_name` | string           | 所属元グループ名（BE 側で必ず JOIN groups により解決済み）                                              |
 | `total`                                | integer          | `q` および `exclude_group_ids` 適用かつ重複排除後の総件数（`members[]` のページサイズに依存しない）     |
+| `duplicate_count`                      | integer          | 複数のサブグループ経由で重複所属するユーザーの件数（`SUM(JSON_LENGTH(source_groups)) OVER() - COUNT(*) OVER()` で算出） |
 
 #### 補足
 
