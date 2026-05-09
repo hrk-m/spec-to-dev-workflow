@@ -2,13 +2,20 @@
 
 ## 概要
 
-| 項目         | 内容                                                                                                                                         |
-| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| 機能名       | `list-groups`                                                                                                                                |
-| 目的         | グループをキーワード・offset 条件で絞り込んで一覧取得する。フロントエンドは 100 件ずつ取得してクライアントキャッシュで無限スクロール表示する |
-| API          | `GET /api/v1/groups`                                                                                                                         |
-| 認証         | 必要（AuthMiddleware）                                                                                                                       |
-| データソース | MySQL (`sample-api/internal/repository/mysql`)                                                                                               |
+| 項目         | 内容                                                                                                                                                                                                                                                              |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 機能名       | `list-groups`                                                                                                                                                                                                                                                     |
+| 目的         | グループをキーワード・offset 条件で絞り込んで一覧取得する。各グループの `member_count` は「自身 + 全子孫サブグループに所属するユニークユーザー数」を返し、グループ詳細画面の「すべてのメンバー」総数（`/api/v1/groups/:id/members.total` 無フィルタ時）と一致する |
+| API          | `GET /api/v1/groups`                                                                                                                                                                                                                                              |
+| 認証         | 必要（AuthMiddleware）                                                                                                                                                                                                                                            |
+| データソース | MySQL (`sample-api/internal/repository/mysql`) — `groups` / `group_members` / `group_relations`                                                                                                                                                                   |
+
+### 依存関係・前提条件
+
+- **`add-subgroup`（`plans/group/add-subgroup`）の実装が先行されていること** — `member_count` 算出で `group_relations` を WITH RECURSIVE で辿るため、以下が先に存在する必要がある:
+  - migration: `db/migrate/20260425000000_create_group_relations.up.sql`
+  - DB スキーマ詳細は [plans/schema.md](../schema.md) を参照
+- **MySQL 8.0+ を前提** — WITH RECURSIVE の利用に必須
 
 ---
 
@@ -57,9 +64,62 @@
 7. q フィルターを適用したグループ総件数を先行取得する
    - q が指定されている場合: スペース区切りの各トークンで name と description を AND 結合で絞り込む
    - 総件数が 0 の場合 → 200 OK + groups=[] + total=0 → 終了
-8. 削除済みでないグループ一覧と member_count を取得する（id DESC 順）
-   - DB エラーの場合 → 500 Internal Server Error { "message": "internal server error" } → 終了
+8. 削除済みでないグループ一覧と「自身 + 全子孫サブグループのユニークユーザー数」を 1 クエリで取得する（id DESC 順）
+   - WITH RECURSIVE で各対象グループから子孫グループを展開する（再帰アンカー: 対象グループ自身、再帰ステップ: `group_relations` 経由で子グループへ降下）
+   - 再帰展開時は `JOIN groups` で `deleted_at IS NULL` を効かせ、削除済みサブグループ配下を辿らない
+   - 展開した group_id 集合に対して `group_members` を JOIN し、`COUNT(DISTINCT user_id)` を root（対象グループ自身）単位で集計して `member_count` とする
+   - サブグループを持たないグループは直属メンバーのユニーク数のみ（実質直属の COUNT）
+   - メンバーが 0 人のグループは `LEFT JOIN` で `member_count = 0`
+   - 親と子孫に重複所属するユーザーは `DISTINCT` でユニーク化して 1 として数える
+   - DB エラー（再帰 CTE 失敗を含む）の場合 → 500 Internal Server Error { "message": "internal server error" } → 終了
 9. 200 OK + グループ一覧と total を含む JSON を返す → 終了
+```
+
+### 主要設計判断（BE）
+
+- `selectGroups` の SQL を WITH RECURSIVE 版に置き換え、`member_count` の意味を「自身 + 全子孫のユニークユーザー数」に変更する。インターフェース・戻り値型（`domain.Group.MemberCount int`）は変更しない。
+- 共通化スコープ: 今回の変更は `selectGroups` 内に閉じる。`ListGroupMembers` 側の SQL には**手を入れない**（副作用ゼロ・最小差分。将来必要に応じてヘルパー関数抽出を検討）。
+- SQL 構造は派生テーブル（サブクエリ）形式を採用する。`ORDER BY g.id DESC` と `LIMIT/OFFSET` は最終 SELECT 側に置き、CTE 内には置かない（MySQL 8 で CTE 内 ORDER BY/LIMIT は順序非保証のため）。
+- LIMIT/OFFSET 後の対象グループに対してのみ再帰展開・集計を行う構成にする（フルスキャン時の再帰コストを抑制）。`buildSearchCondition` の args は SQL 内 2 箇所に展開する都合で 2 回 append する。
+- 再帰展開時は `JOIN groups ON groups.id = gr.child_group_id AND groups.deleted_at IS NULL` で削除済みサブグループ配下を除外する。
+
+#### SQL イメージ（`selectGroups`）
+
+```sql
+WITH RECURSIVE
+  descendants AS (
+    SELECT mg.id AS root_id, mg.id AS group_id, 0 AS depth
+    FROM (
+      SELECT g.id
+      FROM `groups` g
+      WHERE g.deleted_at IS NULL
+        [AND name/description LIKE ...]   -- 既存の q 絞り込み
+      ORDER BY g.id DESC
+      LIMIT ? OFFSET ?
+    ) mg
+    UNION ALL
+    SELECT d.root_id, gr.child_group_id, d.depth + 1
+    FROM descendants d
+    JOIN group_relations gr ON gr.parent_group_id = d.group_id
+    JOIN `groups` cg ON cg.id = gr.child_group_id AND cg.deleted_at IS NULL
+  ),
+  unique_member_counts AS (
+    SELECT d.root_id, COUNT(DISTINCT gm.user_id) AS member_count
+    FROM descendants d
+    JOIN group_members gm ON gm.group_id = d.group_id
+    GROUP BY d.root_id
+  )
+SELECT mg.id, mg.name, mg.description, COALESCE(umc.member_count, 0) AS member_count
+FROM (
+  SELECT g.id, g.name, g.description
+  FROM `groups` g
+  WHERE g.deleted_at IS NULL
+    [AND name/description LIKE ...]
+  ORDER BY g.id DESC
+  LIMIT ? OFFSET ?
+) mg
+LEFT JOIN unique_member_counts umc ON umc.root_id = mg.id
+ORDER BY mg.id DESC;
 ```
 
 ---
@@ -96,17 +156,18 @@
 
 ### sample-api
 
-| 対応ステップ  | パス                                                        | 役割                                                                                                                          |
-| ------------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| 5-2           | `sample-api/domain/group.go`                                | Group Entity（id, name, description, member_count）・GroupMember Entity                                                       |
-| 5-2           | `sample-api/group/service.go`                               | GroupRepository interface の ListGroups 定義・ビジネスロジック                                                                |
-| 5-5           | `sample-api/group/service_test.go`                          | Service ユニットテスト                                                                                                        |
-| 5-5           | `sample-api/group/mocks/group_repository_mock.go`           | GroupRepository の手動 mock                                                                                                   |
-| 5-1, 5-2, 5-4 | `sample-api/internal/rest/group.go`                         | HTTP Handler（ListGroups）・GroupService interface・Handler ローカルの `groupListResponse` / `groupMemberListResponse` 型定義 |
-| 5-5           | `sample-api/internal/rest/group_test.go`                    | Handler ユニットテスト                                                                                                        |
-| 5-5           | `sample-api/internal/rest/mocks/group_service_mock.go`      | GroupService の手動 mock                                                                                                      |
-| 5-3           | `sample-api/internal/repository/mysql/group.go`             | MySQL 実装（`q` LIKE 検索 / `limit` / `offset` を受け取り、`deleted_at IS NULL` で検索）                                      |
-| 5-3           | `sample-api/db/migrate/20260403120000_create_tables.up.sql` | テーブル定義・マイグレーション（golang-migrate）                                                                              |
+| 対応ステップ  | パス                                                        | 役割                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| ------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 5-2           | `sample-api/domain/group.go`                                | Group Entity（id, name, description, member_count）・GroupMember Entity                                                                                                                                                                                                                                                                                                                                                                                                              |
+| 5-2           | `sample-api/group/service.go`                               | GroupRepository interface の ListGroups 定義・ビジネスロジック                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| 5-5           | `sample-api/group/service_test.go`                          | Service ユニットテスト                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| 5-5           | `sample-api/group/mocks/group_repository_mock.go`           | GroupRepository の手動 mock                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| 5-1, 5-2, 5-4 | `sample-api/internal/rest/group.go`                         | HTTP Handler（ListGroups）・GroupService interface・Handler ローカルの `groupListResponse` / `groupMemberListResponse` 型定義                                                                                                                                                                                                                                                                                                                                                        |
+| 5-5           | `sample-api/internal/rest/group_test.go`                    | Handler ユニットテスト                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| 5-5           | `sample-api/internal/rest/mocks/group_service_mock.go`      | GroupService の手動 mock                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| 5-2, 5-3      | `sample-api/internal/repository/mysql/group.go`             | MySQL 実装の `selectGroups` を WITH RECURSIVE 版へ書き換え（`q` LIKE 検索 / `limit` / `offset` 維持、`deleted_at IS NULL` 維持）。`descendants` CTE で `group_relations` を JOIN して子孫グループを再帰展開し、再帰時に `JOIN groups ON groups.id = gr.child_group_id AND groups.deleted_at IS NULL` で削除済みサブグループを除外する。`group_members` の `COUNT(DISTINCT user_id)` を root（対象グループ）単位で集計して `member_count` を返す。`ListGroupMembers` には手を入れない |
+| 5-5           | `sample-api/internal/repository/mysql/group_test.go`        | `selectGroups` の Repository ユニットテスト L1〜L8 を新規追加（動的 INSERT + `defer db.Exec(DELETE...)` パターン）                                                                                                                                                                                                                                                                                                                                                                   |
+| 5-3           | `sample-api/db/migrate/20260403120000_create_tables.up.sql` | テーブル定義・マイグレーション（golang-migrate）                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 
 ### sample-front
 
@@ -135,26 +196,35 @@
       "id": 1,
       "name": "dev-team",
       "description": "developers",
-      "member_count": 3
+      "member_count": 5
     }
   ],
   "total": 42
 }
 ```
 
-※ `total`: q フィルターを適用したグループ件数（`q` 未指定時は全グループ件数と等しい）
+#### フィールド仕様
+
+| フィールド              | 型      | 説明                                                                                                                                                                                                                   |
+| ----------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `groups[].id`           | integer | グループ ID                                                                                                                                                                                                            |
+| `groups[].name`         | string  | グループ名                                                                                                                                                                                                             |
+| `groups[].description`  | string  | グループ説明                                                                                                                                                                                                           |
+| `groups[].member_count` | integer | 自身 + 全子孫サブグループに所属するユニークユーザー数（同一ユーザーが親と子孫の複数 group/subgroup に所属していても 1 として加算）。`/api/v1/groups/:id/members.total`（`q` / `exclude_group_ids` 未指定時）と一致する |
+| `total`                 | integer | q フィルターを適用したグループ件数（`q` 未指定時は全グループ件数と等しい）                                                                                                                                             |
+
 ※ `groups`: 今回のフェッチで返ったグループ一覧（最大 100 件。フロントエンドは limit=100 で送信）
 
 ### エラーケース一覧
 
-| 条件                             | 発生レイヤー                       | ステータス                | レスポンス                                  |
-| -------------------------------- | ---------------------------------- | ------------------------- | ------------------------------------------- |
-| `limit` が整数に変換不可         | Handler                            | 400 Bad Request           | `{ "message": "given param is not valid" }` |
-| `limit` が 1〜500 の範囲外       | Handler                            | 400 Bad Request           | `{ "message": "given param is not valid" }` |
-| `offset` が整数に変換不可        | Handler                            | 400 Bad Request           | `{ "message": "given param is not valid" }` |
-| `offset` が 0 未満               | Handler                            | 400 Bad Request           | `{ "message": "given param is not valid" }` |
-| DB エラー（COUNT / SELECT 失敗） | Repository                         | 500 Internal Server Error | `{ "message": "internal server error" }`    |
-| ネットワークエラー               | フロントエンド: API クライアント層 | —                         | エラーメッセージ表示                        |
+| 条件                                        | 発生レイヤー                       | ステータス                | レスポンス                                  |
+| ------------------------------------------- | ---------------------------------- | ------------------------- | ------------------------------------------- |
+| `limit` が整数に変換不可                    | Handler                            | 400 Bad Request           | `{ "message": "given param is not valid" }` |
+| `limit` が 1〜500 の範囲外                  | Handler                            | 400 Bad Request           | `{ "message": "given param is not valid" }` |
+| `offset` が整数に変換不可                   | Handler                            | 400 Bad Request           | `{ "message": "given param is not valid" }` |
+| `offset` が 0 未満                          | Handler                            | 400 Bad Request           | `{ "message": "given param is not valid" }` |
+| DB エラー（COUNT / SELECT / 再帰 CTE 失敗） | Repository                         | 500 Internal Server Error | `{ "message": "internal server error" }`    |
+| ネットワークエラー                          | フロントエンド: API クライアント層 | —                         | エラーメッセージ表示                        |
 
 ---
 
@@ -190,6 +260,25 @@
 | 17  | 境界値   | limit=501（上限超え）     | `limit=501`              | ErrBadParamInput       |
 | 18  | 境界値   | offset=-1（負数）         | `offset=-1`              | ErrBadParamInput       |
 | 19  | 例外処理 | Repository がエラーを返す | repo mock がエラーを返す | ErrInternalServerError |
+
+> Service / Handler テストは mock ベースのため、`member_count` の意味変更（直属のみ → 再帰ユニーク数）に伴うロジック変更は不要。期待値・コメントの文脈調整のみ行う。
+
+**Repository テスト** (`internal/repository/mysql/group_test.go` — `selectGroups` 用 / 全 L1〜L8 新規追加):
+
+| #   | 観点   | テスト内容                                          | 入力（seed 構成）                                            | 期待 `member_count`                                       |
+| --- | ------ | --------------------------------------------------- | ------------------------------------------------------------ | --------------------------------------------------------- |
+| L1  | 正常系 | サブグループなし → 直属メンバー数のユニーク値を返す | 親 G1 直属 3 名・子孫なし                                    | G1 = **3**                                                |
+| L2  | 正常系 | サブグループ 1 階層を含む                           | G1 直属 2 名 + G1 の子 G2 に 3 名（重複なし）                | G1 = **5**, G2 = **3**                                    |
+| L3  | 正常系 | 複数階層（孫まで）を含む                            | G1 → G2 → G3 各 2 名（重複なし）                             | G1 = **6**, G2 = **4**, G3 = **2**                        |
+| L4  | 正常系 | 親と子に重複所属するユーザーは 1 とカウント         | G1 に user A・B、G1 の子 G2 に user A・C                     | G1 = **3**（A, B, C）                                     |
+| L5  | 境界値 | メンバー 0 人（親も子孫も空）                       | G1 もサブグループも空                                        | G1 = **0**                                                |
+| L6  | 正常系 | サブグループはあるがメンバー 0                      | G1 直属 2 名 + 子 G2 にメンバー 0                            | G1 = **2**                                                |
+| L7  | 正常系 | q フィルタ適用後も再帰ユニーク数を返す              | q で G1 を絞り込み、G1 は子 G2 を持つ（合計重複排除後 5 名） | G1 = **5**                                                |
+| L8  | 正常系 | DAG 形（複数親が同じ子を共有）でも 1 クエリ正常動作 | G1 と G2 の両方が G3 を子に持ち、G3 にメンバー 2 名          | G1・G2 ともに G3 メンバーが正しく加算されユニーク化される |
+
+> 既存 `group_test.go` には `selectGroups` の Repository テストが存在しないため、L1〜L8 はすべて新規追加。動的 INSERT + `defer db.Exec(DELETE...)` パターンで seed を構築し、`users` の id は seed 既存値（1〜15）の範囲を使用する（FK 違反回避）。`list-group-members` の Repository テストと同じパターンを写経元とする。
+
+> **既存テストの期待値見直し**: `group_test.go` に `selectGroups` の seed 既存グループに対する `member_count` をアサートする既存テスト（例: `TestListGroups_MemberCount` 等）が存在する場合、`member_count` のセマンティクス変更（直属のみ → 自身 + 全子孫のユニークユーザー数）に追従して期待値を見直す。対象 seed グループがサブグループを持たない場合は期待値が変わらないため修正不要、サブグループを持つ場合は再帰ユニーク数に合わせて期待値を更新する。
 
 ---
 
@@ -230,6 +319,15 @@
 19. 4 列すべてで `columnheader` ロールがアクセシブルである（`getByRole('columnheader', { name: '...' })` で取得可能）
 20. `GroupList.styles.ts` にテーブル用スタイル定数を持つ（UserList.styles.ts と同じパターン）
 21. 各 `<tr>` はクリック可能（`onClick` + `cursor: pointer`）でグループ詳細画面へ遷移する（`<tr>` に `role="button"` は付与しない）
+22. 各グループの `member_count` は「自身 + 全子孫サブグループに所属するユニークユーザー数」を返す（同一ユーザーが親と子孫の複数 group/subgroup に所属していても 1 として加算する）
+23. メンバーが 0 人のグループは `member_count = 0` を返す（エラーにしない）
+24. `member_count` の値は `GET /api/v1/groups/:id/members.total`（`q` / `exclude_group_ids` 未指定時）と一致する
+25. `selectGroups` の SQL は WITH RECURSIVE で実装し、再帰展開時に削除済みサブグループ（`groups.deleted_at IS NOT NULL`）配下を辿らない
+26. `selectGroups` の SQL は派生テーブル（サブクエリ）形式を採用し、`ORDER BY g.id DESC` と `LIMIT/OFFSET` は最終 SELECT 側に置く（CTE 内には置かない）
+27. 今回の変更は `selectGroups` 内に閉じる（`ListGroupMembers` 側の SQL には手を入れない）
+28. `domain.Group` / `GroupRepository` インターフェース / `GroupService` / Handler / レスポンス JSON 形は変更しない（`member_count` の意味のみ更新）
+29. FE コードは一切変更しない（型・hook・コンポーネント・テスト・スタイルすべて維持）
+30. SQL 変更に伴い、既存 Repository テスト（`group_test.go` 内の seed 既存グループに対する `member_count` アサート）の期待値を `member_count` のセマンティクス変更に追従して見直す（対象 seed グループがサブグループを持たない場合は不変）
 
 ---
 
@@ -238,3 +336,9 @@
 - 認証・認可（AuthMiddleware はグループ全体に適用済み。個別ハンドラ内での追加チェックは不要）
 - グループの作成・更新・削除
 - ソート順の変更（固定: id DESC）
+- `GET /api/v1/groups/:id`（詳細サマリ API）の `member_count` 更新（FE は `apiTotal` 経由で正しい値を表示するため実害なし）
+- `add-subgroup` のサブグループ `member_count` 算出ロジック（同上）
+- レスポンスへのサブグループ別内訳追加（`direct_member_count` / `subgroup_member_count` 等）
+- `GroupDetailContent.tsx` のフォールバック計算（`memberCount = directCount + 選択中サブグループ member_count 合計`）の修正。初期ロード中（`apiTotal` 未受信時）の一瞬だけ「実際より大きい可能性のある値」が見えうるが、`apiTotal` 受信後に即上書きされるため許容する
+- `ListGroupMembers` 側 SQL の共通化リファクタ（将来必要に応じてヘルパー関数抽出を検討）
+- `GroupList` 列ヘッダー文言の変更（「メンバー数（サブグループ含む）」等の説明文言追加）

@@ -38,4 +38,5 @@ type: project
 - 高い ID 範囲（9000+）でテスト用グループを作成し seed data との collision を回避する
 - seed users（id 1〜15）をそのまま再利用。FK 違反を防ぐためユーザーは追加しない
 - `make test` は `go test ./...` + `go vet -tags integration ./...` のみ（DB 不要）。統合テストは `make test-integration` で別途実行する
-- `TestListGroups_DefaultPagination` / `TestListGroups_Search` は seed 不足で既存失敗中（私の変更と無関係）
+- `TestListGroups_DefaultPagination` / `TestListGroups_Search` / `TestListGroups_MemberCount` / `TestListChildren_DirectMembersOnly` / `TestListChildren_NoChildren` は seed 条件不足で変更前から失敗中（私の変更と無関係）
+- L1〜L8 方式: `repo.ListGroups(ctx, "ユニーク名", limit, 0)` で q フィルタを活用して対象グループだけを絞り込み、member_count を検証する
