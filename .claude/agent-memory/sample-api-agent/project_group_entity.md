@@ -48,7 +48,7 @@ type: project
 type GroupService interface {
     ListGroups(ctx context.Context, q string, limit, offset int) ([]domain.Group, int, error)
     GetByID(ctx context.Context, id uint64) (domain.Group, []domain.Group, error)
-    ListGroupMembers(ctx context.Context, id uint64, limit, offset int, q string) ([]domain.GroupMember, int, error)
+    ListGroupMembers(ctx context.Context, id uint64, limit, offset int, q string, excludeGroupIDs []uint64) ([]domain.GroupMember, int, int, error)
     Store(ctx context.Context, name, description string, userID uint64) (domain.Group, error)
     Update(ctx context.Context, id uint64, name, description string, userID uint64) (*domain.Group, error)
     Delete(ctx context.Context, id uint64, userID uint64) error
@@ -65,12 +65,16 @@ type GroupService interface {
 - `Update` の handler も同様に authUser を取得して 401 チェックを行い、`userID` を service に渡す
 - `Update` の repository 実装は `UPDATE groups SET name=?, description=?, updated_by=? WHERE id=? AND deleted_at IS NULL` を実行し、RowsAffected=0 で ErrNotFound を返す。成功後は GetByID で最新データを返す
 
+## groupMemberListResponse（internal/rest/group.go）
+
+`Members`, `Total`, `DuplicateCount` の 3 フィールドを持つ。`duplicate_count = SUM(JSON_LENGTH(source_groups)) - COUNT(*)` で計算される。
+
 ## GroupRepository インターフェース（group/service.go）
 
 `ListGroupMembers`, `ListNonGroupMembers`, `AddGroupMembers`, `RemoveGroupMembers` が追加されている。
 
 シグネチャは全レイヤーで統一：
-- `ListGroupMembers(ctx, id uint64, limit, offset int, q string) ([]domain.GroupMember, int, error)` — WITH RECURSIVE + JSON_ARRAYAGG で全子孫を辿り、ユーザーごとに全所属元グループを source_groups 配列として返す。repository 内部で sourceGroupRow struct を使い JSON を Unmarshal して domain.GroupMemberSource スライスに変換する
+- `ListGroupMembers(ctx, id uint64, limit, offset int, q string, excludeGroupIDs []uint64) ([]domain.GroupMember, int, int, error)` — 戻り値は `(members, total, duplicateCount, error)`。`duplicate_count = SUM(JSON_LENGTH(source_groups)) OVER() - COUNT(*) OVER()` を SQL でウィンドウ関数で計算。WITH RECURSIVE + JSON_ARRAYAGG で全子孫を辿り、user_sources CTE に `WHERE d.root_child_id NOT IN (...)` を条件分岐（空時は WHERE なし・MySQL の NOT IN () エラー回避）。excludeGroupIDs は `parseCommaSeparatedUint64`（params.go）で handler レイヤーでパース。repository で `fmt.Sprintf + strings.Join` で動的プレースホルダを生成。
 - `ListNonGroupMembers(ctx, groupID uint64, limit, offset int, q string) ([]domain.User, int, error)`
 - `RemoveGroupMembers(ctx, groupID uint64, userIDs []uint64) error`
 

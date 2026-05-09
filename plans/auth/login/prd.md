@@ -137,9 +137,9 @@ APP_ENV≠development の場合:
   { "message": "Unauthorized" }
   ```
 
-### Repository 変更
+### Repository
 
-`UserRepository` インターフェースに `GetByUUID` を追加する。
+`UserRepository` インターフェース（`auth/service.go` で消費側宣言）。
 
 ```go
 // auth/service.go

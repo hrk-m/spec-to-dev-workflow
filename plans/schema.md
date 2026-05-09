@@ -72,8 +72,6 @@
 | `group_id` | `BIGINT UNSIGNED` | NOT NULL | なし           | 所属するグループの ID（FK → `groups.id`） |
 | `user_id`  | `BIGINT UNSIGNED` | NOT NULL | なし           | 所属するユーザーの ID（FK → `users.id`）  |
 
-> **注意**: 現在の migration（`20260403120000_create_tables.up.sql`）では初期から `user_id` FK を持つ構成で作成されている。
-
 #### 制約
 
 | 種別        | 名前                          | 対象カラム                | 説明                                                        |
@@ -252,7 +250,7 @@
 
 | ファイル                      | 内容                                                             |
 | ----------------------------- | ---------------------------------------------------------------- |
-| `sample-api/db/seed/seed.sql` | groups / users / group_members のシードデータ（FK 依存順に記載） |
+| `sample-api/db/seed/seed.sql` | users / groups / group_members / group_relations のシードデータ（FK 依存順に記載） |
 
 ---
 

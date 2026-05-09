@@ -104,30 +104,30 @@
 
 ### sample-api
 
-| 対応ステップ  | パス                                                                   | 役割                                                                                                     |
-| ------------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| 5-2           | `group/service.go`                                                     | `GroupRepository` IF の `Update` に `userID uint64` を追加・`Service.Update` シグネチャ更新              |
-| 5-5           | `group/service_test.go`                                                | `Update` のテスト更新（userID 追加、正常系での渡し確認テスト追加）                                       |
-| 5-5           | `group/mocks/group_repository_mock.go`                                 | `Update` mock の `userID uint64` を追加                                                                  |
-| 5-1, 5-2, 5-4 | `internal/rest/group.go`                                               | `GroupService` IF の `Update` に `userID uint64` を追加・ハンドラで authUser 取得・401 返却・userID 渡し |
-| 5-5           | `internal/rest/group_test.go`                                          | `Update` ハンドラのテスト更新（authUser セット・401 テスト追加）                                         |
-| 5-5           | `internal/rest/mocks/group_service_mock.go`                            | `Update` mock の `userID uint64` を追加                                                                  |
-| 5-3           | `internal/repository/mysql/group.go`                                   | `Update` の SQL に `updated_by = ?` を追加・シグネチャに `userID uint64` を追加                          |
-| 5-5           | `internal/repository/mysql/group_test.go`                              | `Update` integration テスト更新（updated_by 検証追加）                                                   |
-| 5-3           | `sample-api/db/migrate/20260417130000_add_updated_by_to_groups.up.sql` | `groups.updated_by` カラム追加・FK 設定（golang-migrate）                                                |
+| 対応ステップ  | パス                                                                   | 役割                                                                                                   |
+| ------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| 5-2           | `group/service.go`                                                     | `GroupRepository` IF の `Update(id, userID uint64, ...)` 定義・`Service.Update` ロジック               |
+| 5-5           | `group/service_test.go`                                                | `Update` Service ユニットテスト（userID の渡し確認を含む）                                             |
+| 5-5           | `group/mocks/group_repository_mock.go`                                 | `Update` mock（`userID uint64` を受け取る）                                                            |
+| 5-1, 5-2, 5-4 | `internal/rest/group.go`                                               | `GroupService` IF の `Update(id, userID uint64, ...)` 定義・ハンドラで authUser を取得し userID を渡す |
+| 5-5           | `internal/rest/group_test.go`                                          | `Update` Handler ユニットテスト（authUser セット・401 ケースを含む）                                   |
+| 5-5           | `internal/rest/mocks/group_service_mock.go`                            | `Update` mock（`userID uint64` を受け取る）                                                            |
+| 5-3           | `internal/repository/mysql/group.go`                                   | `Update(id, userID uint64, ...)` 実装（SQL に `updated_by = ?` を含む）                                |
+| 5-5           | `internal/repository/mysql/group_test.go`                              | `Update` integration テスト（`updated_by` の検証を含む）                                               |
+| 5-3           | `sample-api/db/migrate/20260417130000_add_updated_by_to_groups.up.sql` | `groups.updated_by` カラム追加・FK 設定（golang-migrate）                                              |
 
 ### sample-front
 
-| 対応ステップ | パス                                                            | 役割                                                                            |
-| ------------ | --------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| 5-2-FE       | `src/pages/group-detail/api/update-group.ts`                    | 新規: PUT /api/v1/groups/:id 呼び出し関数                                       |
-| 5-2-FE       | `src/pages/group-detail/model/group-update.ts`                  | 新規: `UpdateGroupRequest` 型定義                                               |
-| 5-2-FE       | `src/pages/group-detail/model/useUpdateGroup.ts`                | 新規: `useUpdateGroup` フック（フォーム状態・バリデーション・API 呼び出し）     |
-| 5-2-FE       | `src/pages/group-detail/model/group-detail-state.ts`            | `refetchKey` state 追加 + `refetch()` 関数 export（`useGroupDetail` を export） |
-| 5-2-FE       | `src/pages/group-detail/ui/EditGroupDialog.tsx`                 | 新規: Radix Dialog 編集モーダルコンポーネント                                   |
-| 5-2-FE       | `src/pages/group-detail/ui/GroupDetailContent.tsx`              | `[Edit]` ボタン追加・`EditGroupDialog` の呼び出し                               |
-| 5-5          | `src/pages/group-detail/ui/__tests__/EditGroupDialog.test.tsx`  | 新規: モーダルテスト                                                            |
-| 5-5          | `src/pages/group-detail/model/__tests__/useUpdateGroup.test.ts` | 新規: フックテスト                                                              |
+| 対応ステップ | パス                                                            | 役割                                                                        |
+| ------------ | --------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| 5-2-FE       | `src/pages/group-detail/api/update-group.ts`                    | 新規: PUT /api/v1/groups/:id 呼び出し関数                                   |
+| 5-2-FE       | `src/pages/group-detail/model/group-update.ts`                  | 新規: `UpdateGroupRequest` 型定義                                           |
+| 5-2-FE       | `src/pages/group-detail/model/useUpdateGroup.ts`                | 新規: `useUpdateGroup` フック（フォーム状態・バリデーション・API 呼び出し） |
+| 5-2-FE       | `src/pages/group-detail/model/useGroupDetail.ts`                | `refetchKey` state 追加 + `refetch()` 関数 export                           |
+| 5-2-FE       | `src/pages/group-detail/ui/EditGroupDialog.tsx`                 | 新規: Radix Dialog 編集モーダルコンポーネント                               |
+| 5-2-FE       | `src/pages/group-detail/ui/GroupDetailContent.tsx`              | `[Edit]` ボタン追加・`EditGroupDialog` の呼び出し                           |
+| 5-5          | `src/pages/group-detail/ui/__tests__/EditGroupDialog.test.tsx`  | 新規: モーダルテスト                                                        |
+| 5-5          | `src/pages/group-detail/model/__tests__/useUpdateGroup.test.ts` | 新規: フックテスト                                                          |
 
 ---
 

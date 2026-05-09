@@ -144,6 +144,44 @@ test.describe("グループメンバー追加", () => {
         postCompleted = true;
       } else if (
         method === "GET" &&
+        url.includes("/members") &&
+        postCompleted
+      ) {
+        // GroupDetailContent は表示件数に useMemberList の total（apiTotal）を優先するため、
+        // POST 後の GET /members も total: 3 で返さないと "3件" が描画されない。
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            members: [
+              {
+                id: 1,
+                uuid: "00000000-0000-0000-0000-000000000001",
+                first_name: "Taro",
+                last_name: "Yamada",
+                source_groups: [{ group_id: 1, group_name: "Group 001" }],
+              },
+              {
+                id: 2,
+                uuid: "00000000-0000-0000-0000-000000000002",
+                first_name: "Hanako",
+                last_name: "Suzuki",
+                source_groups: [{ group_id: 1, group_name: "Group 001" }],
+              },
+              {
+                id: 3,
+                uuid: "00000000-0000-0000-0000-000000000003",
+                first_name: "Jiro",
+                last_name: "Tanaka",
+                source_groups: [{ group_id: 1, group_name: "Group 001" }],
+              },
+            ],
+            total: 3,
+            duplicate_count: 0,
+          }),
+        });
+      } else if (
+        method === "GET" &&
         !url.includes("/members") &&
         postCompleted
       ) {
@@ -159,7 +197,7 @@ test.describe("グループメンバー追加", () => {
 
     await page.goto(GROUP_1_URL);
     await page.waitForLoadState("networkidle");
-    await expect(page.getByText("2 total")).toBeVisible();
+    await expect(page.getByText("2件")).toBeVisible();
 
     await page.getByRole("button", { name: "メンバー追加" }).click();
     await page.waitForSelector('[role="dialog"]');
@@ -169,7 +207,7 @@ test.describe("グループメンバー追加", () => {
     await dialog.locator("tbody tr").filter({ hasText: "Tanaka Jiro" }).click();
     await dialog.getByRole("button", { name: "一括追加" }).click();
     await expect(dialog).not.toBeVisible({ timeout: 5000 });
-    await expect(page.getByText("3 total")).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText("3件")).toBeVisible({ timeout: 5000 });
   });
 
   // TC-06: 複数ユーザーを同時に選択して一括追加できる
@@ -349,7 +387,9 @@ test.describe("グループメンバー追加", () => {
     await dialog.getByTestId("header-checkbox").click();
 
     // 一括追加ボタンが活性化されていることを確認
-    await expect(dialog.getByRole("button", { name: "一括追加" })).toBeEnabled();
+    await expect(
+      dialog.getByRole("button", { name: "一括追加" }),
+    ).toBeEnabled();
 
     // 一括追加をクリック
     await dialog.getByRole("button", { name: "一括追加" }).click();
@@ -373,7 +413,9 @@ test.describe("グループメンバー追加", () => {
     // 1回目クリック: 全選択
     await dialog.getByTestId("header-checkbox").click();
     // 一括追加ボタンが活性化
-    await expect(dialog.getByRole("button", { name: "一括追加" })).toBeEnabled();
+    await expect(
+      dialog.getByRole("button", { name: "一括追加" }),
+    ).toBeEnabled();
     // 全行が選択状態
     const rowCount = await rows.count();
     for (let i = 0; i < rowCount; i++) {
@@ -386,7 +428,9 @@ test.describe("グループメンバー追加", () => {
     // 2回目クリック: 全解除
     await dialog.getByTestId("header-checkbox").click();
     // 一括追加ボタンが非活性
-    await expect(dialog.getByRole("button", { name: "一括追加" })).toBeDisabled();
+    await expect(
+      dialog.getByRole("button", { name: "一括追加" }),
+    ).toBeDisabled();
     // 全行が解除状態
     for (let i = 0; i < rowCount; i++) {
       await expect(rows.nth(i).locator('[role="checkbox"]')).toHaveAttribute(
@@ -407,7 +451,9 @@ test.describe("グループメンバー追加", () => {
     // 1件だけ選択して indeterminate 状態にする
     await dialog.locator("tbody tr").first().click();
     // 一括追加ボタンが活性化（1件選択）
-    await expect(dialog.getByRole("button", { name: "一括追加" })).toBeEnabled();
+    await expect(
+      dialog.getByRole("button", { name: "一括追加" }),
+    ).toBeEnabled();
 
     // ヘッダーチェックボックスが indeterminate 状態であることを確認
     const isIndeterminate = await dialog
@@ -454,7 +500,9 @@ test.describe("グループメンバー追加", () => {
   });
 
   // N-3: AddMemberSheet の uuid 列ヘッダーが表示される
-  test("[N-3] AddMemberSheet の uuid 列ヘッダーが表示される", async ({ page }) => {
+  test("[N-3] AddMemberSheet の uuid 列ヘッダーが表示される", async ({
+    page,
+  }) => {
     await openAddMemberSheetOnFullPage(page);
     const dialog = page.getByRole("dialog");
     // スケルトン表示中でも uuid columnheader は即時表示されるため、データ読み込み待ち不要
@@ -464,7 +512,9 @@ test.describe("グループメンバー追加", () => {
   });
 
   // N-4: AddMemberSheet の各ユーザー行に uuid 値が表示される
-  test("[N-4] AddMemberSheet の各ユーザー行に uuid 値が表示される", async ({ page }) => {
+  test("[N-4] AddMemberSheet の各ユーザー行に uuid 値が表示される", async ({
+    page,
+  }) => {
     await openAddMemberSheetOnFullPage(page);
     await waitForNonMemberList(page);
     const dialog = page.getByRole("dialog");

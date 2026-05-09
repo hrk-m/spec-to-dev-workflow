@@ -126,29 +126,29 @@
 
 ### sample-api
 
-| ファイル                                                             | 役割                                                                                                                   |
-| -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `sample-api/domain/group.go`                                         | `GroupRelation` Entity（parent_group_id, child_group_id）を `Group` / `GroupMember` と同ファイルに定義                 |
-| `sample-api/group/service.go`                                        | `GroupRelationRepository` IF 追加・`CreateSubGroup` メソッド                                                           |
-| `sample-api/group/service_test.go`                                   | `CreateSubGroup` サービステスト                                                                                        |
-| `sample-api/group/mocks/group_relation_repository_mock.go`           | `GroupRelationRepository` 手動 mock（新規作成）                                                                        |
-| `sample-api/internal/rest/group.go`                                  | `CreateSubGroup` ハンドラ・`GroupService` IF に `CreateSubGroup` 追加・ルート登録（POST /api/v1/groups/:id/subgroups） |
-| `sample-api/internal/rest/group_test.go`                             | `CreateSubGroup` ハンドラテスト                                                                                        |
-| `sample-api/internal/rest/mocks/group_service_mock.go`               | `GroupService` mock に `CreateSubGroup` 追加                                                                           |
-| `sample-api/internal/repository/mysql/group_relation.go`             | `GroupRelationRepository` MySQL 実装（新規ファイル・WITH RECURSIVE で祖先/子孫集合取得）                               |
-| `sample-api/db/migrate/20260425000000_create_group_relations.up.sql` | `group_relations` テーブル作成                                                                                         |
-| `sample-api/app/main.go`                                             | DI 配線（`GroupRelationRepository` の注入）                                                                            |
+| ファイル                                                             | 役割                                                                                                                     |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `sample-api/domain/group.go`                                         | `GroupRelation` Entity（parent_group_id, child_group_id）を `Group` / `GroupMember` と同ファイルに定義                   |
+| `sample-api/group/service.go`                                        | `GroupRelationRepository` IF（消費側宣言）・`GroupService.CreateSubGroup` ロジック                                       |
+| `sample-api/group/service_test.go`                                   | `CreateSubGroup` Service ユニットテスト                                                                                  |
+| `sample-api/group/mocks/group_relation_repository_mock.go`           | `GroupRelationRepository` の手動 mock                                                                                    |
+| `sample-api/internal/rest/group.go`                                  | `CreateSubGroup` ハンドラ・`GroupService` IF（`CreateSubGroup` を含む）・ルート登録（POST /api/v1/groups/:id/subgroups） |
+| `sample-api/internal/rest/group_test.go`                             | `CreateSubGroup` Handler ユニットテスト                                                                                  |
+| `sample-api/internal/rest/mocks/group_service_mock.go`               | `GroupService` の手動 mock（`CreateSubGroup` を含む）                                                                    |
+| `sample-api/internal/repository/mysql/group_relation.go`             | `GroupRelationRepository` MySQL 実装（WITH RECURSIVE で祖先/子孫集合を取得）                                             |
+| `sample-api/db/migrate/20260425000000_create_group_relations.up.sql` | `group_relations` テーブル作成                                                                                           |
+| `sample-api/app/main.go`                                             | DI 配線（`GroupRelationRepository` の注入）                                                                              |
 
 ### sample-front
 
-| ファイル                                                                     | 役割                                                                                                                                                              |
-| ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `sample-front/src/pages/group-detail/api/add-subgroup.ts`                    | POST /api/v1/groups/:id/subgroups fetch 関数（新規）                                                                                                              |
-| `sample-front/src/pages/group-detail/api/fetch-groups.ts`                    | GET /api/v1/groups fetch 関数。`fetchGroupsForSheet(q?: string)` に `q` パラメータを追加し、クエリ文字列として付与する                                            |
-| `sample-front/src/pages/group-detail/ui/AddSubgroupSheet.tsx`                | グループ選択 Sheet。検索フォーム（TextField + 虫眼鏡アイコン）・`q` state・300ms デバウンス（`useEffect + setTimeout`）・"X groups" 件数表示（`total`）を追加する |
-| `sample-front/src/pages/group-detail/ui/SubgroupList.tsx`                    | サブグループ一覧の表示コンポーネント。各サブグループのメンバー数（`member_count`）を "N members" の形式で表示する                                                 |
-| `sample-front/src/pages/group-detail/ui/__tests__/AddSubgroupSheet.test.tsx` | 検索機能テストケースを追加する（既存テストファイルに追記）                                                                                                        |
-| `sample-front/src/pages/group-detail/ui/__tests__/SubgroupList.test.tsx`     | SubgroupList コンポーネントのテスト。メンバー数表示・空リスト表示・削除ダイアログの動作を確認する（既存テストファイルに追記）                                     |
+| ファイル                                                                            | 役割                                                                                                                                                          |
+| ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sample-front/src/pages/group-detail/api/add-subgroup.ts`                           | POST /api/v1/groups/:id/subgroups fetch 関数                                                                                                                  |
+| `sample-front/src/pages/group-detail/api/fetch-groups.ts`                           | GET /api/v1/groups fetch 関数（`fetchGroupsForSheet`）。`q` / `limit` / `offset` パラメータを URLSearchParams で組み立てて apiFetch を呼ぶ                    |
+| `sample-front/src/pages/group-detail/ui/AddSubgroupSheet.tsx`                       | グループ選択 Sheet。検索フォーム（TextField + 虫眼鏡アイコン）・`q` state・300ms デバウンス（`useEffect + setTimeout`）・"X groups" 件数表示（`total`）を含む |
+| `sample-front/src/pages/group-detail/ui/SubgroupManagementSheet.tsx`                | サブグループ一覧の表示コンポーネント。各サブグループのメンバー数（`member_count`）を "N members" の形式で表示する                                             |
+| `sample-front/src/pages/group-detail/ui/__tests__/AddSubgroupSheet.test.tsx`        | AddSubgroupSheet テスト（検索機能ケースを含む）                                                                                                               |
+| `sample-front/src/pages/group-detail/ui/__tests__/SubgroupManagementSheet.test.tsx` | SubgroupManagementSheet テスト（メンバー数表示・空リスト表示・削除ダイアログの動作を確認）                                                                    |
 
 > DB スキーマ（`group_relations` テーブル定義・制約・FK）の詳細は [plans/schema.md](../../schema.md) を参照。
 
@@ -193,7 +193,7 @@
 
 ### エンドポイント: `POST /api/v1/groups/:id/subgroups`
 
-**FE コンポーネントテスト** (`pages/group-detail/ui/__tests__/SubgroupList.test.tsx`):
+**FE コンポーネントテスト** (`pages/group-detail/ui/__tests__/SubgroupManagementSheet.test.tsx`):
 
 | #   | 観点   | テスト内容                                      | 期待結果                                    |
 | --- | ------ | ----------------------------------------------- | ------------------------------------------- |
@@ -272,7 +272,7 @@
 16. 入力後 300ms デバウンス後に API を再送信する（`useEffect + setTimeout` で実装）
 17. API レスポンスの `total` を "X groups" としてフォーム上部に表示する
 18. バックエンドの変更はなし
-19. SubgroupList でサブグループごとのメンバー数（`member_count`）を "N members" の形式で表示する
+19. SubgroupManagementSheet でサブグループごとのメンバー数（`member_count`）を "N members" の形式で表示する
 
 ---
 

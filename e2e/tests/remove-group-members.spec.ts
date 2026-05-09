@@ -29,7 +29,8 @@ test.describe("グループメンバー削除", () => {
       const deleteButton = page.getByRole("button", { name: "削除" });
       await expect(deleteButton).toBeDisabled();
 
-      await page.getByRole("checkbox").first().click();
+      // member-checkbox（各行の Radix UI Checkbox）をクリックして選択
+      await page.getByTestId("member-checkbox").first().click();
 
       await expect(deleteButton).toBeEnabled();
     },
@@ -102,7 +103,7 @@ test.describe("グループメンバー削除", () => {
       await page.goto(GROUP_1_URL);
       await page.waitForLoadState("networkidle");
 
-      await page.getByRole("checkbox").first().click();
+      await page.getByTestId("member-checkbox").first().click();
       await page.getByRole("button", { name: "削除" }).click();
 
       const [deleteResponse] = await Promise.all([
@@ -119,7 +120,7 @@ test.describe("グループメンバー削除", () => {
         timeout: 5000,
       });
 
-      await expect(page.getByText("1 total")).toBeVisible({ timeout: 5000 });
+      await expect(page.getByText("1件")).toBeVisible({ timeout: 5000 });
       // mock が Suzuki Hanako のみを返すため、Suzuki Hanako が表示されること
       await expect(page.getByText("Suzuki Hanako")).toBeVisible({
         timeout: 5000,
@@ -209,9 +210,8 @@ test.describe("グループメンバー削除", () => {
         timeout: 5000,
       });
 
-      // "0 total" appears in both the Subgroups section and the Members section.
-      // Use last() to target the Members section counter (DOM order: Subgroups first, Members last).
-      await expect(page.getByText("0 total").last()).toBeVisible({ timeout: 5000 });
+      // "0件" appears in the Members section counter
+      await expect(page.getByText("0件")).toBeVisible({ timeout: 5000 });
     },
   );
 
@@ -222,7 +222,7 @@ test.describe("グループメンバー削除", () => {
       await page.goto(GROUP_1_URL);
       await page.waitForLoadState("networkidle");
 
-      await page.getByRole("checkbox").first().click();
+      await page.getByTestId("member-checkbox").first().click();
       await page.getByRole("button", { name: "削除" }).click();
 
       await expect(page.getByRole("alertdialog")).toBeVisible();
@@ -289,7 +289,7 @@ test.describe("グループメンバー削除", () => {
       await page.goto(GROUP_1_URL);
       await page.waitForLoadState("networkidle");
 
-      await page.getByRole("checkbox").first().click();
+      await page.getByTestId("member-checkbox").first().click();
       await page.getByRole("button", { name: "削除" }).click();
       await page.getByRole("button", { name: "削除する" }).click();
 
@@ -324,7 +324,7 @@ test.describe("グループメンバー削除", () => {
       await page.goto(GROUP_1_URL);
       await page.waitForLoadState("networkidle");
 
-      await page.getByRole("checkbox").first().click();
+      await page.getByTestId("member-checkbox").first().click();
       await page.getByRole("button", { name: "削除" }).click();
       await page.getByRole("button", { name: "削除する" }).click();
 
