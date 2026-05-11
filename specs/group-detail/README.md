@@ -234,6 +234,7 @@
 | 機能                 | 概要                                                                                                            | 詳細                                                 |
 | -------------------- | --------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
 | get-group            | グループの詳細情報（名称・説明・メンバー数・サブグループ一覧）を取得する                                        | [get-group.md](./get-group.md)                       |
+| list-subgroups       | SubgroupManagementSheet 内でサブグループ一覧のみを軽量に取得する（追加・削除後に refetch される）               | [list-subgroups.md](./list-subgroups.md)             |
 | list-group-members   | グループのメンバー一覧を検索・無限スクロール付きで取得する                                                      | [list-group-members.md](./list-group-members.md)     |
 | sheet-navigation     | グループ詳細をシートで表示し、メンバー詳細へネストできるシートナビゲーション                                    | [sheet-navigation.md](./sheet-navigation.md)         |
 | update-group         | グループの名称・説明を編集ダイアログから更新する                                                                | [update-group.md](./update-group.md)                 |

@@ -176,7 +176,8 @@
 | 4   | 境界値   | id=0（最小境界外）           | `id=0`                 | 400 Bad Request                     |
 | 5   | 境界値   | id=-1（負の整数）            | `id=-1`                | 400 Bad Request                     |
 | 6   | 異常系   | 存在しないグループ ID        | `id=9999`              | 404 Not Found                       |
-| 7   | 例外処理 | DB 接続エラー発生時          | DB mock がエラーを返す | 500 Internal Server Error           |
+| 7   | 例外処理 | DB 接続エラー発生時（GetByID）       | DB mock がエラーを返す | 500 Internal Server Error |
+| 8   | 例外処理 | ListSubgroups が DB エラーを返す     | DB mock がエラーを返す | 500 Internal Server Error |
 
 **Service テスト** (`group/service_test.go`):
 
