@@ -44,17 +44,19 @@
 1. 開始
 2. パスパラメータ id を取得してパースする
    - パース失敗または 0 以下の場合 → 400 Bad Request { "message": "given param is not valid" } → 終了
-3. サービス層に取得を委譲する
+3. GetByID をサービス層に委譲する
 4. サービス層で id が 1 未満かどうかを確認する
    - 1 未満の場合 → 400 Bad Request → 終了
 5. 削除済みでないグループを id で検索する
    - 存在しない場合 → 404 Not Found { "message": "your requested item is not found" } → 終了
    - DB エラーの場合 → 500 Internal Server Error { "message": "internal server error" } → 終了
 6. グループ基本情報（id, name, description, member_count）を取得する
-7. GroupRelationRepository.ListChildren でサブグループ一覧を取得する
+7. ListSubgroups をサービス層に委譲する
+   - サービス層で id が 1 未満の場合 → 400 Bad Request → 終了
+   - GroupRelationRepository.ListChildren でサブグループ一覧を取得する
    - DB エラーの場合 → 500 Internal Server Error { "message": "internal server error" } → 終了
-   - サブグループなし → 空スライス（nil でなく []）を使用する
-8. handler 層の専用レスポンス型（getGroupResponse）に詰めて 200 OK を返す → 終了
+8. サブグループなし → 空スライス（[]）として初期化する
+9. handler 層の専用レスポンス型（getGroupResponse）に詰めて 200 OK を返す → 終了
    ※ domain.Group には Subgroups フィールドを追加しない（list 系レスポンスへの波及防止）
 ```
 
@@ -90,13 +92,13 @@
 
 ### sample-api
 
-| ファイル                                               | 役割                                                                                                                                           |
-| ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `sample-api/internal/rest/group.go`                    | `GetByID` ハンドラ・専用 `getGroupResponse` 型・ルート登録                                                                                     |
-| `sample-api/internal/rest/mocks/group_service_mock.go` | `GroupService` interface の手動 mock                                                                                                           |
-| `sample-api/internal/rest/group_test.go`               | `GetByID` Handler ユニットテスト（`subgroups` フィールドの検証を含む）                                                                         |
-| `sample-api/group/service.go`                          | `GetByID` ロジック（`GroupRepository.GetByID` + `GroupRelationRepository.ListChildren` + `relationRepo nil` ガード）・`GroupService` interface |
-| `sample-api/group/service_test.go`                     | `GetByID` Service ユニットテスト（`ListChildren` mock を含む）                                                                                 |
+| ファイル                                               | 役割                                                                                                                                               |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sample-api/internal/rest/group.go`                    | `GetByID` ハンドラ・専用 `getGroupResponse` 型・ルート登録                                                                                         |
+| `sample-api/internal/rest/mocks/group_service_mock.go` | `GroupService` interface の手動 mock                                                                                                               |
+| `sample-api/internal/rest/group_test.go`               | `GetByID` Handler ユニットテスト（`subgroups` フィールドの検証を含む）                                                                             |
+| `sample-api/group/service.go`                          | `GetByID` ロジック（`GroupRepository.GetByID` のみ）・`ListSubgroups` ロジック（`GroupRelationRepository.ListChildren`）・`GroupService` interface |
+| `sample-api/group/service_test.go`                     | `GetByID` / `ListSubgroups` Service ユニットテスト                                                                                                 |
 
 ### sample-front
 
@@ -168,26 +170,36 @@
 
 **Handler テスト** (`internal/rest/group_test.go`):
 
-| #   | 観点     | テスト内容                   | 入力例                 | 期待結果                            |
-| --- | -------- | ---------------------------- | ---------------------- | ----------------------------------- |
-| 1   | 正常系   | subgroups なし（空配列）     | `id=1`（関係なし）     | 200 OK + `subgroups: []`            |
-| 2   | 正常系   | subgroups ありのグループ取得 | `id=1`                 | 200 OK + `subgroups` フィールドあり |
-| 3   | 異常系   | 文字列を id に指定           | `id=abc`               | 400 Bad Request                     |
-| 4   | 境界値   | id=0（最小境界外）           | `id=0`                 | 400 Bad Request                     |
-| 5   | 境界値   | id=-1（負の整数）            | `id=-1`                | 400 Bad Request                     |
-| 6   | 異常系   | 存在しないグループ ID        | `id=9999`              | 404 Not Found                       |
-| 7   | 例外処理 | DB 接続エラー発生時          | DB mock がエラーを返す | 500 Internal Server Error           |
+| #   | 観点     | テスト内容                     | 入力例                                           | 期待結果                            |
+| --- | -------- | ------------------------------ | ------------------------------------------------ | ----------------------------------- |
+| 1   | 正常系   | subgroups なし（空配列）       | `id=1`（関係なし）                               | 200 OK + `subgroups: []`            |
+| 2   | 正常系   | subgroups ありのグループ取得   | `id=1`                                           | 200 OK + `subgroups` フィールドあり |
+| 3   | 異常系   | 文字列を id に指定             | `id=abc`                                         | 400 Bad Request                     |
+| 4   | 境界値   | id=0（最小境界外）             | `id=0`                                           | 400 Bad Request                     |
+| 5   | 境界値   | id=-1（負の整数）              | `id=-1`                                          | 400 Bad Request                     |
+| 6   | 異常系   | 存在しないグループ ID          | `id=9999`                                        | 404 Not Found                       |
+| 7   | 例外処理 | DB 接続エラー発生時（GetByID） | DB mock がエラーを返す                           | 500 Internal Server Error           |
+| 8   | 例外処理 | ListSubgroups がエラーを返す   | GetByID 成功後 ListSubgroups mock がエラーを返す | 500 Internal Server Error           |
 
-**Service テスト** (`group/service_test.go`):
+**Service テスト** (`group/service_test.go` — `GetByID` / `ListSubgroups` それぞれで独立してテスト):
 
-| #   | 観点     | テスト内容                        | 入力例                   | 期待結果                 |
-| --- | -------- | --------------------------------- | ------------------------ | ------------------------ |
-| 7   | 正常系   | グループ + subgroups を返す       | `id=1`                   | Group + `[]domain.Group` |
-| 8   | 正常系   | subgroups なし（空スライス）      | `id=1`（関係なし）       | Group + `[]`             |
-| 9   | 例外処理 | `ListChildren` が DB エラーを返す | mock がエラーを返す      | ErrInternalServerError   |
-| 10  | 異常系   | 存在しないグループ ID             | `id=9999`                | ErrNotFound              |
-| 11  | 境界値   | id=0（最小境界外）                | `id=0`                   | ErrBadParamInput         |
-| 12  | 例外処理 | GroupRepository がエラーを返す    | repo mock がエラーを返す | ErrInternalServerError   |
+`GetByID` テスト:
+
+| #   | 観点     | テスト内容                     | 入力例                   | 期待結果               |
+| --- | -------- | ------------------------------ | ------------------------ | ---------------------- |
+| 7   | 正常系   | グループ情報を返す             | `id=1`                   | `domain.Group`         |
+| 8   | 異常系   | 存在しないグループ ID          | `id=9999`                | ErrNotFound            |
+| 9   | 境界値   | id=0（最小境界外）             | `id=0`                   | ErrBadParamInput       |
+| 10  | 例外処理 | GroupRepository がエラーを返す | repo mock がエラーを返す | ErrInternalServerError |
+
+`ListSubgroups` テスト:
+
+| #   | 観点     | テスト内容                        | 入力例                      | 期待結果                |
+| --- | -------- | --------------------------------- | --------------------------- | ----------------------- |
+| 11  | 正常系   | サブグループ一覧を返す            | `id=1`（子あり）            | `[]domain.Group`（2件） |
+| 12  | 正常系   | サブグループなし（空スライス）    | `id=1`（関係なし）          | `[]`                    |
+| 13  | 境界値   | id=0（最小境界外）                | `id=0`                      | ErrBadParamInput        |
+| 14  | 例外処理 | `ListChildren` が DB エラーを返す | relRepo mock がエラーを返す | ErrInternalServerError  |
 
 **FE コンポーネントテスト**:
 
