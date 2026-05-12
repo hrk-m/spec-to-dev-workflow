@@ -241,7 +241,7 @@
 | delete-group         | グループを削除確認ダイアログからソフトデリートし、一覧へ遷移する                                                | [delete-group.md](./delete-group.md)                 |
 | add-group-member     | グループ未所属のユーザーを検索・選択して AddMemberSheet から一括追加する                                        | [add-group-member.md](./add-group-member.md)         |
 | add-subgroup         | グループを選択して AddSubgroupSheet からサブグループ（子グループ）として登録する                                | [add-subgroup.md](./add-subgroup.md)                 |
-| delete-subgroup      | サブグループ行の [Delete] ボタンから確認ダイアログを経由してサブグループ関係を解除する                          | [delete-subgroup.md](./delete-subgroup.md)           |
+| delete-subgroup      | サブグループ行の「削除」ボタンから確認ダイアログを経由してサブグループ関係を解除する                            | [delete-subgroup.md](./delete-subgroup.md)           |
 | remove-group-members | メンバー一覧のチェックボックスで選択した 1 件または複数件のメンバーを一括削除する（全選択・indeterminate 含む） | [remove-group-members.md](./remove-group-members.md) |
 
 ## スクリーンショット設定
