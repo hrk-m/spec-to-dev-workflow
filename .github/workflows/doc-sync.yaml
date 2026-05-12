@@ -88,7 +88,6 @@ jobs:
           - コード（sample-api/ / sample-front/）の実装変更は行わない
           - docs/steering/ の変更も行わない（CI では不要）
           - スクリーンショットの撮影（spec-screenshot）は実行しない
-          - `make check` / `bun run format:md:check` は実行しない（PR 作成前に自動修正ステップが走るため）
 
           ## plans/ 更新ルール
           plans/ を更新・作成する場合は、必ず以下の構造に従うこと。

@@ -170,16 +170,16 @@
 
 **Handler テスト** (`internal/rest/group_test.go`):
 
-| #   | 観点     | テスト内容                     | 入力例                                           | 期待結果                            |
-| --- | -------- | ------------------------------ | ------------------------------------------------ | ----------------------------------- |
-| 1   | 正常系   | subgroups なし（空配列）       | `id=1`（関係なし）                               | 200 OK + `subgroups: []`            |
-| 2   | 正常系   | subgroups ありのグループ取得   | `id=1`                                           | 200 OK + `subgroups` フィールドあり |
-| 3   | 異常系   | 文字列を id に指定             | `id=abc`                                         | 400 Bad Request                     |
-| 4   | 境界値   | id=0（最小境界外）             | `id=0`                                           | 400 Bad Request                     |
-| 5   | 境界値   | id=-1（負の整数）              | `id=-1`                                          | 400 Bad Request                     |
-| 6   | 異常系   | 存在しないグループ ID          | `id=9999`                                        | 404 Not Found                       |
-| 7   | 例外処理 | DB 接続エラー発生時（GetByID） | DB mock がエラーを返す                           | 500 Internal Server Error           |
-| 8   | 例外処理 | ListSubgroups がエラーを返す   | GetByID 成功後 ListSubgroups mock がエラーを返す | 500 Internal Server Error           |
+| #   | 観点     | テスト内容                       | 入力例                 | 期待結果                            |
+| --- | -------- | -------------------------------- | ---------------------- | ----------------------------------- |
+| 1   | 正常系   | subgroups なし（空配列）         | `id=1`（関係なし）     | 200 OK + `subgroups: []`            |
+| 2   | 正常系   | subgroups ありのグループ取得     | `id=1`                 | 200 OK + `subgroups` フィールドあり |
+| 3   | 異常系   | 文字列を id に指定               | `id=abc`               | 400 Bad Request                     |
+| 4   | 境界値   | id=0（最小境界外）               | `id=0`                 | 400 Bad Request                     |
+| 5   | 境界値   | id=-1（負の整数）                | `id=-1`                | 400 Bad Request                     |
+| 6   | 異常系   | 存在しないグループ ID            | `id=9999`              | 404 Not Found                       |
+| 7   | 例外処理 | DB 接続エラー発生時（GetByID）   | DB mock がエラーを返す | 500 Internal Server Error           |
+| 8   | 例外処理 | ListSubgroups が DB エラーを返す | DB mock がエラーを返す | 500 Internal Server Error           |
 
 **Service テスト** (`group/service_test.go` — `GetByID` / `ListSubgroups` それぞれで独立してテスト):
 
