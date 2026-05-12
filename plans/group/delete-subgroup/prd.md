@@ -69,7 +69,7 @@
 
 ```
 1. 開始
-2. SubgroupManagementSheet の行の [Delete] ボタン押下
+2. SubgroupManagementSheet の行の「削除」ボタン押下
 3. 削除対象のサブグループ ID を state にセットし、確認ダイアログ（AlertDialog）を開く
    - Title: "Delete Subgroup"
    - Description: "Are you sure you want to delete this subgroup? This action cannot be undone."
@@ -107,13 +107,13 @@
 
 ### sample-front
 
-| ファイル                                                             | 役割                                                                |
-| -------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| `sample-front/src/pages/group-detail/api/delete-subgroup.ts`         | DELETE /api/v1/groups/:id/subgroups/:childId fetch 関数             |
-| `sample-front/src/pages/group-detail/model/useDeleteSubgroup.ts`     | 削除ロジック・loading・error を管理するカスタムフック               |
-| `sample-front/src/pages/group-detail/ui/DeleteSubgroupDialog.tsx`    | サブグループ削除を確認する AlertDialog コンポーネント               |
-| `sample-front/src/pages/group-detail/ui/SubgroupManagementSheet.tsx` | [Delete] ボタン・`deletingSubgroupId` state                         |
-| `sample-front/src/pages/group-detail/ui/GroupDetailContent.tsx`      | SubgroupManagementSheet に `groupId`・`refetch` を props として渡す |
+| ファイル                                                             | 役割                                                                  |
+| -------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `sample-front/src/pages/group-detail/api/delete-subgroup.ts`         | DELETE /api/v1/groups/:id/subgroups/:childId fetch 関数               |
+| `sample-front/src/pages/group-detail/model/useDeleteSubgroup.ts`     | 削除ロジック・loading・error を管理するカスタムフック                 |
+| `sample-front/src/pages/group-detail/ui/DeleteSubgroupDialog.tsx`    | サブグループ削除を確認する AlertDialog コンポーネント                 |
+| `sample-front/src/pages/group-detail/ui/SubgroupManagementSheet.tsx` | 「削除」ボタン・`deletingSubgroupId` state                            |
+| `sample-front/src/pages/group-detail/ui/GroupDetailContent.tsx`      | SubgroupManagementSheet に `groupId`・`groupName` を props として渡す |
 
 > DB スキーマ（`group_relations` テーブル定義・制約・FK）の詳細は [plans/schema.md](../../schema.md) を参照。
 
@@ -148,13 +148,13 @@
 
 **FE コンポーネントテスト** (`pages/group-detail/ui/__tests__/SubgroupManagementSheet.test.tsx` 更新):
 
-| #   | 観点       | テスト内容                          | 期待結果                                                           |
-| --- | ---------- | ----------------------------------- | ------------------------------------------------------------------ |
-| 1   | 正常系     | [Delete] 押下 → ダイアログが開く    | AlertDialog が表示される                                           |
-| 2   | 正常系     | ダイアログの Delete 押下 → 204 成功 | ダイアログが閉じ、一覧が再取得される                               |
-| 3   | 異常系     | ダイアログの Delete 押下 → 404 返却 | ダイアログ内にエラーメッセージが表示される（ダイアログは閉じない） |
-| 4   | 例外処理   | ダイアログの Delete 押下 → 500 返却 | ダイアログ内に汎用エラーメッセージが表示される                     |
-| 5   | キャンセル | ダイアログの Cancel 押下            | ダイアログが閉じ、API は呼ばれない                                 |
+| #   | 観点       | テスト内容                                | 期待結果                                                           |
+| --- | ---------- | ----------------------------------------- | ------------------------------------------------------------------ |
+| 1   | 正常系     | 「削除」ボタンクリック → ダイアログが開く | AlertDialog が表示される                                           |
+| 2   | 正常系     | ダイアログの Delete 押下 → 204 成功       | ダイアログが閉じ、一覧が再取得される                               |
+| 3   | 異常系     | ダイアログの Delete 押下 → 404 返却       | ダイアログ内にエラーメッセージが表示される（ダイアログは閉じない） |
+| 4   | 例外処理   | ダイアログの Delete 押下 → 500 返却       | ダイアログ内に汎用エラーメッセージが表示される                     |
+| 5   | キャンセル | ダイアログの Cancel 押下                  | ダイアログが閉じ、API は呼ばれない                                 |
 
 **Handler テスト** (`internal/rest/group_test.go`):
 

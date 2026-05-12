@@ -63,7 +63,9 @@
 | `SubgroupFilterChips`     | コンポーネント | サブグループのフィルターチップを横スクロールで描画し、右端に「サブグループ管理」ボタンを表示する                                                                      |
 | `SubgroupManagementSheet` | コンポーネント | サブグループ一覧（グループ名・説明・"N members" + 削除ボタン）と「＋ 追加」ボタンを表示する。「＋ 追加」クリックで AddSubgroupSheet を `useSheetStack` でスタックする |
 | `AddSubgroupSheet`        | コンポーネント | 検索入力・ラジオ選択付きグループ一覧・「追加」ボタンを提供するシートコンテンツ                                                                                        |
-| `fetchGroupsForSheet`     | API 関数       | `GET /api/v1/groups` を呼び出して全グループ一覧と total を取得する                                                                                                    |
+| `fetchGroups`             | API 関数       | `GET /api/v1/groups` を呼び出して全グループ一覧と total を取得する                                                                                                    |
+| `useSearchableGroupList`  | カスタム Hook  | `fetchGroups` をラップし、`searchQuery` の変化を 300ms デバウンス後に API へ送信する。`groups`・`total`・`isLoading`・`error` を返す                                  |
+| `useAddSubgroup`          | カスタム Hook  | サブグループ追加の送信ロジックを管理する。`isLoading`・`error`・`submit` を返す。409 時は「すでに追加済みです」、その他エラーは汎用メッセージを設定する               |
 | `addSubgroup`             | API 関数       | `POST /api/v1/groups/:id/subgroups` を呼び出す                                                                                                                        |
 | `selectedGroupId`         | state          | ラジオ選択されたグループの ID（`number \| null`）                                                                                                                     |
 | `searchQuery`             | state          | 検索フィールドの入力値。300ms デバウンス後に API リクエストを送信する                                                                                                 |
@@ -89,7 +91,7 @@
 - [ ] 既に直接の子グループになっているグループが候補から除外される
 - [ ] グループ行をクリックするとラジオ選択されて行がハイライトされる
 - [ ] 未選択状態では「追加」ボタンが disabled
-- [ ] グループを選択すると「追加する」ボタンが enabled になる
+- [ ] グループを選択すると「追加」ボタンが enabled になる
 - [ ] 「追加」クリックで成功するとシートが閉じ、Subgroups 一覧が更新される
 - [ ] 検索キーワード入力（300ms デバウンス）でグループ一覧が絞り込まれる
 - [ ] 409 エラー時はシート内に「すでに追加済みです」が表示される（シートは開いたまま）

@@ -2,13 +2,13 @@
 
 ## 概要
 
-| 項目         | 内容                                                                                                              |
-| ------------ | ----------------------------------------------------------------------------------------------------------------- |
-| 機能名       | `list-subgroups`                                                                                                  |
+| 項目         | 内容                                                                                                                   |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| 機能名       | `list-subgroups`                                                                                                       |
 | 目的         | 親グループ ID を指定してサブグループ一覧のみを取得する。サブグループ管理シートを subgroup のみに依存させ関心を分離する |
-| API          | `GET /api/v1/groups/:id/subgroups`                                                                                |
-| 認証         | 必要（AuthMiddleware）                                                                                            |
-| データソース | MySQL (`sample-api/internal/repository/mysql`)                                                                    |
+| API          | `GET /api/v1/groups/:id/subgroups`                                                                                     |
+| 認証         | 必要（AuthMiddleware）                                                                                                 |
+| データソース | MySQL (`sample-api/internal/repository/mysql`)                                                                         |
 
 > 既存 `GET /api/v1/groups/:id` のレスポンスは変更しない（`subgroups` フィールドは互換性維持のため残す）。
 
@@ -20,20 +20,20 @@
 
 #### リクエスト仕様
 
-| フィールド | 型             | 必須 | 説明                          |
-| ---------- | -------------- | ---- | ----------------------------- |
-| `id`       | integer (path) | ✓    | 親グループの ID。正の整数     |
+| フィールド | 型             | 必須 | 説明                      |
+| ---------- | -------------- | ---- | ------------------------- |
+| `id`       | integer (path) | ✓    | 親グループの ID。正の整数 |
 
 クエリパラメータ・リクエストボディは無し（軽量 API としてページネーションなし）。
 
 #### バリデーション一覧
 
-| #   | 対象フィールド | ルール                                            | エラー時の挙動  |
-| --- | -------------- | ------------------------------------------------- | --------------- |
-| 1   | `id`           | 整数に変換できること                              | 400 Bad Request |
-| 2   | `id`           | 1 以上（正の整数）であること                      | 400 Bad Request |
-| 3   | 認証情報       | `authUser` が context に存在すること              | 401 Unauthorized |
-| 4   | `id`           | 親グループの存在チェックは行わない（不存在は空配列で返す） | —               |
+| #   | 対象フィールド | ルール                                                     | エラー時の挙動   |
+| --- | -------------- | ---------------------------------------------------------- | ---------------- |
+| 1   | `id`           | 整数に変換できること                                       | 400 Bad Request  |
+| 2   | `id`           | 1 以上（正の整数）であること                               | 400 Bad Request  |
+| 3   | 認証情報       | `authUser` が context に存在すること                       | 401 Unauthorized |
+| 4   | `id`           | 親グループの存在チェックは行わない（不存在は空配列で返す） | —                |
 
 ---
 
@@ -97,30 +97,30 @@
 
 ### sample-api
 
-| ファイル                                               | 役割                                                                                                                |
-| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
-| `sample-api/internal/rest/group.go`                    | `ListSubgroups` ハンドラ・専用 `subgroupListResponse` 型・ルート登録（`g.GET("/groups/:id/subgroups", h.ListSubgroups)` を `members` ルート直後に追加） |
-| `sample-api/internal/rest/group_test.go`               | `ListSubgroups` Handler ユニットテスト                                                                              |
-| `sample-api/internal/rest/mocks/group_service_mock.go` | 変更不要（`ListSubgroups` は既に `GroupService` IF に存在）                                                          |
-| `sample-api/group/service.go`                          | 変更不要（`Service.ListSubgroups` を既存利用）                                                                      |
-| `sample-api/group/service_test.go`                     | 変更不要（`Service.ListSubgroups` の既存テストを継続利用）                                                          |
-| `sample-api/internal/repository/mysql/group_relation.go` | 変更不要（`ListChildren` を既存利用）                                                                              |
+| ファイル                                                 | 役割                                                                                                                                                    |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sample-api/internal/rest/group.go`                      | `ListSubgroups` ハンドラ・専用 `subgroupListResponse` 型・ルート登録（`g.GET("/groups/:id/subgroups", h.ListSubgroups)` を `members` ルート直後に追加） |
+| `sample-api/internal/rest/group_test.go`                 | `ListSubgroups` Handler ユニットテスト                                                                                                                  |
+| `sample-api/internal/rest/mocks/group_service_mock.go`   | 変更不要（`ListSubgroups` は既に `GroupService` IF に存在）                                                                                             |
+| `sample-api/group/service.go`                            | 変更不要（`Service.ListSubgroups` を既存利用）                                                                                                          |
+| `sample-api/group/service_test.go`                       | 変更不要（`Service.ListSubgroups` の既存テストを継続利用）                                                                                              |
+| `sample-api/internal/repository/mysql/group_relation.go` | 変更不要（`ListChildren` を既存利用）                                                                                                                   |
 
 ### sample-front
 
-| ファイル                                                                            | 役割                                                                                                                 |
-| ----------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `sample-front/src/pages/group-detail/api/fetch-subgroups.ts`                        | 新規。`GET /api/v1/groups/:id/subgroups` を呼び出し `{ subgroups: SubgroupSummary[] }` を返す（`apiFetch` 単純実装）  |
-| `sample-front/src/pages/group-detail/model/useSubgroups.ts`                         | 新規。`useEffect + useState + refetchKey` パターンで `subgroups`・`refetch` を返すフック（loading / error UI は露出しない） |
+| ファイル                                                                            | 役割                                                                                                                                                                               |
+| ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sample-front/src/pages/group-detail/api/fetch-subgroups.ts`                        | 新規。`GET /api/v1/groups/:id/subgroups` を呼び出し `{ subgroups: SubgroupSummary[] }` を返す（`apiFetch` 単純実装）                                                               |
+| `sample-front/src/pages/group-detail/model/useSubgroups.ts`                         | 新規。`useEffect + useState + refetchKey` パターンで `subgroups`・`refetch` を返すフック（loading / error UI は露出しない）                                                        |
 | `sample-front/src/pages/group-detail/ui/SubgroupManagementSheet.tsx`                | 内部呼び出しを `useGroupDetail(groupId)` から `useSubgroups(groupId)` に置き換え。`AddSubgroupSheet` への subgroups 受け渡しは継続。`refetch` も `useSubgroups.refetch` に切り替え |
-| `sample-front/src/pages/group-detail/ui/__tests__/SubgroupManagementSheet.test.tsx` | 既存テストの mock 対象を `useGroupDetail` から `useSubgroups` に変更                                                   |
-| `sample-front/src/pages/group-detail/ui/GroupDetailContent.tsx`                     | 変更不要（`SubgroupManagementSheet` 内部の取得元を切り替えるだけのため）                                              |
-| `sample-front/src/pages/group-detail/api/fetch-group.ts`                            | 変更不要                                                                                                              |
-| `sample-front/src/pages/group-detail/model/useGroupDetail.ts`                       | 変更不要                                                                                                              |
-| `sample-front/src/pages/group-detail/model/group-detail.ts`                         | 変更不要（`SubgroupSummary` を流用）                                                                                  |
-| `sample-front/src/pages/group-detail/ui/AddSubgroupSheet.tsx`                       | 変更不要（`subgroups: SubgroupSummary[]` を props で受け取る既存仕様を維持）                                           |
-| `sample-front/src/pages/group-detail/ui/SubgroupFilterChips.tsx`                    | 変更不要                                                                                                              |
-| `sample-front/src/pages/group-detail/model/useSubgroupFilter.ts`                    | 変更不要                                                                                                              |
+| `sample-front/src/pages/group-detail/ui/__tests__/SubgroupManagementSheet.test.tsx` | 既存テストの mock 対象を `useGroupDetail` から `useSubgroups` に変更                                                                                                               |
+| `sample-front/src/pages/group-detail/ui/GroupDetailContent.tsx`                     | 変更不要（`SubgroupManagementSheet` 内部の取得元を切り替えるだけのため）                                                                                                           |
+| `sample-front/src/pages/group-detail/api/fetch-group.ts`                            | 変更不要                                                                                                                                                                           |
+| `sample-front/src/pages/group-detail/model/useGroupDetail.ts`                       | 変更不要                                                                                                                                                                           |
+| `sample-front/src/pages/group-detail/model/group-detail.ts`                         | 変更不要（`SubgroupSummary` を流用）                                                                                                                                               |
+| `sample-front/src/pages/group-detail/ui/AddSubgroupSheet.tsx`                       | 変更不要（`subgroups: SubgroupSummary[]` を props で受け取る既存仕様を維持）                                                                                                       |
+| `sample-front/src/pages/group-detail/ui/SubgroupFilterChips.tsx`                    | 変更不要                                                                                                                                                                           |
+| `sample-front/src/pages/group-detail/model/useSubgroupFilter.ts`                    | 変更不要                                                                                                                                                                           |
 
 > DB スキーマ変更なし（`group_relations` テーブルの既存実装を流用）。
 
@@ -157,14 +157,14 @@
 
 ### エラーケース一覧
 
-| 条件                                  | 発生レイヤー         | ステータス                | レスポンス                                  |
-| ------------------------------------- | -------------------- | ------------------------- | ------------------------------------------- |
-| `id` が整数に変換不可                 | Handler              | 400 Bad Request           | `{ "message": "given param is not valid" }` |
-| `id` が 1 未満                        | Handler / Service    | 400 Bad Request           | `{ "message": "given param is not valid" }` |
-| `authUser` が context に存在しない    | Handler              | 401 Unauthorized          | `{ "message": "..." }`                      |
-| DB エラー（`ListChildren` 失敗）      | Repository           | 500 Internal Server Error | `{ "message": "internal server error" }`    |
-| 親グループ不存在                      | Service / Repository | 200 OK                    | `{ "subgroups": [] }`（404 にしない）       |
-| ネットワークエラー                    | フロントエンド       | —                         | コンソールにエラー記録（UI 表示は無し）     |
+| 条件                               | 発生レイヤー         | ステータス                | レスポンス                                  |
+| ---------------------------------- | -------------------- | ------------------------- | ------------------------------------------- |
+| `id` が整数に変換不可              | Handler              | 400 Bad Request           | `{ "message": "given param is not valid" }` |
+| `id` が 1 未満                     | Handler / Service    | 400 Bad Request           | `{ "message": "given param is not valid" }` |
+| `authUser` が context に存在しない | Handler              | 401 Unauthorized          | `{ "message": "..." }`                      |
+| DB エラー（`ListChildren` 失敗）   | Repository           | 500 Internal Server Error | `{ "message": "internal server error" }`    |
+| 親グループ不存在                   | Service / Repository | 200 OK                    | `{ "subgroups": [] }`（404 にしない）       |
+| ネットワークエラー                 | フロントエンド       | —                         | コンソールにエラー記録（UI 表示は無し）     |
 
 ---
 
@@ -174,27 +174,27 @@
 
 **Handler テスト** (`internal/rest/group_test.go`):
 
-| #   | 観点     | テスト内容                                                  | 入力例                       | 期待結果                                              |
-| --- | -------- | ----------------------------------------------------------- | ---------------------------- | ----------------------------------------------------- |
-| 1   | 正常系   | subgroups 複数件を返す                                       | `id=1`、mock が 2 件返す      | 200 OK + `{"subgroups":[{...},{...}]}`                |
-| 2   | 境界値   | subgroups 0 件（親不存在含む）                               | `id=999`、mock が `[]` を返す | 200 OK + `{"subgroups":[]}`                           |
-| 3   | 異常系   | 文字列を id に指定                                          | `id=abc`                     | 400 Bad Request                                       |
-| 4   | 境界値   | `id=0`                                                      | `id=0`                       | 400 Bad Request                                       |
-| 5   | 例外処理 | 認証情報なし（authUser 未設定）                              | authUser = nil               | 401 Unauthorized                                      |
-| 6   | 例外処理 | サービス層が DB エラーを返す                                 | mock がエラーを返す           | 500 Internal Server Error                             |
-| 7   | 外部依存 | サービスへの引数検証                                        | `id=42`                      | mock が `ctx, id=42` で呼ばれる                       |
+| #   | 観点     | テスト内容                      | 入力例                        | 期待結果                               |
+| --- | -------- | ------------------------------- | ----------------------------- | -------------------------------------- |
+| 1   | 正常系   | subgroups 複数件を返す          | `id=1`、mock が 2 件返す      | 200 OK + `{"subgroups":[{...},{...}]}` |
+| 2   | 境界値   | subgroups 0 件（親不存在含む）  | `id=999`、mock が `[]` を返す | 200 OK + `{"subgroups":[]}`            |
+| 3   | 異常系   | 文字列を id に指定              | `id=abc`                      | 400 Bad Request                        |
+| 4   | 境界値   | `id=0`                          | `id=0`                        | 400 Bad Request                        |
+| 5   | 例外処理 | 認証情報なし（authUser 未設定） | authUser = nil                | 401 Unauthorized                       |
+| 6   | 例外処理 | サービス層が DB エラーを返す    | mock がエラーを返す           | 500 Internal Server Error              |
+| 7   | 外部依存 | サービスへの引数検証            | `id=42`                       | mock が `ctx, id=42` で呼ばれる        |
 
 **FE 単体テスト**:
 
-| #   | ファイル                                                                            | 観点     | テスト内容                                                          | 期待結果                                          |
-| --- | ----------------------------------------------------------------------------------- | -------- | ------------------------------------------------------------------- | ------------------------------------------------- |
-| 8   | `pages/group-detail/api/__tests__/fetch-subgroups.test.ts`                          | 正常系   | 200 を受け取り subgroups 配列を返す                                  | パース後の `SubgroupSummary[]` を返す             |
-| 9   | `pages/group-detail/api/__tests__/fetch-subgroups.test.ts`                          | 境界値   | 0 件レスポンス                                                       | 空配列を返す                                      |
-| 10  | `pages/group-detail/api/__tests__/fetch-subgroups.test.ts`                          | 異常系   | エラーレスポンスで throw する                                        | エラーが throw される                             |
-| 11  | `pages/group-detail/model/__tests__/useSubgroups.test.ts`                           | 状態変化 | 初回マウントで取得し subgroups を反映                                | subgroups が反映され、refetch を呼ぶと再取得      |
-| 12  | `pages/group-detail/model/__tests__/useSubgroups.test.ts`                           | 異常系   | 取得失敗時はコンソールエラー（UI 露出はなし）                        | state は空のまま、エラーログが出る                |
-| 13  | `pages/group-detail/ui/__tests__/SubgroupManagementSheet.test.tsx`                  | 仕様     | mock を `useSubgroups` に置き換えて既存表示挙動が変わらないこと      | 既存テストと同等のアサーションが pass する        |
-| 14  | `pages/group-detail/ui/__tests__/SubgroupManagementSheet.test.tsx`                  | 仕様     | `useSubgroups` の subgroups を `AddSubgroupSheet` に props で渡すこと | AddSubgroupSheet が同じ subgroups を受け取る      |
+| #   | ファイル                                                           | 観点     | テスト内容                                                            | 期待結果                                     |
+| --- | ------------------------------------------------------------------ | -------- | --------------------------------------------------------------------- | -------------------------------------------- |
+| 8   | `pages/group-detail/api/__tests__/fetch-subgroups.test.ts`         | 正常系   | 200 を受け取り subgroups 配列を返す                                   | パース後の `SubgroupSummary[]` を返す        |
+| 9   | `pages/group-detail/api/__tests__/fetch-subgroups.test.ts`         | 境界値   | 0 件レスポンス                                                        | 空配列を返す                                 |
+| 10  | `pages/group-detail/api/__tests__/fetch-subgroups.test.ts`         | 異常系   | エラーレスポンスで throw する                                         | エラーが throw される                        |
+| 11  | `pages/group-detail/model/__tests__/useSubgroups.test.ts`          | 状態変化 | 初回マウントで取得し subgroups を反映                                 | subgroups が反映され、refetch を呼ぶと再取得 |
+| 12  | `pages/group-detail/model/__tests__/useSubgroups.test.ts`          | 異常系   | 取得失敗時はコンソールエラー（UI 露出はなし）                         | state は空のまま、エラーログが出る           |
+| 13  | `pages/group-detail/ui/__tests__/SubgroupManagementSheet.test.tsx` | 仕様     | mock を `useSubgroups` に置き換えて既存表示挙動が変わらないこと       | 既存テストと同等のアサーションが pass する   |
+| 14  | `pages/group-detail/ui/__tests__/SubgroupManagementSheet.test.tsx` | 仕様     | `useSubgroups` の subgroups を `AddSubgroupSheet` に props で渡すこと | AddSubgroupSheet が同じ subgroups を受け取る |
 
 ---
 
